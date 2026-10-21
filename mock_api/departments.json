@@ -1,0 +1,95 @@
+{
+ "success": true,
+ "message": "เรียกดูรายการหน่วยงานสำเร็จ",
+ "total": 12,
+ "data": [
+  {
+   "department_id": 1,
+   "department_name": "สำนักงานเลขานุการคณะ",
+   "shortname": "สนง.เลขาฯ",
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "department_id": 2,
+   "department_name": "ภาควิชาวิศวกรรมชลประทาน",
+   "shortname": "IRE",
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "department_id": 3,
+   "department_name": "ภาควิชาวิศวกรรมเกษตร",
+   "shortname": "AGE",
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "department_id": 4,
+   "department_name": "ภาควิชาวิศวกรรมอาหาร",
+   "shortname": "FE",
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "department_id": 5,
+   "department_name": "ภาควิชาวิศวกรรมโยธา",
+   "shortname": "CE",
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "department_id": 6,
+   "department_name": "ภาควิชาวิศวกรรมเครื่องกล",
+   "shortname": "ME",
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "department_id": 7,
+   "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+   "shortname": "CPE",
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "department_id": 8,
+   "department_name": "ภาควิชาวิศวกรรมอุตสาหการ",
+   "shortname": "IE",
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "department_id": 9,
+   "department_name": "ศูนย์ปฏิบัติการวิศวกรรมพลังงานและสิ่งแวดล้อม",
+   "shortname": "ศูนย์พลังงานฯ",
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "department_id": 10,
+   "department_name": "ศูนย์ทดสอบประตู หน้าต่าง และระบบผนังกระจกสำหรับงานอาคาร",
+   "shortname": "ศูนย์ทดสอบประตูฯ",
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "department_id": 11,
+   "department_name": "ศูนย์เครื่องจักรกลการเกษตรแห่งชาติ",
+   "shortname": "ศูนย์เครื่องจักรกลฯ",
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "department_id": 12,
+   "department_name": "หน่วยงานเดิม (ยุบรวมแล้ว)",
+   "shortname": "OLD",
+   "is_deleted": 1,
+   "deleted_at": "2024-01-15 09:00:00"
+  }
+ ],
+ "_mock": {
+  "endpoint": "https://cpe.eng.kps.ku.ac.th/CPEAssets/assets_api/departments.php?limit=100&page=1",
+  "note": "MOCK DATA สำหรับทดสอบ ETL เท่านั้น ไม่ใช่ข้อมูลจริง"
+ }
+}

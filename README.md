@@ -1,0 +1,337 @@
+# ETL ระบบครุภัณฑ์ + ใบแจ้งซ่อม → Data Warehouse
+
+`etl_warehouse.py` รวมข้อมูลจาก 2 แหล่งให้เป็นรูปแบบเดียวกัน แล้วสร้างไฟล์ SQL สำหรับโหลดเข้า warehouse ตาม `warehouse schema (1).sql` ซึ่งมี 8 dimension และ 3 fact
+
+| แหล่ง | มาจาก | ไปที่ warehouse |
+|---|---|---|
+| Excel | ใบแจ้งซ่อม Google Form เดิม | `fact_general_maintenance` |
+| API | ระบบครุภัณฑ์ CPEAssets | `dim_asset` และ dimension อื่นๆ, `fact_asset_maintenance`, `fact_borrow_transaction`, `fact_general_maintenance` |
+
+## วิธีรัน
+
+```bash
+pip install -r requirements.txt
+python etl_warehouse.py "ใบแจ้งซ่อม.xlsx" -o output
+```
+
+แล้วรัน `output/warehouse_load.sql` บน MySQL 8 ที่สร้างตารางจาก `warehouse schema (1).sql` ไว้แล้ว ไฟล์นี้ TRUNCATE ทุกตารางก่อน INSERT จึงรันซ้ำได้
+
+| ตัวเลือก | ความหมาย |
+|---|---|
+| `-o DIR` | โฟลเดอร์ผลลัพธ์ (default `./output`) |
+| `--api-base URL` | URL ของ API (default `https://cpe.eng.kps.ku.ac.th/CPEAssets/assets_api/`) |
+| `--mock-dir DIR` | โฟลเดอร์ mock JSON (default `mock_api/` ข้างสคริปต์) |
+| `--offline` | ไม่เรียก API จริง ใช้ข้อมูลที่ดึงไว้ใน `<out>/raw/` |
+| `--as-of YYYY-MM-DD` | วันที่อ้างอิงสำหรับคำนวณวันเกินกำหนดของรายการยืมที่ยังไม่คืน (default วันนี้) |
+| `--keep-invalid-place` | เก็บแถวที่สถานที่ใช้ไม่ได้ไว้ โดยเว้นสถานที่ว่าง แทนการลบแถว |
+
+**ผลลัพธ์**
+
+| ไฟล์ | เนื้อหา |
+|---|---|
+| `warehouse_load.sql` | SQL โหลด warehouse ทั้งหมด หัวไฟล์บอกแหล่งข้อมูล ส่วนที่เป็น mock และปัญหาที่พบ |
+| `warehouse/*.csv` | ข้อมูลรายตาราง ไว้ตรวจหรือโหลดด้วยวิธีอื่น |
+| `repair_requests_clean.xlsx` | Excel ที่ clean แล้ว มี sheet `cleaning_log` (ทุกการแก้) และ `rejected_place` (แถวที่ถูกตัด) |
+| `raw/*.json` | ข้อมูลที่ดึงจาก API จริง ใช้กับ `--offline` |
+
+---
+
+## 1. Excel ใบแจ้งซ่อม
+
+### โครงสร้างที่ต้องเป็น
+
+ไฟล์ `.xlsx` ต้องมี 3 sheet ชื่อนี้ตรงตัว:
+
+| sheet | ตำแหน่งข้อมูล |
+|---|---|
+| `การตอบแบบฟอร์ม 1` | ข้อมูลเริ่ม**แถว 4 คอลัมน์ B** (แถว 2–3 ว่าง และ header ในแถว 1 เลื่อนไปซ้าย 1 คอลัมน์จากข้อมูล ซึ่งเป็นลักษณะของไฟล์เดิม) |
+| `การตอบแบบฟอร์ม 3` | header แถว 1 ข้อมูลเริ่มแถว 2 คอลัมน์ A |
+| `การตอบแบบฟอร์ม 4` | header แถว 1 ข้อมูลเริ่มแถว 2 คอลัมน์ A |
+
+sheet อื่น เช่น `การตอบแบบฟอร์ม 2` ซึ่งเป็นฟอร์มผลการปฏิบัติงาน จะไม่ถูกอ่าน
+
+> ETL อ่านคอลัมน์**ตามลำดับ ไม่ใช่ตามชื่อ header** ถ้าแทรก ลบ หรือสลับคอลัมน์ใน Google Form จะอ่านผิดหรือ error ต้องแก้ใน `extract()` ก่อน
+
+**ลำดับคอลัมน์ sheet 3 และ 4** (11 คอลัมน์ A–K)
+
+| # | คอลัมน์ | ใช้ทำอะไร |
+|---|---|---|
+| 1 | ประทับเวลา | **ต้องมี** ต้องเป็น datetime ใช้ตรวจวันแจ้งที่พิมพ์ผิด และตรวจการส่งซ้ำ |
+| 2 | ชื่อ-นามสกุล ผู้แจ้งซ่อม | ใช้ตรวจแถวทดสอบและการส่งซ้ำ ไม่โหลดเข้า warehouse |
+| 3 | สังกัด | → `dim_department` |
+| 4 | สถานภาพผู้แจ้งซ่อม | → `reporter_status` |
+| 5 | เบอร์โทรศัพท์ผู้แจ้งซ่อม | ไม่ใช้ (ข้อมูลส่วนบุคคล) |
+| 6 | ประเภทงานซ่อมบำรุง | → `dim_maintenance_type` |
+| 7 | สถานที่เกิดปัญหา | → `dim_location` |
+| 8 | รายละเอียดของปัญหา | ใช้ตรวจการส่งซ้ำ (warehouse ไม่มีคอลัมน์รับ) |
+| 9 | แจ้งซ่อมเมื่อ | → `reported_date_key` |
+| 10 | รายละเอียดเพิ่มเติม | รวมเข้ากับรายละเอียดของปัญหา |
+| 11 | รูปภาพประกอบ | ไม่ใช้ |
+
+**sheet 1** มีคอลัมน์เหมือนกันแต่ลำดับต่าง (B–L): ประทับเวลา, ชื่อ, สถานภาพ, เบอร์โทร, ประเภทงาน, สถานที่, รายละเอียด, แจ้งซ่อมเมื่อ, รายละเอียดเพิ่มเติม, **สังกัด**, รูปภาพ
+
+### ค่าที่ ETL รับได้ และสิ่งที่ทำให้
+
+| ช่อง | รับได้ | ETL ทำอะไร |
+|---|---|---|
+| แจ้งซ่อมเมื่อ | datetime ของ Excel หรือข้อความ `m/d/yyyy hh:mm` | ปี พ.ศ. แปลงเป็น ค.ศ.; ถ้าอ่านไม่ได้, อยู่หลังประทับเวลาเกิน 5 นาที หรือเก่ากว่าเกิน 7 วัน ให้ใช้ประทับเวลาแทน |
+| ประเภทงาน | 8 ประเภทมาตรฐานของฟอร์ม | ข้อความที่พิมพ์เองจัดเข้าประเภทตาม `TYPE_MAP` ถ้าไม่รู้จักเป็น `งานอื่นๆ` |
+| สถานภาพ | เจ้าหน้าที่ / อาจารย์ / นิสิต / ช่างเทคนิค / แม่บ้าน | ค่าอื่นจัดตาม `STATUS_MAP` ถ้าไม่รู้จักเป็น `อื่นๆ` |
+| สังกัด | ชื่อเต็ม หรือ shortname ตาม `departments` ของ API | ชื่อที่สะกดต่างแก้ตาม `EXCEL_DEPT_ALIAS` ถ้าไม่ตรงจะเพิ่มเป็นหน่วยงานใหม่ `department_id = NULL` |
+| สถานที่ | ข้อความอิสระ | แยกเป็นอาคาร/ชั้น/ห้อง/ชื่อพื้นที่ (ดูด้านล่าง) |
+
+**การอ่านสถานที่**
+- รหัสห้อง 4 หลัก เช่น `E9203`, `9203`, `ห้อง 9203` อ่านเป็น อาคาร 9 ชั้น 2 ห้อง 9203 (ตัว `E` ตัดทิ้ง)
+- `ตึก` / `อ.` แปลงเป็น `อาคาร` และแก้คำพิมพ์ผิดที่พบบ่อย
+- ชื่อพื้นที่ที่มีที่เดียว ใช้ได้แม้ไม่มีเลข เช่น ห้องงานบริการการศึกษาและพัฒนานิสิต, สำนักงานเลขานุการ, ศูนย์พลังงาน, ห้องสมุดคณะ (รายการเต็มอยู่ใน `UNIQUE_AREAS`)
+- ชื่อทั่วไปที่มีหลายที่ ต้องมีอาคารหรือรหัสห้องด้วย เช่น ห้องน้ำ, ห้อง Server, ห้องธุรการ
+
+**แถวที่ถูกตัดออก** (ดูเหตุผลได้ใน `cleaning_log` / `rejected_place`)
+- แถวทดสอบ: ชื่อขึ้นต้นด้วย "ทดสอบ" หรือมีคำว่า "ทดสอบ" ในประเภท สถานที่ หรือรายละเอียด ยกเว้น "ศูนย์ทดสอบ…" ที่เป็นชื่อหน่วยงานจริง
+- ส่งซ้ำ: ผู้แจ้งคนเดิม เนื้อหาเหมือนกันทุกช่อง ภายใน 24 ชั่วโมง
+- สถานที่ใช้ไม่ได้: เป็นอาการ (เช่น "แอร์ไม่เย็น"), อาคารที่ไม่มีจริง, อาคาร/ชั้นขัดกับรหัสห้อง หรือชื่อทั่วไปที่ไม่มีอาคาร (ใช้ `--keep-invalid-place` ถ้าต้องการเก็บแถวไว้)
+
+---
+
+## 2. API ระบบครุภัณฑ์
+
+### สถานะแต่ละ endpoint
+
+ตั้งค่าที่ `SOURCES` ใน `etl_warehouse.py`: `"api"` คือเรียก API จริง, `"mock"` คืออ่าน `mock_api/<endpoint>.json`
+
+| endpoint | ตอนนี้ | ไปที่ warehouse |
+|---|---|---|
+| `assets` | **API จริง** | `dim_asset`, `dim_asset_type`, `dim_asset_category` |
+| `departments` | mock | `dim_department` |
+| `users` | mock | `dim_user` |
+| `locations` | mock | `dim_location` |
+| `maintenance_type` | mock | `dim_maintenance_type` |
+| `maintenance_asset` | mock | `fact_asset_maintenance` |
+| `maintenance_general` | mock | `fact_general_maintenance` |
+| `borrow` | mock | `fact_borrow_transaction` |
+| `borrow_request_items` | mock | `fact_borrow_transaction` |
+
+เมื่อระบบจริงทำ endpoint ไหนเสร็จ ให้เปลี่ยนค่าใน `SOURCES` เป็น `"api"` ไม่ต้องแก้ส่วนอื่น ถ้า API ทำตามข้อกำหนดด้านล่าง
+
+### ข้อกำหนดของ API
+
+#### Request
+
+```http
+GET {API_BASE}{endpoint}.php?limit=100&page=1
+```
+
+| ส่วน | ค่า |
+|---|---|
+| `API_BASE` | `https://cpe.eng.kps.ku.ac.th/CPEAssets/assets_api/` (เปลี่ยนได้ด้วย `--api-base`) |
+| `endpoint` | ชื่อในตาราง "สถานะแต่ละ endpoint" ด้านบน เช่น `borrow.php`, `locations.php` |
+| `limit` | จำนวน record ต่อหน้า ETL ส่ง 100 |
+| `page` | เริ่มที่ 1 ETL เพิ่มทีละ 1 จนได้ครบ `total` หรือจนเจอหน้าที่ `data` เป็น `[]` |
+| method / auth | `GET` ไม่มี token หรือ login (ยังไม่รองรับ) |
+
+#### Response
+
+ทุก endpoint ตอบกลับโครงเดียวกัน (เหมือน `assets.php` ที่ใช้งานอยู่จริง) โดยใช้ `Content-Type: application/json` และ UTF-8
+
+```json
+{
+  "success": true,
+  "message": "เรียกดูรายการยืมสำเร็จ",
+  "total": 168,
+  "data": [
+    { "id": 1, "user_id": 57, "...": "..." },
+    { "id": 2, "user_id": 12, "...": "..." }
+  ]
+}
+```
+
+| key | ชนิด | ความหมาย |
+|---|---|---|
+| `success` | boolean | `false` = ETL หยุดและแสดง `message` |
+| `message` | string | ข้อความสถานะ |
+| `total` | integer | จำนวน record **ทั้งหมด** (ไม่ใช่แค่ในหน้านี้) ใช้บอกว่าดึงครบหรือยัง |
+| `data` | array | record ของหน้านี้ ไม่เกิน `limit` รายการ |
+
+ตัวอย่างการแบ่งหน้า เมื่อ `total = 168`:
+
+| request | `data` ได้กี่รายการ |
+|---|---|
+| `?limit=100&page=1` | 100 |
+| `?limit=100&page=2` | 68 แล้ว ETL หยุด เพราะครบ 168 |
+| `?limit=100&page=3` | `[]` (ถ้าถูกเรียก ต้องตอบ array ว่าง ไม่ใช่ error) |
+
+ตัวอย่าง error:
+
+```json
+{ "success": false, "message": "ไม่สามารถเชื่อมต่อฐานข้อมูลได้", "total": 0, "data": [] }
+```
+
+#### กติกาของ record ใน `data`
+
+- **1 record = 1 แถวของตารางใน DB schema** ใช้ชื่อ key เดียวกับชื่อคอลัมน์ ส่งคอลัมน์อื่นเกินมาได้ ETL จะไม่สนใจ
+- **โครงแบน ไม่ซ้อน object/array** ข้อมูลที่เกี่ยวกันอ้างถึงกันด้วย id (ดูแผนผังด้านล่าง)
+- **วันเวลา** `"YYYY-MM-DD HH:MM:SS"` (เวลาไทย), **วันที่** `"YYYY-MM-DD"` (แบบ ISO ที่มี `T` หรือ timezone ยังไม่รองรับ)
+- **ไม่มีค่า** ส่ง `null` และต้องมี key นั้นอยู่ ห้ามตัด key ทิ้ง
+- **ตัวเลข/เงิน** เป็น number (`800.0`) ไม่ใช่ string; **flag** เป็น `0` / `1`
+- **ข้อความ** เป็นภาษาไทยตรงๆ ใน UTF-8 ได้เลย
+
+#### ความสัมพันธ์ระหว่าง endpoint
+
+```
+departments.department_id ◄── assets.department_id
+                          ◄── users.department_id
+                          ◄── borrow.department_id
+                          ◄── maintenance_general.department_id
+locations.location_id     ◄── assets.location_id
+users.user_id             ◄── borrow.user_id / teacher_id / approved_by
+                          ◄── maintenance_asset.approved_by
+                          ◄── maintenance_general.staff_id
+maintenance_type.type_id  ◄── maintenance_general.maintenance_type_id
+assets.asset_id           ◄── maintenance_asset.asset_id
+                          ◄── borrow_request_items.asset_id / replace_asset_id
+borrow.id                 ◄── borrow_request_items.request_id
+maintenance_asset.id      ◄── maintenance_asset.parent_maintenance_id   (งานซ่อมซ้ำ)
+```
+
+id ที่อ้างถึงต้องมีอยู่จริงใน endpoint ปลายทาง ไม่อย่างนั้นช่องนั้นใน warehouse จะเป็น NULL
+
+### ฟิลด์ที่ ETL ใช้
+
+**ต้องมี** = ถ้าไม่มี key นี้ ETL จะ error (ค่าเป็น `null` ได้) / **ไม่บังคับ** = ไม่มีก็ได้ จะได้ NULL หรือใช้ค่าเริ่มต้น
+
+| endpoint | ต้องมี | ไม่บังคับ |
+|---|---|---|
+| `assets` | `asset_id, asset_code, asset_name, type_id, type_code, type_name, brand, year_purchase, year_fiscal, source, asset_status, location_id, department_id` | `model` |
+| `departments` | `department_id, department_name` | `shortname` (ใช้จับคู่ชื่อสังกัดใน Excel), `is_deleted` |
+| `users` | `user_id, fullname` | `role_status` (**ไม่มีใน DB schema แต่ `dim_user` ต้องใช้**), `department_id` |
+| `locations` | `location_id, location_name, building, floor, room_detail` | `is_deleted` |
+| `maintenance_type` | `type_id, type_name` | – |
+| `maintenance_asset` | `asset_id, repair_date, complete_date, cost, followup_cost, vendor, status, approved_by, repair_total_day, is_followup, followup_no` | – |
+| `maintenance_general` | `id, department_id, reporter_status, maintenance_type_id, problem_location, reported_at, status, staff_id, completed_at` | – |
+| `borrow` | `id, user_id, teacher_id, borrow_date, return_date, actual_return_date, status, return_condition, department_id, is_overdue, approved_by` | – |
+| `borrow_request_items` | `request_id, asset_id, item_status, replace_asset_id` | – |
+
+### ตัวอย่าง JSON แต่ละ endpoint
+
+ตัวอย่างนี้คือ 1 record ใน `data` แบบส่งครบทุกคอลัมน์ตาม DB schema `assets` เป็นข้อมูลจริง ส่วน endpoint อื่นมาจาก mock
+
+**`assets.php`** (API จริง ส่ง `type_name` และ `department_name` มาด้วย)
+```json
+{
+  "asset_id": 948, "asset_code": "2-K0504-FA05-09200040001/001-68", "asset_name": "เวทีสำเร็จรูป",
+  "type_id": 2, "type_name": "ครุภัณฑ์สำนักงาน", "type_code": "FA05", "category_id": null,
+  "brand": "", "year_purchase": null, "year_fiscal": null, "source": "เงินรายได้",
+  "asset_status": "พร้อมใช้งาน", "location_id": 32, "department_id": 3,
+  "department_name": "ภาควิชาวิศวกรรมเกษตร", "update_date": "2026-06-23 14:07:32"
+}
+```
+ควรเพิ่ม: `model`, `purchase_date`, `purchase_price`, `warranty_expire`, `serial_number` และใส่ค่า `brand`, `year_fiscal`, `category_id` ที่ตอนนี้ว่างเกือบทั้งหมด
+
+**`departments.php`**
+```json
+{ "department_id": 7, "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์", "shortname": "CPE", "is_deleted": 0, "deleted_at": null }
+```
+
+**`users.php`** (`role_status` / `department_id` ไม่มีในตาราง `users` ของ DB schema แต่ควรส่งมา)
+```json
+{ "user_id": 1, "fullname": "ผู้ใช้ตัวอย่าง 01", "role_status": "อาจารย์", "department_id": 5 }
+```
+`role_status`: `อาจารย์` / `เจ้าหน้าที่` / `นิสิต`
+
+**`locations.php`**
+```json
+{
+  "location_id": 1, "location_name": "ห้องเรียน 8302", "building": "อาคาร 8", "floor": "3",
+  "room_detail": "E8302", "remark": null, "is_deleted": 0, "deleted_at": null
+}
+```
+`building` / `room_detail` กรอกแบบอิสระได้ (`ตึก 8`, `E8302`, `ห้อง 8302`) ETL จะจัดรูปเอง
+
+**`maintenance_type.php`**
+```json
+{ "type_id": 1, "type_name": "งานระบบปรับอากาศ" }
+```
+ชื่อควรตรงกับประเภทในฟอร์ม Excel เพื่อให้รวมกันได้ (ตัวอย่างครบ 11 ประเภทอยู่ใน `mock_api/maintenance_type.json`)
+
+**`maintenance_asset.php`** (งานซ่อมครุภัณฑ์)
+```json
+{
+  "id": 4, "asset_id": 2657, "reporter_name": "ผู้ใช้ตัวอย่าง 36",
+  "repair_date": "2024-10-10 12:20:00", "detail": "ใช้งานได้บางครั้ง", "repair_image": null,
+  "cost": 800.0, "vendor": "ร้านซ่อมตัวอย่าง C", "status": "ซ่อมเสร็จ",
+  "executive_note": "อนุมัติให้ส่งซ่อมภายนอก", "executive_by": 15, "executive_at": "2024-10-11 12:20:00",
+  "staff_note": null, "staff_note_by": 23, "staff_note_at": "2024-10-10 15:20:00",
+  "complete_date": "2024-10-18 12:20:00", "deleted_at": null, "deleted_by": null, "updated_by": 24,
+  "approved_by": 15, "updated_at": "2024-10-18 12:20:00", "created_at": "2024-10-10 12:20:00",
+  "repair_total_day": 8, "parent_maintenance_id": null, "is_followup": 0, "followup_no": 0, "followup_cost": null
+}
+```
+งานซ่อมซ้ำของงานเดิม: `"parent_maintenance_id": 5, "is_followup": 1, "followup_no": 1, "cost": null, "followup_cost": 350.0`
+ถ้ายังซ่อมไม่เสร็จ: `complete_date` และ `repair_total_day` เป็น `null`
+
+**`maintenance_general.php`** (แจ้งซ่อมทั่วไปในระบบใหม่)
+```json
+{
+  "id": 11, "department_id": 2, "reporter_status": "เจ้าหน้าที่", "maintenance_type_id": 1,
+  "problem_location": "อาคาร 8 ชั้น 3 ห้องเรียน E8302", "problem_detail": "แอร์มีเสียงดัง",
+  "reported_at": "2026-08-11 13:30:00", "additional_detail": "-", "status": "เสร็จสิ้น",
+  "staff_id": 26, "completed_at": "2026-08-12 14:30:00",
+  "created_at": "2026-08-11 13:30:00", "updated_at": "2026-08-12 14:30:00"
+}
+```
+`problem_location` ใช้กติกาเดียวกับช่องสถานที่ใน Excel ถ้ากรอกเป็นอาการ (เช่น "แอร์ไม่เย็น") แถวนั้นจะถูกตัด
+
+**`borrow.php`** (ใบยืม 1 ใบ)
+```json
+{
+  "id": 3, "user_id": 51, "teacher_id": 15, "borrow_date": "2024-10-11", "return_date": "2024-11-10",
+  "reason": "ใช้ในงานกิจกรรม", "status": "คืนแล้ว", "created_at": "2024-10-10 11:40:00",
+  "return_by": 19, "actual_return_date": "2024-11-09 16:15:00", "return_condition": "ปกติ",
+  "return_note": null, "deleted_at": null, "phone": null, "department_id": 2,
+  "deleted_by": null, "updated_by": null, "is_overdue": 0, "approved_by": 21, "updated_at": "2024-11-09 16:15:00"
+}
+```
+`return_date` = วันกำหนดคืน, `actual_return_date` = วันคืนจริง (`null` = ยังไม่คืน), `status` = `อนุมัติ` / `คืนแล้ว` / `ปฏิเสธ`
+
+**`borrow_request_items.php`** (ครุภัณฑ์แต่ละชิ้นในใบยืม ใบยืม 1 ใบมีได้หลายชิ้น)
+```json
+{
+  "id": 3, "request_id": 3, "asset_id": 2840, "item_status": "อนุมัติ", "replace_asset_id": 3337,
+  "staff_note": "เครื่องเดิมไม่พร้อมใช้ เปลี่ยนเครื่องทดแทน", "checked_by": 18, "checked_at": "2024-10-11 09:30:00",
+  "return_status": "คืนแล้ว", "return_note": null, "returned_by": 19, "returned_at": "2024-11-09 16:15:00",
+  "deleted_at": null, "deleted_by": null
+}
+```
+`replace_asset_id` = เครื่องทดแทนที่ให้ยืมไปจริง (`null` = ไม่ได้เปลี่ยน)
+
+### สิ่งที่ ETL ทำกับข้อมูล API
+
+- **หมวดหมู่ครุภัณฑ์**: API ส่ง `category_id = null` ทุกแถว ETL จัดหมวดเองจาก `type_name` (`CATEGORY_RULES`)
+- **แหล่งเงิน (`source`)**: 8 แบบที่สะกดต่างกันรวมเป็น 4 กลุ่ม (`SOURCE_GROUP`)
+- **locations**: `building + floor + room_detail + location_name` ผ่านตัวแยกสถานที่เดียวกับ Excel ห้องเดียวกันจึงได้ `location_key` เดียวกันทั้งฝั่งครุภัณฑ์และฝั่งแจ้งซ่อม
+- **แถวที่ `is_deleted = 1`** (departments, locations): ตัดออก ยกเว้นยังมีข้อมูลอ้างถึงอยู่
+- **ผู้อนุมัติการยืม**: ใช้ `approved_by` ถ้าว่างใช้ `teacher_id`
+- **ครุภัณฑ์ที่ยืม**: ถ้ามี `replace_asset_id` ใช้เครื่องทดแทน (เครื่องที่ยืมไปจริง) และตั้ง `is_replaced_flag = 1`
+- **วันเกินกำหนด**: คืนแล้วคิดจาก `actual_return_date − return_date`; ยังไม่คืนคิดถึงวันที่ `--as-of`; ใบที่ `status = ปฏิเสธ` ไม่คิด
+- **แจ้งซ่อมทั่วไป**: ถือว่า API เป็นระบบใหม่ที่ใช้ต่อจาก Excel ถ้ามีงานใน API ที่แจ้งก่อนหรือวันเดียวกับ Excel ใบสุดท้าย ETL จะเตือนในหัวไฟล์ SQL ว่าอาจซ้ำ
+
+### Mock
+
+- `mock_api/*.json` คือตัวอย่าง response ตามข้อกำหนดข้างบน ทีมที่ทำ API ใช้เป็นแบบได้
+- `departments` ใช้ id และชื่อจริงจาก assets ส่วนที่เหลือเป็นค่าสมมติ อ้าง asset_id จริง
+- ช่วงข้อมูล: ปีงบประมาณ 2568–2569 ส่วนแจ้งซ่อมทั่วไปเริ่มหลัง Excel
+- สร้างใหม่ได้ด้วยคำสั่งนี้ (seed คงที่ ได้ข้อมูลชุดเดิมทุกครั้ง):
+  ```bash
+  python mock_api/generate_mock.py output/raw/assets.json mock_api
+  ```
+- รายละเอียด field ครบทุกตัวอยู่ใน [mock_api/API_SPEC.md](mock_api/API_SPEC.md)
+
+---
+
+## ข้อจำกัดที่ควรรู้
+
+- `fact_general_maintenance` ไม่มีคอลัมน์รายละเอียดของปัญหาและชั่วโมงที่แจ้ง จึงไม่ได้โหลด 2 อย่างนี้
+- แถวจาก Excel ไม่มีวันเสร็จ สถานะงาน ผู้รับผิดชอบ และเวลาแก้ไข (เป็น NULL)
+- ใบแจ้งซ่อมที่ระบุหลายห้อง/ชั้น/อาคาร เก็บรวมในช่องเดียว เช่น ห้อง `4401, 4402` เพราะ fact มี `location_key` ได้ค่าเดียว
+- API จริงยังไม่ส่ง `model`, `purchase_price`, `category` และ `year_fiscal` เป็น null ทั้งหมด
+- `fiscal_year` ใน `dim_date` เป็นปีงบประมาณ **พ.ศ.** เริ่ม 1 ต.ค. (เปลี่ยนได้ที่ `FISCAL_YEAR_BE`)

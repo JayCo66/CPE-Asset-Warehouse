@@ -1,0 +1,311 @@
+{
+ "success": true,
+ "message": "เรียกดูรายการสถานที่สำเร็จ",
+ "total": 30,
+ "data": [
+  {
+   "location_id": 1,
+   "location_name": "ห้องเรียน 8302",
+   "building": "อาคาร 8",
+   "floor": "3",
+   "room_detail": "E8302",
+   "remark": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "location_id": 2,
+   "location_name": "ห้องเรียน 8303",
+   "building": "อาคาร 8",
+   "floor": "3",
+   "room_detail": "ห้อง 8303",
+   "remark": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "location_id": 4,
+   "location_name": "ห้อง Server คณะ",
+   "building": "อาคาร 8",
+   "floor": "3",
+   "room_detail": "ห้อง server",
+   "remark": "ห้องควบคุมอุณหภูมิ",
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "location_id": 5,
+   "location_name": "ห้องปฏิบัติการคอมพิวเตอร์ 1",
+   "building": "อาคาร 8",
+   "floor": "3",
+   "room_detail": "8314",
+   "remark": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "location_id": 6,
+   "location_name": "สำนักประสานงานโลจิสติกส์",
+   "building": "อาคาร 9",
+   "floor": "2",
+   "room_detail": "9204",
+   "remark": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "location_id": 7,
+   "location_name": "ห้องงานบริการการศึกษาและพัฒนานิสิต",
+   "building": "ตึก 9",
+   "floor": "1",
+   "room_detail": null,
+   "remark": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "location_id": 8,
+   "location_name": "สำนักงานเลขานุการคณะ",
+   "building": "อาคาร 9",
+   "floor": "3",
+   "room_detail": null,
+   "remark": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "location_id": 9,
+   "location_name": "ห้องเรียน 4401",
+   "building": "อาคาร 4",
+   "floor": "4",
+   "room_detail": "E4401",
+   "remark": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "location_id": 10,
+   "location_name": "ห้องเรียน 4402",
+   "building": "อาคาร 4",
+   "floor": "4",
+   "room_detail": "E4402",
+   "remark": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "location_id": 11,
+   "location_name": "ห้องสมุดคณะ",
+   "building": "อาคาร 4",
+   "floor": "3",
+   "room_detail": null,
+   "remark": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "location_id": 12,
+   "location_name": "ห้องปฏิบัติการ 4305",
+   "building": "ตึก4",
+   "floor": "3",
+   "room_detail": "4305",
+   "remark": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "location_id": 13,
+   "location_name": "ห้องพักอาจารย์ภาควิชาวิศวกรรมโยธา",
+   "building": "อาคาร 6",
+   "floor": "2",
+   "room_detail": "6218",
+   "remark": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "location_id": 14,
+   "location_name": "ห้องประชุมภาควิชาวิศวกรรมโยธา",
+   "building": "อาคาร 6",
+   "floor": "2",
+   "room_detail": "E6221",
+   "remark": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "location_id": 15,
+   "location_name": "ห้องปฏิบัติการ 7101",
+   "building": "อาคาร 7",
+   "floor": "1",
+   "room_detail": "7101",
+   "remark": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "location_id": 16,
+   "location_name": "ห้องปฏิบัติการ 7107",
+   "building": "อาคาร 7",
+   "floor": "1",
+   "room_detail": "7107",
+   "remark": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "location_id": 19,
+   "location_name": "ห้อง Server อาคาร 1",
+   "building": "อาคาร 1",
+   "floor": "2",
+   "room_detail": "ห้อง server",
+   "remark": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "location_id": 21,
+   "location_name": "ห้องเรียน 1214",
+   "building": "อาคาร 1",
+   "floor": "2",
+   "room_detail": "1214",
+   "remark": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "location_id": 22,
+   "location_name": "ห้องเรียน 9501",
+   "building": "อาคาร 9",
+   "floor": "5",
+   "room_detail": "9501",
+   "remark": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "location_id": 23,
+   "location_name": "ห้องเรียน 9502",
+   "building": "อาคาร 9",
+   "floor": "5",
+   "room_detail": "E9502",
+   "remark": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "location_id": 24,
+   "location_name": "ห้องธุรการภาควิชาวิศวกรรมอุตสาหการ",
+   "building": "อาคาร 9",
+   "floor": "2",
+   "room_detail": "E9205",
+   "remark": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "location_id": 25,
+   "location_name": "ห้องประชุม 1",
+   "building": "อาคาร 9",
+   "floor": "3",
+   "room_detail": null,
+   "remark": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "location_id": 26,
+   "location_name": "ห้องปฏิบัติการ 3104",
+   "building": "อาคาร 3",
+   "floor": "1",
+   "room_detail": "3104",
+   "remark": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "location_id": 30,
+   "location_name": "ห้องปฏิบัติการ 3201",
+   "building": "อาคาร 3",
+   "floor": "2",
+   "room_detail": "3201",
+   "remark": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "location_id": 31,
+   "location_name": "ห้องปฏิบัติการ 5102",
+   "building": "อาคาร 5",
+   "floor": "1",
+   "room_detail": "5102",
+   "remark": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "location_id": 32,
+   "location_name": "ห้องปฏิบัติการ 5203",
+   "building": "อาคาร 5",
+   "floor": "2",
+   "room_detail": "5203",
+   "remark": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "location_id": 36,
+   "location_name": "ห้องเรียน 6301",
+   "building": "อาคาร 6",
+   "floor": "3",
+   "room_detail": "6301",
+   "remark": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "location_id": 39,
+   "location_name": "ห้องเรียน 2203",
+   "building": "อาคาร 2",
+   "floor": "2",
+   "room_detail": "2203",
+   "remark": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "location_id": 44,
+   "location_name": "ห้องปฏิบัติการ 2105",
+   "building": "อาคาร 2",
+   "floor": "1",
+   "room_detail": "2105",
+   "remark": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "location_id": 46,
+   "location_name": "ห้องประชุมสโมสรนิสิต",
+   "building": "อาคารกิจการนิสิต",
+   "floor": "2",
+   "room_detail": "204",
+   "remark": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "location_id": 47,
+   "location_name": "ห้องเก็บของเดิม (ยุบแล้ว)",
+   "building": "อาคาร 8",
+   "floor": "1",
+   "room_detail": "8105",
+   "remark": "รวมกับห้อง 8107",
+   "is_deleted": 1,
+   "deleted_at": "2025-03-01 10:00:00"
+  }
+ ],
+ "_mock": {
+  "endpoint": "https://cpe.eng.kps.ku.ac.th/CPEAssets/assets_api/locations.php?limit=100&page=1",
+  "note": "MOCK DATA สำหรับทดสอบ ETL เท่านั้น ไม่ใช่ข้อมูลจริง"
+ }
+}

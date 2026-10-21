@@ -1,0 +1,371 @@
+{
+ "success": true,
+ "message": "เรียกดูรายชื่อผู้ใช้สำเร็จ",
+ "total": 60,
+ "data": [
+  {
+   "user_id": 1,
+   "fullname": "ผู้ใช้ตัวอย่าง 01",
+   "role_status": "อาจารย์",
+   "department_id": 5
+  },
+  {
+   "user_id": 2,
+   "fullname": "ผู้ใช้ตัวอย่าง 02",
+   "role_status": "อาจารย์",
+   "department_id": 4
+  },
+  {
+   "user_id": 3,
+   "fullname": "ผู้ใช้ตัวอย่าง 03",
+   "role_status": "อาจารย์",
+   "department_id": 8
+  },
+  {
+   "user_id": 4,
+   "fullname": "ผู้ใช้ตัวอย่าง 04",
+   "role_status": "อาจารย์",
+   "department_id": 1
+  },
+  {
+   "user_id": 5,
+   "fullname": "ผู้ใช้ตัวอย่าง 05",
+   "role_status": "อาจารย์",
+   "department_id": 4
+  },
+  {
+   "user_id": 6,
+   "fullname": "ผู้ใช้ตัวอย่าง 06",
+   "role_status": "อาจารย์",
+   "department_id": 3
+  },
+  {
+   "user_id": 7,
+   "fullname": "ผู้ใช้ตัวอย่าง 07",
+   "role_status": "อาจารย์",
+   "department_id": 6
+  },
+  {
+   "user_id": 8,
+   "fullname": "ผู้ใช้ตัวอย่าง 08",
+   "role_status": "อาจารย์",
+   "department_id": 5
+  },
+  {
+   "user_id": 9,
+   "fullname": "ผู้ใช้ตัวอย่าง 09",
+   "role_status": "อาจารย์",
+   "department_id": 4
+  },
+  {
+   "user_id": 10,
+   "fullname": "ผู้ใช้ตัวอย่าง 10",
+   "role_status": "อาจารย์",
+   "department_id": 8
+  },
+  {
+   "user_id": 11,
+   "fullname": "ผู้ใช้ตัวอย่าง 11",
+   "role_status": "อาจารย์",
+   "department_id": 1
+  },
+  {
+   "user_id": 12,
+   "fullname": "ผู้ใช้ตัวอย่าง 12",
+   "role_status": "อาจารย์",
+   "department_id": 7
+  },
+  {
+   "user_id": 13,
+   "fullname": "ผู้ใช้ตัวอย่าง 13",
+   "role_status": "อาจารย์",
+   "department_id": 5
+  },
+  {
+   "user_id": 14,
+   "fullname": "ผู้ใช้ตัวอย่าง 14",
+   "role_status": "อาจารย์",
+   "department_id": 2
+  },
+  {
+   "user_id": 15,
+   "fullname": "ผู้ใช้ตัวอย่าง 15",
+   "role_status": "อาจารย์",
+   "department_id": 4
+  },
+  {
+   "user_id": 16,
+   "fullname": "ผู้ใช้ตัวอย่าง 16",
+   "role_status": "เจ้าหน้าที่",
+   "department_id": 2
+  },
+  {
+   "user_id": 17,
+   "fullname": "ผู้ใช้ตัวอย่าง 17",
+   "role_status": "เจ้าหน้าที่",
+   "department_id": 3
+  },
+  {
+   "user_id": 18,
+   "fullname": "ผู้ใช้ตัวอย่าง 18",
+   "role_status": "เจ้าหน้าที่",
+   "department_id": 8
+  },
+  {
+   "user_id": 19,
+   "fullname": "ผู้ใช้ตัวอย่าง 19",
+   "role_status": "เจ้าหน้าที่",
+   "department_id": 3
+  },
+  {
+   "user_id": 20,
+   "fullname": "ผู้ใช้ตัวอย่าง 20",
+   "role_status": "เจ้าหน้าที่",
+   "department_id": 2
+  },
+  {
+   "user_id": 21,
+   "fullname": "ผู้ใช้ตัวอย่าง 21",
+   "role_status": "เจ้าหน้าที่",
+   "department_id": 2
+  },
+  {
+   "user_id": 22,
+   "fullname": "ผู้ใช้ตัวอย่าง 22",
+   "role_status": "เจ้าหน้าที่",
+   "department_id": 11
+  },
+  {
+   "user_id": 23,
+   "fullname": "ผู้ใช้ตัวอย่าง 23",
+   "role_status": "เจ้าหน้าที่",
+   "department_id": 6
+  },
+  {
+   "user_id": 24,
+   "fullname": "ผู้ใช้ตัวอย่าง 24",
+   "role_status": "เจ้าหน้าที่",
+   "department_id": 2
+  },
+  {
+   "user_id": 25,
+   "fullname": "ผู้ใช้ตัวอย่าง 25",
+   "role_status": "เจ้าหน้าที่",
+   "department_id": 2
+  },
+  {
+   "user_id": 26,
+   "fullname": "ผู้ใช้ตัวอย่าง 26",
+   "role_status": "เจ้าหน้าที่",
+   "department_id": 8
+  },
+  {
+   "user_id": 27,
+   "fullname": "ผู้ใช้ตัวอย่าง 27",
+   "role_status": "เจ้าหน้าที่",
+   "department_id": 2
+  },
+  {
+   "user_id": 28,
+   "fullname": "ผู้ใช้ตัวอย่าง 28",
+   "role_status": "นิสิต",
+   "department_id": 7
+  },
+  {
+   "user_id": 29,
+   "fullname": "ผู้ใช้ตัวอย่าง 29",
+   "role_status": "นิสิต",
+   "department_id": 1
+  },
+  {
+   "user_id": 30,
+   "fullname": "ผู้ใช้ตัวอย่าง 30",
+   "role_status": "นิสิต",
+   "department_id": 5
+  },
+  {
+   "user_id": 31,
+   "fullname": "ผู้ใช้ตัวอย่าง 31",
+   "role_status": "นิสิต",
+   "department_id": 4
+  },
+  {
+   "user_id": 32,
+   "fullname": "ผู้ใช้ตัวอย่าง 32",
+   "role_status": "นิสิต",
+   "department_id": 5
+  },
+  {
+   "user_id": 33,
+   "fullname": "ผู้ใช้ตัวอย่าง 33",
+   "role_status": "นิสิต",
+   "department_id": 2
+  },
+  {
+   "user_id": 34,
+   "fullname": "ผู้ใช้ตัวอย่าง 34",
+   "role_status": "นิสิต",
+   "department_id": 3
+  },
+  {
+   "user_id": 35,
+   "fullname": "ผู้ใช้ตัวอย่าง 35",
+   "role_status": "นิสิต",
+   "department_id": 4
+  },
+  {
+   "user_id": 36,
+   "fullname": "ผู้ใช้ตัวอย่าง 36",
+   "role_status": "นิสิต",
+   "department_id": 8
+  },
+  {
+   "user_id": 37,
+   "fullname": "ผู้ใช้ตัวอย่าง 37",
+   "role_status": "นิสิต",
+   "department_id": 2
+  },
+  {
+   "user_id": 38,
+   "fullname": "ผู้ใช้ตัวอย่าง 38",
+   "role_status": "นิสิต",
+   "department_id": 3
+  },
+  {
+   "user_id": 39,
+   "fullname": "ผู้ใช้ตัวอย่าง 39",
+   "role_status": "นิสิต",
+   "department_id": 4
+  },
+  {
+   "user_id": 40,
+   "fullname": "ผู้ใช้ตัวอย่าง 40",
+   "role_status": "นิสิต",
+   "department_id": 2
+  },
+  {
+   "user_id": 41,
+   "fullname": "ผู้ใช้ตัวอย่าง 41",
+   "role_status": "นิสิต",
+   "department_id": 11
+  },
+  {
+   "user_id": 42,
+   "fullname": "ผู้ใช้ตัวอย่าง 42",
+   "role_status": "นิสิต",
+   "department_id": 4
+  },
+  {
+   "user_id": 43,
+   "fullname": "ผู้ใช้ตัวอย่าง 43",
+   "role_status": "นิสิต",
+   "department_id": 2
+  },
+  {
+   "user_id": 44,
+   "fullname": "ผู้ใช้ตัวอย่าง 44",
+   "role_status": "นิสิต",
+   "department_id": 1
+  },
+  {
+   "user_id": 45,
+   "fullname": "ผู้ใช้ตัวอย่าง 45",
+   "role_status": "นิสิต",
+   "department_id": 3
+  },
+  {
+   "user_id": 46,
+   "fullname": "ผู้ใช้ตัวอย่าง 46",
+   "role_status": "นิสิต",
+   "department_id": 6
+  },
+  {
+   "user_id": 47,
+   "fullname": "ผู้ใช้ตัวอย่าง 47",
+   "role_status": "นิสิต",
+   "department_id": 3
+  },
+  {
+   "user_id": 48,
+   "fullname": "ผู้ใช้ตัวอย่าง 48",
+   "role_status": "นิสิต",
+   "department_id": 7
+  },
+  {
+   "user_id": 49,
+   "fullname": "ผู้ใช้ตัวอย่าง 49",
+   "role_status": "นิสิต",
+   "department_id": 5
+  },
+  {
+   "user_id": 50,
+   "fullname": "ผู้ใช้ตัวอย่าง 50",
+   "role_status": "นิสิต",
+   "department_id": 2
+  },
+  {
+   "user_id": 51,
+   "fullname": "ผู้ใช้ตัวอย่าง 51",
+   "role_status": "นิสิต",
+   "department_id": 2
+  },
+  {
+   "user_id": 52,
+   "fullname": "ผู้ใช้ตัวอย่าง 52",
+   "role_status": "นิสิต",
+   "department_id": 3
+  },
+  {
+   "user_id": 53,
+   "fullname": "ผู้ใช้ตัวอย่าง 53",
+   "role_status": "นิสิต",
+   "department_id": 3
+  },
+  {
+   "user_id": 54,
+   "fullname": "ผู้ใช้ตัวอย่าง 54",
+   "role_status": "นิสิต",
+   "department_id": 6
+  },
+  {
+   "user_id": 55,
+   "fullname": "ผู้ใช้ตัวอย่าง 55",
+   "role_status": "นิสิต",
+   "department_id": 9
+  },
+  {
+   "user_id": 56,
+   "fullname": "ผู้ใช้ตัวอย่าง 56",
+   "role_status": "นิสิต",
+   "department_id": 3
+  },
+  {
+   "user_id": 57,
+   "fullname": "ผู้ใช้ตัวอย่าง 57",
+   "role_status": "นิสิต",
+   "department_id": 2
+  },
+  {
+   "user_id": 58,
+   "fullname": "ผู้ใช้ตัวอย่าง 58",
+   "role_status": "นิสิต",
+   "department_id": 5
+  },
+  {
+   "user_id": 59,
+   "fullname": "ผู้ใช้ตัวอย่าง 59",
+   "role_status": "นิสิต",
+   "department_id": 8
+  },
+  {
+   "user_id": 60,
+   "fullname": "ผู้ใช้ตัวอย่าง 60",
+   "role_status": "นิสิต",
+   "department_id": 2
+  }
+ ],
+ "_mock": {
+  "endpoint": "https://cpe.eng.kps.ku.ac.th/CPEAssets/assets_api/users.php?limit=100&page=1",
+  "note": "MOCK DATA สำหรับทดสอบ ETL เท่านั้น ไม่ใช่ข้อมูลจริง"
+ }
+}

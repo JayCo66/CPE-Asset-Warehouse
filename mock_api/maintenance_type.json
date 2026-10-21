@@ -1,0 +1,55 @@
+{
+ "success": true,
+ "message": "เรียกดูประเภทงานซ่อมสำเร็จ",
+ "total": 11,
+ "data": [
+  {
+   "type_id": 1,
+   "type_name": "งานระบบปรับอากาศ"
+  },
+  {
+   "type_id": 2,
+   "type_name": "งานระบบไฟฟ้า/แสงสว่าง"
+  },
+  {
+   "type_id": 3,
+   "type_name": "งานโสตทัศนูปกรณ์"
+  },
+  {
+   "type_id": 4,
+   "type_name": "งานอาคาร/สถานที่"
+  },
+  {
+   "type_id": 5,
+   "type_name": "งานระบบโทรศัพท์"
+  },
+  {
+   "type_id": 6,
+   "type_name": "งานระบบเครือข่าย/อินเตอร์เน็ต"
+  },
+  {
+   "type_id": 7,
+   "type_name": "งานประปา"
+  },
+  {
+   "type_id": 8,
+   "type_name": "งานสุขภัณฑ์"
+  },
+  {
+   "type_id": 9,
+   "type_name": "งานคอมพิวเตอร์"
+  },
+  {
+   "type_id": 10,
+   "type_name": "งานกล้องวงจรปิด"
+  },
+  {
+   "type_id": 11,
+   "type_name": "งานอื่นๆ"
+  }
+ ],
+ "_mock": {
+  "endpoint": "https://cpe.eng.kps.ku.ac.th/CPEAssets/assets_api/maintenance_type.php?limit=100&page=1",
+  "note": "MOCK DATA สำหรับทดสอบ ETL เท่านั้น ไม่ใช่ข้อมูลจริง"
+ }
+}
