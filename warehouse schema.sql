@@ -60,7 +60,6 @@ CREATE TABLE `dim_asset` (
   `asset_name` VARCHAR(200),
   `brand` VARCHAR(100),
   `model` VARCHAR(100),
-  `purchase_price` DECIMAL(12,2),
   `year_purchase` VARCHAR(10),
   `year_fiscal` VARCHAR(10),
   `source` VARCHAR(255),
