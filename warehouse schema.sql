@@ -47,6 +47,7 @@ CREATE TABLE `dim_asset_type` (
 
 CREATE TABLE `dim_location` (
   `location_key` INT AUTO_INCREMENT PRIMARY KEY,
+  `location_id` INT COMMENT 'Original ID จากตาราง locations',
   `building` VARCHAR(100) COMMENT 'อาคาร (เช่น อาคาร 9, อาคาร 8)',
   `floor` VARCHAR(50) COMMENT 'ชั้น (เช่น 1, 2, 3)',
   `room` VARCHAR(100) COMMENT 'ห้อง (เช่น 8303, 9204)',

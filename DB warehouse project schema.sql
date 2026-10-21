@@ -12,7 +12,6 @@ CREATE TABLE `asset` (
   `detailed_spec` text,
   `serial_number` varchar(100),
   `purchase_date` date,
-  `purchase_price` decimal(12,2),
   `warranty_expire` date,
   `year_purchase` varchar(10),
   `year_fiscal` varchar(10),
@@ -132,6 +131,17 @@ CREATE TABLE `departments` (
   `department_name` varchar(255)
 );
 
+CREATE TABLE `locations` (
+  `location_id` INT AUTO_INCREMENT PRIMARY KEY,
+  `location_name` varchar(150) NOT NULL,
+  `building` varchar(100) DEFAULT NULL,
+  `floor` varchar(20) DEFAULT NULL,
+  `room_detail` varchar(255) DEFAULT NULL,
+  `remark` varchar(255) DEFAULT NULL,
+  `is_deleted` tinyint(1) NOT NULL DEFAULT 0,
+  `deleted_at` datetime DEFAULT NULL
+);
+
 CREATE TABLE `users` (
   `user_id` INT AUTO_INCREMENT PRIMARY KEY,
   `fullname` varchar(255)
@@ -157,3 +167,4 @@ ALTER TABLE `borrow_request_items` ADD FOREIGN KEY (`returned_by`) REFERENCES `u
 ALTER TABLE `borrow_request_items` ADD FOREIGN KEY (`deleted_by`) REFERENCES `users` (`user_id`);
 ALTER TABLE `borrow` ADD FOREIGN KEY (`department_id`) REFERENCES `departments` (`department_id`);
 ALTER TABLE `asset` ADD FOREIGN KEY (`department_id`) REFERENCES `departments` (`department_id`);
+ALTER TABLE `asset` ADD FOREIGN KEY (`location_id`) REFERENCES `locations` (`location_id`);
