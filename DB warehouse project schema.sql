@@ -147,6 +147,34 @@ CREATE TABLE `users` (
   `fullname` varchar(255)
 );
 
+CREATE TABLE `asset_categories` (
+  `category_id` INT AUTO_INCREMENT PRIMARY KEY,
+  `category_code` varchar(10) UNIQUE,
+  `category_name_th` varchar(255) NOT NULL,
+  `category_name_en` varchar(255) NOT NULL,
+  `description` text,
+  `status` enum('active','inactive') DEFAULT 'active',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE `asset_types` (
+  `type_id` INT AUTO_INCREMENT PRIMARY KEY,
+  `type_code` varchar(20) NOT NULL,
+  `type_name` varchar(100) NOT NULL,
+  `description` text,
+  `is_deleted` tinyint(1) NOT NULL DEFAULT 0,
+  `deleted_at` datetime DEFAULT NULL
+);
+
+CREATE TABLE `roles` (
+  `role_id` INT AUTO_INCREMENT PRIMARY KEY,
+  `role_name` varchar(50) NOT NULL,
+  `description` text,
+  `is_deleted` tinyint(1) NOT NULL DEFAULT 0,
+  `deleted_at` datetime DEFAULT NULL
+);
+
 -- เพิ่ม Foreign Keys (ลบ DEFERRABLE ออกเพื่อให้รันผ่านใน MySQL)
 ALTER TABLE `maintenance_asset` ADD FOREIGN KEY (`asset_id`) REFERENCES `asset` (`asset_id`);
 ALTER TABLE `maintenance_asset` ADD FOREIGN KEY (`parent_maintenance_id`) REFERENCES `maintenance_asset` (`id`);
@@ -168,3 +196,5 @@ ALTER TABLE `borrow_request_items` ADD FOREIGN KEY (`deleted_by`) REFERENCES `us
 ALTER TABLE `borrow` ADD FOREIGN KEY (`department_id`) REFERENCES `departments` (`department_id`);
 ALTER TABLE `asset` ADD FOREIGN KEY (`department_id`) REFERENCES `departments` (`department_id`);
 ALTER TABLE `asset` ADD FOREIGN KEY (`location_id`) REFERENCES `locations` (`location_id`);
+ALTER TABLE `asset` ADD FOREIGN KEY (`category_id`) REFERENCES `asset_categories` (`category_id`);
+ALTER TABLE `asset` ADD FOREIGN KEY (`type_id`) REFERENCES `asset_types` (`type_id`);
