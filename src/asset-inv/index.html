@@ -158,6 +158,111 @@
           </article>
         </section>
 
+        <section class="panel asset-register-panel" id="asset-register" aria-labelledby="asset-register-title">
+          <div class="panel-heading asset-register-heading">
+            <div>
+              <p class="panel-kicker">Live source · assets_api</p>
+              <h2 id="asset-register-title">Asset register preview</h2>
+              <p class="panel-description">
+                Search the currently loaded page returned by <code>assets.php</code>. The live
+                source exposes inventory identity, type, status, ownership, and update details.
+              </p>
+            </div>
+            <div class="asset-source-status">
+              <span class="status-chip status-chip-info" id="asset-api-status">Connecting</span>
+              <span class="panel-aside" id="asset-api-updated">Waiting for response</span>
+            </div>
+          </div>
+
+          <div class="asset-summary" aria-label="Live asset source summary">
+            <div class="asset-summary-item">
+              <span class="asset-summary-label">Total in API</span>
+              <strong class="asset-summary-value" id="asset-api-total">—</strong>
+              <span class="asset-summary-detail">Non-deleted assets</span>
+            </div>
+            <div class="asset-summary-item">
+              <span class="asset-summary-label">Preview rows</span>
+              <strong class="asset-summary-value" id="asset-api-loaded">—</strong>
+              <span class="asset-summary-detail" id="asset-api-pages">Page 1</span>
+            </div>
+            <div class="asset-summary-item">
+              <span class="asset-summary-label">Types in preview</span>
+              <strong class="asset-summary-value" id="asset-api-type-count">—</strong>
+              <span class="asset-summary-detail">Distinct type names</span>
+            </div>
+            <div class="asset-summary-item">
+              <span class="asset-summary-label">Latest row update</span>
+              <strong class="asset-summary-value" id="asset-api-latest">—</strong>
+              <span class="asset-summary-detail">From loaded rows</span>
+            </div>
+          </div>
+
+          <div class="asset-register-toolbar table-controls">
+            <label class="input-label" for="asset-api-search">
+              <span class="sr-only">Search live asset register</span>
+              <input id="asset-api-search" type="search" placeholder="Search loaded rows by code, name, type, or department" />
+            </label>
+            <label class="select-label" for="asset-api-status-filter">
+              Status
+              <select id="asset-api-status-filter">
+                <option value="all">All statuses</option>
+              </select>
+            </label>
+            <label class="select-label" for="asset-api-type-filter">
+              Type
+              <select id="asset-api-type-filter">
+                <option value="all">All types</option>
+              </select>
+            </label>
+            <button class="button button-secondary" type="button" id="refresh-asset-api-button">
+              Refresh source
+            </button>
+          </div>
+
+          <div class="api-state api-state-loading" id="asset-api-loading" role="status" aria-live="polite">
+            Loading the live asset register…
+          </div>
+          <div class="api-state api-state-error" id="asset-api-error" role="alert" hidden>
+            <strong>Live source unavailable.</strong>
+            <span id="asset-api-error-message">Try refreshing the source.</span>
+          </div>
+          <div class="table-wrap" id="asset-api-table-wrap" hidden>
+            <table class="asset-api-table">
+              <caption class="sr-only">Live asset register preview from assets.php</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Asset</th>
+                  <th scope="col">Type / brand</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Purchased</th>
+                  <th scope="col">Department</th>
+                  <th scope="col">Location ID</th>
+                  <th scope="col">Updated</th>
+                </tr>
+              </thead>
+              <tbody id="asset-api-body"></tbody>
+            </table>
+          </div>
+          <div class="empty-state" id="asset-api-empty" hidden>
+            <strong>No live assets match these filters</strong>
+            <p>Clear the search or choose a different status or type.</p>
+          </div>
+          <div class="asset-pagination" aria-label="Live asset register pages">
+            <button class="button button-secondary" type="button" id="asset-api-previous" disabled>
+              Previous page
+            </button>
+            <span id="asset-api-page-label">Page 1 of 1</span>
+            <button class="button button-secondary" type="button" id="asset-api-next" disabled>
+              Next page
+            </button>
+          </div>
+          <div class="asset-api-status-mix" id="asset-api-status-mix" aria-live="polite"></div>
+          <div class="table-footer">
+            <span id="asset-api-results-count">Waiting for live data</span>
+            <span>Source · <code>assets_api/assets.php</code></span>
+          </div>
+        </section>
+
         <section class="analysis-grid" aria-label="Lifecycle analysis">
           <article class="panel age-panel">
             <div class="panel-heading">
