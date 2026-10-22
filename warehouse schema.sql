@@ -126,6 +126,23 @@ CREATE TABLE `fact_general_maintenance` (
   `resolution_days` INT COMMENT 'ระยะเวลาที่ใช้แก้ไขปัญหา (วัน)'
 );
 
+CREATE TABLE `fact_asset_inventory` (
+  `asset_fact_id` INT AUTO_INCREMENT PRIMARY KEY,
+  `snapshot_date_key` INT COMMENT 'FK เชื่อม dim_date (วันที่บันทึกยอด snapshot)',
+  `acquisition_date_key` INT COMMENT 'FK เชื่อม dim_date (ปีงบประมาณ/วันที่จัดหามา ถอดจากรหัสหรือปีจัดซื้อ)',
+  `asset_key` INT COMMENT 'FK เชื่อม dim_asset',
+  `department_key` INT COMMENT 'FK เชื่อม dim_department (หน่วยงานผู้ถือครอง)',
+  `type_key` INT COMMENT 'FK เชื่อม dim_asset_type',
+  `category_key` INT COMMENT 'FK เชื่อม dim_asset_category',
+  `location_key` INT COMMENT 'FK เชื่อม dim_location',
+  `asset_count` INT DEFAULT 1 COMMENT 'จำนวนชิ้น (=1 ใช้ SUM นับยอด)',
+  `is_available_flag` TINYINT(1) COMMENT '1 = พร้อมใช้งาน, 0 = ไม่พร้อม/ชำรุด/ส่งซ่อม',
+  `is_damaged_flag` TINYINT(1) COMMENT '1 = ชำรุด/ส่งซ่อม, 0 = ปกติ',
+  `is_below_threshold_flag` TINYINT(1) COMMENT '1 = ต่ำกว่าเกณฑ์ (< 5,000 บาท), 0 = ตามเกณฑ์',
+  `has_location_flag` TINYINT(1) COMMENT '1 = ระบุตำแหน่งที่ตั้งแล้ว, 0 = ยังไม่ระบุ',
+  `asset_age_years` INT COMMENT 'อายุครุภัณฑ์คำนวณถึงปัจจุบัน (ปี)'
+);
+
 -- ==========================================
 -- RELATIONSHIPS (การสร้าง Foreign Keys)
 -- ==========================================
@@ -158,3 +175,12 @@ ALTER TABLE `fact_general_maintenance` ADD FOREIGN KEY (`department_key`) REFERE
 ALTER TABLE `fact_general_maintenance` ADD FOREIGN KEY (`maintenance_type_key`) REFERENCES `dim_maintenance_type` (`maintenance_type_key`);
 ALTER TABLE `fact_general_maintenance` ADD FOREIGN KEY (`location_key`) REFERENCES `dim_location` (`location_key`);
 ALTER TABLE `fact_general_maintenance` ADD FOREIGN KEY (`staff_user_key`) REFERENCES `dim_user` (`user_key`);
+
+-- Links สำหรับ Fact Asset Inventory
+ALTER TABLE `fact_asset_inventory` ADD FOREIGN KEY (`snapshot_date_key`) REFERENCES `dim_date` (`date_key`);
+ALTER TABLE `fact_asset_inventory` ADD FOREIGN KEY (`acquisition_date_key`) REFERENCES `dim_date` (`date_key`);
+ALTER TABLE `fact_asset_inventory` ADD FOREIGN KEY (`asset_key`) REFERENCES `dim_asset` (`asset_key`);
+ALTER TABLE `fact_asset_inventory` ADD FOREIGN KEY (`department_key`) REFERENCES `dim_department` (`department_key`);
+ALTER TABLE `fact_asset_inventory` ADD FOREIGN KEY (`type_key`) REFERENCES `dim_asset_type` (`type_key`);
+ALTER TABLE `fact_asset_inventory` ADD FOREIGN KEY (`category_key`) REFERENCES `dim_asset_category` (`category_key`);
+ALTER TABLE `fact_asset_inventory` ADD FOREIGN KEY (`location_key`) REFERENCES `dim_location` (`location_key`);
