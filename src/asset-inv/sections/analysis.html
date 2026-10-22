@@ -1,79 +1,38 @@
-<section class="analysis-grid" aria-label="การวิเคราะห์วงจรชีวิต">
+<section class="analysis-grid" aria-label="การวิเคราะห์วงจรชีวิตสินทรัพย์">
   <article class="panel age-panel">
     <div class="panel-heading">
-      <div>
-        <p class="panel-kicker">มุมมองวงจรชีวิต</p>
-        <h2>โปรไฟล์อายุสินทรัพย์</h2>
-      </div>
-      <span class="panel-aside">อายุมัธยฐาน · 4.8 ปี</span>
+      <h2>การกระจายอายุสินทรัพย์</h2>
+      <span class="panel-aside" id="age-unknown-count">อายุที่ไม่ทราบ — รายการ</span>
     </div>
-    <div class="age-chart" id="age-chart"></div>
+    <div class="age-chart" id="age-chart" hidden></div>
+    <div class="empty-state" id="age-data-empty" role="status" aria-live="polite">
+      <strong>ยังไม่มีข้อมูลอายุสินทรัพย์</strong>
+      <p>กราฟจะแสดงเมื่อคลังส่งข้อมูลอายุจากชุดข้อมูลล่าสุด</p>
+    </div>
   </article>
 
   <article class="panel location-panel">
     <div class="panel-heading">
-      <div>
-        <p class="panel-kicker">จุดควบคุม</p>
-        <h2>ความครอบคลุมของตำแหน่ง</h2>
-      </div>
-      <span class="panel-aside">เป้าหมาย · 98%</span>
+      <h2>ความครอบคลุมของตำแหน่ง</h2>
     </div>
     <div class="location-score">
-      <div class="score-ring" aria-hidden="true"><span>96.9%</span></div>
+      <strong class="location-percent" id="location-summary-percent">—</strong>
       <div>
-        <strong>จับคู่สินทรัพย์แล้ว 4,190 รายการ</strong>
-        <p>อีก 134 รายการยังต้องระบุห้องหรืออาคาร</p>
+        <strong id="location-summary-count">ยังไม่มีข้อมูล</strong>
+        <p id="location-summary-detail">รอข้อมูลสรุปจากคลังสินทรัพย์</p>
       </div>
     </div>
-    <div class="location-meter" aria-label="ความครอบคลุมของตำแหน่ง 96.9 เปอร์เซ็นต์">
-      <span style="width: 96.9%"></span>
+    <div
+      class="location-meter"
+      id="location-summary-meter"
+      role="progressbar"
+      aria-label="ความครอบคลุมของตำแหน่ง"
+      aria-valuemin="0"
+      aria-valuemax="100"
+      aria-valuenow="0"
+      hidden
+    >
+      <span></span>
     </div>
-    <a class="text-link" href="#exceptions">ตรวจสอบตำแหน่งที่ยังไม่จับคู่ <span aria-hidden="true">↗</span></a>
   </article>
-</section>
-
-<section class="panel exceptions-panel" id="exceptions" aria-labelledby="exceptions-title">
-  <div class="panel-heading exceptions-heading">
-    <div>
-      <p class="panel-kicker">คิวดำเนินการ</p>
-      <h2 id="exceptions-title">รายการต่ำกว่าเกณฑ์</h2>
-      <p class="panel-description">จัดลำดับรายการที่ต่ำกว่าเกณฑ์ ฿5,000 ในการตรวจนับภาคสนามครั้งถัดไป</p>
-    </div>
-    <div class="table-controls">
-      <label class="input-label" for="search-input">
-        <span class="sr-only">ค้นหารายการที่ต้องตรวจสอบ</span>
-        <input id="search-input" type="search" placeholder="ค้นหาสินทรัพย์หรือหมวดหมู่" />
-      </label>
-      <label class="select-label" for="category-filter">
-        <span class="sr-only">กรองตามหมวดหมู่</span>
-        <select id="category-filter">
-          <option value="all">ทุกหมวดหมู่</option>
-        </select>
-      </label>
-    </div>
-  </div>
-  <div class="table-wrap">
-    <table>
-      <caption class="sr-only">สินทรัพย์ต่ำกว่าเกณฑ์มูลค่าที่ต้องตรวจสอบ</caption>
-      <thead>
-        <tr>
-          <th scope="col">สินทรัพย์</th>
-          <th scope="col">หมวดหมู่</th>
-          <th scope="col">อายุ</th>
-          <th scope="col">ตำแหน่ง</th>
-          <th scope="col">ความพร้อม</th>
-          <th scope="col"><span class="sr-only">การดำเนินการ</span></th>
-        </tr>
-      </thead>
-      <tbody id="exceptions-body"></tbody>
-    </table>
-  </div>
-  <div class="empty-state" id="empty-state" hidden>
-    <strong>ไม่พบรายการที่ตรงกัน</strong>
-    <p>ลองใช้รหัสสินทรัพย์หรือหมวดหมู่อื่น</p>
-  </div>
-  <div class="table-footer">
-    <span id="results-count">แสดง 0 รายการ</span>
-    <span>ฟิลด์ต้นทาง · <code>is_below_threshold_flag</code></span>
-  </div>
 </section>
