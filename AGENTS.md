@@ -39,3 +39,7 @@
   continuing design-related work.
 - If either file is missing or inaccessible, report the issue
   instead of assuming its contents.
+
+# Structure Guide Rules
+
+- Do not read .temp directory until the user told to do so.
