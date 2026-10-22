@@ -177,7 +177,6 @@ code {
 .eyebrow,
 .panel-kicker,
 .metric-label,
-.module-nav-label,
 .select-label,
 .input-label,
 .table-footer,
@@ -193,7 +192,6 @@ code {
 .eyebrow,
 .panel-kicker,
 .metric-label,
-.module-nav-label,
 .select-label,
 .input-label {
   font-weight: 700;
@@ -237,44 +235,32 @@ code {
 }
 
 .module-nav {
-  gap: 18px;
-  width: fit-content;
+  width: max-content;
   max-width: 100%;
   margin: 0 auto 36px;
-  padding: 7px 9px;
-  overflow-x: auto;
-  background: rgba(24, 26, 27, 0.92);
+  padding: 7px;
+  background: var(--cpe-surface);
   border: 1px solid var(--cpe-border);
-  border-radius: 14px;
+  border-radius: 999px;
   box-shadow: var(--shadow-panel);
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.module-nav::-webkit-scrollbar {
-  display: none;
-}
-
-.module-nav-label {
-  padding: 0 7px;
-  white-space: nowrap;
 }
 
 .module-links {
-  gap: 5px;
+  gap: 6px;
 }
 
 .module-link {
-  position: relative;
   display: inline-flex;
-  min-height: 34px;
+  min-height: 43px;
+  min-width: 0;
   align-items: center;
   gap: 8px;
-  padding: 0 12px;
+  padding: 0 18px;
   color: var(--cpe-text-muted);
-  border-radius: 9px;
+  border-radius: 999px;
   font-size: 0.82rem;
   text-decoration: none;
+  transition: color 160ms ease, background-color 160ms ease;
   white-space: nowrap;
 }
 
@@ -285,18 +271,8 @@ code {
 
 .module-link[aria-current="page"] {
   color: var(--cpe-text);
-  background: var(--cpe-brand-blue-deep);
+  background: var(--cpe-brand-blue);
   font-weight: 700;
-}
-
-.module-link[aria-current="page"]::after {
-  position: absolute;
-  right: 12px;
-  bottom: -8px;
-  left: 12px;
-  height: 2px;
-  background: var(--cpe-info);
-  content: "";
 }
 
 .module-link-mark {
@@ -1532,8 +1508,27 @@ tbody tr:hover td {
 
   .module-nav {
     width: 100%;
-    justify-content: flex-start;
+    justify-content: center;
     margin-bottom: 27px;
+    padding: 5px;
+  }
+
+  .module-links {
+    width: 100%;
+    justify-content: center;
+    align-items: stretch;
+    gap: 2px;
+  }
+
+  .module-link {
+    flex: 1 1 0;
+    min-height: 40px;
+    justify-content: center;
+    gap: 5px;
+    padding: 9px 7px;
+    font-size: 0.75rem;
+    text-align: center;
+    white-space: normal;
   }
 
   .page-heading,
@@ -1662,6 +1657,15 @@ tbody tr:hover td {
 }
 
 @media (max-width: 420px) {
+  .module-link-mark {
+    display: none;
+  }
+
+  .module-link {
+    padding: 8px 4px;
+    overflow-wrap: anywhere;
+  }
+
   .metric-grid {
     grid-template-columns: 1fr;
   }
