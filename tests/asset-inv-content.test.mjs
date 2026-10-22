@@ -11,11 +11,24 @@ function visibleMarkupText(markup) {
   return markup.replace(/<[^>]*>/gu, " ").replace(/\s+/gu, " ");
 }
 
-test("labels page-local search and the actual inventory-data date accurately", () => {
-  assert.match(registerHtml, /ค้นหาในหน้าปัจจุบัน/u);
-  assert.match(registerHtml, /placeholder="ค้นหาในหน้านี้: รหัส ชื่อ ประเภท หรือหน่วยงาน"/u);
+test("labels whole-inventory search, export scopes, and the actual inventory-data date accurately", () => {
+  assert.match(registerHtml, /ค้นหาทั้งคลัง/u);
+  assert.match(registerHtml, /id="asset-api-search"[^>]*maxlength="200"/u);
+  assert.match(registerHtml, /ค้นหาทั้งคลัง\s*<input id="asset-api-search" type="search" maxlength="200"/u);
+  assert.match(registerHtml, /placeholder="รหัส ชื่อ ประเภท ยี่ห้อ หน่วยงาน หรือสถานที่"/u);
+  assert.match(registerHtml, /ส่งออกหน้าปัจจุบัน/u);
+  assert.match(registerHtml, /ส่งออกทุกรายการที่ตรงกับตัวกรอง/u);
+  assert.match(dashboardApp, /buildAssetInventoryApiUrl/u);
+  assert.match(dashboardApp, /buildAssetInventoryExportUrl/u);
+  assert.match(dashboardApp, /matchedTotal/u);
   assert.match(registerHtml, /วันที่ชุดข้อมูลล่าสุด/u);
   assert.doesNotMatch(registerHtml, /การอัปเดตล่าสุด/u);
+});
+
+test("labels the threshold flag as undefined rather than implying low stock", () => {
+  assert.match(overviewHtml, /ธงประเภท “ต่ำกว่าเกณฑ์” · นิยามยังไม่ยืนยัน/u);
+  assert.match(dashboardApp, /นิยามธุรกิจยังไม่ยืนยัน/u);
+  assert.match(dashboardApp, /ไม่ใช่จำนวนสต็อก/u);
 });
 
 test("uses Thai copy for snapshot concepts across the inventory dashboard", () => {

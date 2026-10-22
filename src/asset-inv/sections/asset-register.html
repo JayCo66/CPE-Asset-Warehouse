@@ -37,8 +37,8 @@
 
   <div class="asset-register-toolbar table-controls">
     <label class="input-label" for="asset-api-search">
-      <span class="sr-only">ค้นหาในหน้าปัจจุบัน</span>
-      <input id="asset-api-search" type="search" placeholder="ค้นหาในหน้านี้: รหัส ชื่อ ประเภท หรือหน่วยงาน" />
+      ค้นหาทั้งคลัง
+      <input id="asset-api-search" type="search" maxlength="200" placeholder="รหัส ชื่อ ประเภท ยี่ห้อ หน่วยงาน หรือสถานที่" />
     </label>
     <label class="select-label" for="asset-api-status-filter">
       สถานะ
@@ -57,10 +57,13 @@
     </button>
     <div class="asset-export-control">
       <button class="button button-secondary" type="button" id="asset-api-export-button" disabled>
-        ส่งออกผลลัพธ์หน้านี้ (CSV)
+        ส่งออกหน้าปัจจุบัน (CSV)
+      </button>
+      <button class="button button-secondary" type="button" id="asset-api-export-all-button" disabled>
+        ส่งออกทุกรายการที่ตรงกับตัวกรอง (CSV)
       </button>
       <span class="export-scope-note" id="asset-api-export-scope">
-        ส่งออกเฉพาะรายการที่ตรงกับคำค้นและตัวกรองในหน้าปัจจุบัน ไม่รวมหน้าอื่น
+        ปุ่มแรกส่งออกหน้านี้ · ปุ่มที่สองส่งออกผลลัพธ์ที่ตรงกันทุกหน้า
       </span>
     </div>
   </div>
@@ -72,7 +75,10 @@
     <strong>คลังข้อมูลไม่พร้อมใช้งาน</strong>
     <span id="asset-api-error-message">ลองรีเฟรชแหล่งข้อมูลอีกครั้ง</span>
   </div>
-  <div class="table-wrap" id="asset-api-table-wrap" hidden>
+  <p class="table-scroll-hint asset-api-table-scroll-hint" id="asset-api-table-scroll-hint" hidden>
+    เลื่อนตารางในแนวนอนเพื่อดูคอลัมน์เพิ่มเติม
+  </p>
+  <div class="table-wrap asset-api-table-wrap" id="asset-api-table-wrap" role="region" aria-label="ตารางทะเบียนสินทรัพย์ เลื่อนแนวนอนเพื่อดูคอลัมน์เพิ่มเติม" tabindex="0" hidden>
     <table class="asset-api-table">
       <caption class="sr-only">ทะเบียนสินทรัพย์จากชุดข้อมูลล่าสุดใน fact_asset_inventory</caption>
       <thead>
@@ -90,6 +96,7 @@
       <tbody id="asset-api-body"></tbody>
     </table>
   </div>
+  <ul id="asset-api-mobile-cards" class="asset-api-mobile-cards" aria-label="รายการสินทรัพย์" hidden></ul>
   <div class="empty-state" id="asset-api-empty" hidden>
       <strong>ไม่พบสินทรัพย์ในหน้านี้ที่ตรงกับตัวกรอง</strong>
       <p>ล้างคำค้นหรือเลือกสถานะหรือประเภทอื่น หรือไปยังหน้าอื่น</p>
@@ -150,7 +157,7 @@
   </div>
   <div class="asset-api-status-mix" id="asset-api-status-mix" aria-live="polite"></div>
   <div class="table-footer">
-    <span id="asset-api-results-count">กำลังรอข้อมูลจากคลังข้อมูล</span>
+    <span id="asset-api-results-count" aria-live="polite" aria-atomic="true">กำลังรอข้อมูลจากคลังข้อมูล</span>
     <span>แหล่งข้อมูล · <code>assets_api/fact_asset_inventory.php</code></span>
   </div>
 </section>

@@ -15,9 +15,12 @@ import {
 import {
   buildAssetInventoryCsv,
   compareInventorySnapshots,
-  filterAssetRows,
   normalizeSnapshotSummary,
 } from "./inventory-data.mjs";
+import {
+  buildAssetInventoryApiUrl,
+  buildAssetInventoryExportUrl,
+} from "./inventory-api.mjs";
 
 const dashboardData = {
   moduleNav: [
@@ -40,6 +43,10 @@ const dashboardData = {
 };
 
 const ASSET_API_BASE_URL = new URL("../../assets_api/", import.meta.url).href;
+const ASSET_INVENTORY_API_ENDPOINT = new URL(
+  ASSET_DETAIL_API_ENDPOINTS.assets,
+  ASSET_API_BASE_URL,
+).href;
 const DASHBOARD_SECTION_FILES = [
   "sections/overview.html",
   "sections/analysis.html",
@@ -53,6 +60,8 @@ const assetApiState = {
   pageSize: ASSET_API_DEFAULT_PAGE_SIZE,
   rows: [],
   total: 0,
+  matchedTotal: 0,
+  filterOptions: { statuses: [], types: [] },
   summary: null,
   loadedAt: null,
   error: null,
@@ -68,6 +77,8 @@ const assetDetailState = {
 };
 
 let assetDetailRequestId = 0;
+let assetApiRequestId = 0;
+let assetApiSearchTimer;
 
 let elements;
 
@@ -121,11 +132,14 @@ function cacheElements() {
     assetApiPageSizeButtons: document.querySelector("#asset-api-page-size-buttons"),
     refreshAssetApiButton: document.querySelector("#refresh-asset-api-button"),
     assetApiExportButton: document.querySelector("#asset-api-export-button"),
+    assetApiExportAllButton: document.querySelector("#asset-api-export-all-button"),
     assetApiLoading: document.querySelector("#asset-api-loading"),
     assetApiError: document.querySelector("#asset-api-error"),
     assetApiErrorMessage: document.querySelector("#asset-api-error-message"),
     assetApiTableWrap: document.querySelector("#asset-api-table-wrap"),
+    assetApiTableScrollHint: document.querySelector("#asset-api-table-scroll-hint"),
     assetApiBody: document.querySelector("#asset-api-body"),
+    assetApiMobileCards: document.querySelector("#asset-api-mobile-cards"),
     assetApiEmpty: document.querySelector("#asset-api-empty"),
     assetApiPageNavigation: document.querySelector(".asset-page-navigation"),
     assetApiPrevious: document.querySelector("#asset-api-previous"),
@@ -233,7 +247,7 @@ function formatApiDate(value, includeTime = false) {
 }
 
 function getAssetApiTotalPages() {
-  return getTotalPages(assetApiState.total, assetApiState.pageSize);
+  return getTotalPages(assetApiState.matchedTotal, assetApiState.pageSize);
 }
 
 async function fetchAssetApiPage(endpointName, page = 1, limit = ASSET_DETAIL_API_PAGE_SIZE) {
@@ -679,7 +693,7 @@ function renderMetrics() {
   elements.metricLocation.textContent = locationPercent;
   elements.metricTotalFootnote.textContent = "จำนวนแถวในชุดข้อมูลล่าสุด";
   elements.metricReadyFootnote.textContent = `${formatNumber(snapshot.ready)} รายการพร้อมใช้งาน`;
-  elements.metricThresholdFootnote.textContent = `${formatNumber(snapshot.belowThreshold)} รายการตามธงต่ำกว่าเกณฑ์`;
+  elements.metricThresholdFootnote.textContent = `${formatNumber(snapshot.belowThreshold)} รายการถูกกำหนดธงจากรหัส/ชื่อประเภท · นิยามธุรกิจยังไม่ยืนยัน · ไม่ใช่จำนวนสต็อก`;
   elements.metricLocationFootnote.textContent = `${formatNumber(snapshot.missingLocation)} รายการไม่มีตำแหน่ง · ระบุแล้ว ${formatNumber(located)}`;
 }
 
@@ -731,7 +745,7 @@ function renderSnapshotComparison() {
   const rows = [
     ["สินทรัพย์ทั้งหมด", formatNumber(current.total), formatNumber(previous.total), `${signedCount(comparison.total.delta)} รายการ`],
     ["พร้อมใช้งาน", `${formatNumber(current.ready)} (${readyCurrentRate})`, `${formatNumber(previous.ready)} (${readyPreviousRate})`, `${signedCount(comparison.ready.delta)} รายการ · ${readyChange === null ? "—" : `${readyChange > 0 ? "+" : ""}${readyChange.toFixed(1)} จุดร้อยละ`}`],
-    ["ต่ำกว่าเกณฑ์", formatNumber(current.belowThreshold), formatNumber(previous.belowThreshold), `${signedCount(comparison.belowThreshold.delta)} รายการ`],
+    ["ธงประเภท (นิยามยังไม่ยืนยัน)", formatNumber(current.belowThreshold), formatNumber(previous.belowThreshold), `${signedCount(comparison.belowThreshold.delta)} รายการ`],
     ["มีตำแหน่งระบุ", `${formatNumber(locatedCurrent)} (${locatedCurrentRate})`, `${formatNumber(locatedPrevious)} (${locatedPreviousRate})`, `${signedCount(comparison.located.delta)} รายการ · ${locationChange === null ? "—" : `${locationChange > 0 ? "+" : ""}${locationChange.toFixed(1)} จุดร้อยละ`}`],
   ];
 
@@ -815,23 +829,12 @@ function setAssetApiFilterOptions(select, values, allLabel) {
 }
 
 function renderAssetApiFilters() {
-  const statuses = [...new Set(assetApiState.rows.map((row) => row.asset_status).filter(Boolean))].sort((a, b) =>
-    String(a).localeCompare(String(b)),
-  );
-  const types = [...new Set(assetApiState.rows.map((row) => row.type_name).filter(Boolean))].sort((a, b) =>
-    String(a).localeCompare(String(b)),
-  );
-
-  setAssetApiFilterOptions(elements.assetApiStatusFilter, statuses, "ทุกสถานะ");
-  setAssetApiFilterOptions(elements.assetApiTypeFilter, types, "ทุกประเภท");
+  setAssetApiFilterOptions(elements.assetApiStatusFilter, assetApiState.filterOptions.statuses, "ทุกสถานะ");
+  setAssetApiFilterOptions(elements.assetApiTypeFilter, assetApiState.filterOptions.types, "ทุกประเภท");
 }
 
-function getFilteredAssetApiRows() {
-  return filterAssetRows(assetApiState.rows, {
-    search: elements.assetApiSearch.value,
-    status: elements.assetApiStatusFilter.value,
-    type: elements.assetApiTypeFilter.value,
-  });
+function getAssetApiPageRows() {
+  return assetApiState.rows;
 }
 
 function renderAssetApiSummary() {
@@ -848,7 +851,8 @@ function renderAssetApiSummary() {
       : "กำลังรอข้อมูล";
   elements.assetApiTypeCount.textContent = assetApiState.status === "ready" ? formatNumber(types.size) : "—";
   elements.assetApiLatest.textContent = assetApiState.status === "ready" ? formatApiDate(current?.snapshotDate) : "—";
-  elements.assetApiExportButton.disabled = assetApiState.status !== "ready" || getFilteredAssetApiRows().length === 0;
+  elements.assetApiExportButton.disabled = assetApiState.status !== "ready" || getAssetApiPageRows().length === 0;
+  elements.assetApiExportAllButton.disabled = assetApiState.status !== "ready" || assetApiState.matchedTotal === 0;
 
   if (assetApiState.status !== "ready") {
     elements.assetApiStatusMix.textContent = "สถานะในหน้าปัจจุบันจะแสดงเมื่อโหลดข้อมูลจากคลังแล้ว";
@@ -936,11 +940,65 @@ function renderAssetApiPageButtons() {
   elements.assetApiFinalPageButtons.innerHTML = finalPages.map(renderButton).join("");
 }
 
+function formatAssetLocation(row) {
+  const namedParts = [
+    row.building,
+    row.floor,
+    row.room,
+    row.area_name,
+  ]
+    .filter((value) => displayValue(value) !== "—")
+    .map((value) => displayValue(value));
+
+  if (namedParts.length > 0) return namedParts.join(" · ");
+
+  const locationId = displayValue(row.location_id);
+  return locationId === "—" ? locationId : `รหัสสถานที่ ${locationId}`;
+}
+
+function renderAssetApiMobileCard(row) {
+  const status = displayValue(row.asset_status);
+  const statusTone = assetStatusTone(row.asset_status);
+  const assetCode = displayValue(row.asset_code);
+  const assetDetailHref = `#/inventory/asset/${encodeURIComponent(String(row.asset_id))}`;
+
+  return `
+    <li class="asset-api-mobile-card">
+      <article>
+        <h3 class="asset-api-mobile-card-title">${escapeHtml(displayValue(row.asset_name))}</h3>
+        <p class="asset-api-mobile-card-code"><span>รหัสสินทรัพย์</span><strong>${escapeHtml(assetCode)}</strong></p>
+        <p class="asset-api-mobile-card-status"><span class="status-chip status-chip-${statusTone}">${escapeHtml(status)}</span></p>
+        <dl class="asset-api-mobile-fields">
+          <div><dt>หมวดหมู่</dt><dd>${escapeHtml(displayValue(row.category_name))}</dd></div>
+          <div><dt>สถานที่</dt><dd>${escapeHtml(formatAssetLocation(row))}</dd></div>
+        </dl>
+        <details class="asset-api-mobile-details">
+          <summary>รายละเอียดเพิ่มเติม</summary>
+          <dl>
+            <div><dt>ประเภท</dt><dd>${escapeHtml(displayValue(row.type_name))}</dd></div>
+            <div><dt>ยี่ห้อ</dt><dd>${escapeHtml(displayValue(row.brand))}</dd></div>
+            <div><dt>รุ่น</dt><dd>${escapeHtml(displayValue(row.model))}</dd></div>
+            <div><dt>ปีที่จัดซื้อ</dt><dd>${escapeHtml(displayValue(row.year_purchase))}</dd></div>
+            <div><dt>ปีงบประมาณ</dt><dd>${escapeHtml(displayValue(row.year_fiscal))}</dd></div>
+            <div><dt>หน่วยงาน</dt><dd>${escapeHtml(displayValue(row.department_name))}</dd></div>
+            <div><dt>รหัสสถานที่</dt><dd>${escapeHtml(displayValue(row.location_id))}</dd></div>
+            <div><dt>วันที่ชุดข้อมูล</dt><dd>${escapeHtml(formatApiDate(row.snapshot_date))}</dd></div>
+          </dl>
+        </details>
+        <a class="button button-secondary asset-detail-action" href="${assetDetailHref}" aria-label="ดูรายละเอียด ${escapeHtml(assetCode)}">
+          ดูรายละเอียด
+        </a>
+      </article>
+    </li>
+  `;
+}
+
 function renderAssetApiTable() {
   if (assetApiState.status !== "ready") return;
 
-  const filtered = getFilteredAssetApiRows();
-  elements.assetApiBody.innerHTML = filtered
+  const rows = getAssetApiPageRows();
+  elements.assetApiMobileCards.innerHTML = rows.map((row) => renderAssetApiMobileCard(row)).join("");
+  elements.assetApiBody.innerHTML = rows
     .map((row) => {
       const status = displayValue(row.asset_status);
       const statusTone = assetStatusTone(row.asset_status);
@@ -975,11 +1033,14 @@ function renderAssetApiTable() {
     })
     .join("");
 
-  const hasRows = filtered.length > 0;
+  const hasRows = rows.length > 0;
   elements.assetApiTableWrap.hidden = !hasRows;
+  elements.assetApiMobileCards.hidden = !hasRows;
+  elements.assetApiTableScrollHint.hidden = !hasRows;
   elements.assetApiEmpty.hidden = hasRows;
-  elements.assetApiResultsCount.textContent = `แสดง ${formatNumber(filtered.length)} จาก ${formatNumber(assetApiState.rows.length)} แถวในหน้าปัจจุบัน · ชุดข้อมูลล่าสุดมี ${formatNumber(assetApiState.total)} รายการ`;
+  elements.assetApiResultsCount.textContent = `แสดง ${formatNumber(rows.length)} รายการในหน้านี้ · พบ ${formatNumber(assetApiState.matchedTotal)} รายการที่ตรงกับคำค้นและตัวกรอง จากทั้งหมด ${formatNumber(assetApiState.total)} รายการ`;
   elements.assetApiExportButton.disabled = !hasRows;
+  elements.assetApiExportAllButton.disabled = assetApiState.matchedTotal === 0;
   renderAssetApiPagination();
 }
 
@@ -991,6 +1052,8 @@ function renderAssetApiState() {
   elements.assetApiLoading.hidden = !isLoading;
   elements.assetApiError.hidden = !hasError;
   elements.assetApiTableWrap.hidden = !isReady;
+  elements.assetApiMobileCards.hidden = !isReady;
+  elements.assetApiTableScrollHint.hidden = !isReady || assetApiState.rows.length === 0;
   elements.assetApiEmpty.hidden = true;
   elements.assetApiResultsCount.textContent = isLoading ? "กำลังโหลดข้อมูลจากคลัง…" : "กำลังรอข้อมูลจากคลังข้อมูล";
 
@@ -1021,6 +1084,8 @@ function renderAssetApiState() {
 }
 
 async function loadAssetRegister(page = assetApiState.page, pageSize = assetApiState.pageSize) {
+  window.clearTimeout(assetApiSearchTimer);
+  const requestId = ++assetApiRequestId;
   assetApiState.status = "loading";
   assetApiState.page = Math.max(1, Number.parseInt(page, 10) || 1);
   assetApiState.pageSize = normalizePageSize(pageSize);
@@ -1030,14 +1095,19 @@ async function loadAssetRegister(page = assetApiState.page, pageSize = assetApiS
   elements.refreshAssetApiButton.disabled = true;
 
   try {
-    const endpoint = new URL(ASSET_DETAIL_API_ENDPOINTS.assets, `${ASSET_API_BASE_URL.replace(/\/+$/, "")}/`);
-    endpoint.searchParams.set("limit", String(assetApiState.pageSize));
-    endpoint.searchParams.set("page", String(assetApiState.page));
+    const endpoint = buildAssetInventoryApiUrl(ASSET_INVENTORY_API_ENDPOINT, {
+      page: assetApiState.page,
+      pageSize: assetApiState.pageSize,
+      search: elements.assetApiSearch.value,
+      status: elements.assetApiStatusFilter.value,
+      type: elements.assetApiTypeFilter.value,
+    });
 
     const response = await fetch(endpoint, { headers: { Accept: "application/json" } });
     if (!response.ok) throw new Error(`คำขอล้มเหลว (HTTP ${response.status})`);
 
     const payload = await response.json();
+    if (requestId !== assetApiRequestId) return;
     if (!payload || payload.success !== true || !Array.isArray(payload.data)) {
       throw new Error(payload?.message || "ได้รับข้อมูลจาก fact_asset_inventory.php ในรูปแบบที่ไม่คาดคิด");
     }
@@ -1046,20 +1116,43 @@ async function loadAssetRegister(page = assetApiState.page, pageSize = assetApiS
       throw new Error("พบแถวสินทรัพย์ในคำตอบจาก fact_asset_inventory.php ที่ไม่ถูกต้อง");
     }
 
+    const total = Number(payload.total);
+    const matchedTotal = Number(payload.matchedTotal ?? payload.total);
+    if (
+      !Number.isSafeInteger(total) ||
+      total < 0 ||
+      !Number.isSafeInteger(matchedTotal) ||
+      matchedTotal < 0 ||
+      matchedTotal > total
+    ) {
+      throw new Error("จำนวนผลลัพธ์จาก fact_asset_inventory.php ไม่ถูกต้อง");
+    }
+
     assetApiState.rows = payload.data;
-    assetApiState.total = Number(payload.total) || payload.data.length;
+    assetApiState.total = total;
+    assetApiState.matchedTotal = matchedTotal;
+    const filterOptions = payload.filterOptions && typeof payload.filterOptions === "object" ? payload.filterOptions : {};
+    assetApiState.filterOptions = {
+      statuses: Array.isArray(filterOptions.statuses)
+        ? filterOptions.statuses.filter((value) => typeof value === "string")
+        : [...new Set(payload.data.map((row) => row.asset_status).filter((value) => typeof value === "string"))],
+      types: Array.isArray(filterOptions.types)
+        ? filterOptions.types.filter((value) => typeof value === "string")
+        : [...new Set(payload.data.map((row) => row.type_name).filter((value) => typeof value === "string"))],
+    };
     assetApiState.summary = payload.summary && typeof payload.summary === "object" ? payload.summary : null;
-    assetApiState.page = clampPage(assetApiState.page, getAssetApiTotalPages());
+    assetApiState.page = clampPage(payload.page ?? assetApiState.page, getAssetApiTotalPages());
     assetApiState.loadedAt = new Date();
     assetApiState.status = "ready";
     renderAssetApiFilters();
     renderAssetApiState();
   } catch (error) {
+    if (requestId !== assetApiRequestId) return;
     assetApiState.status = "error";
     assetApiState.error = error instanceof Error ? error.message : "เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุจาก API";
     renderAssetApiState();
   } finally {
-    elements.refreshAssetApiButton.disabled = false;
+    if (requestId === assetApiRequestId) elements.refreshAssetApiButton.disabled = false;
   }
 }
 
@@ -1102,7 +1195,7 @@ function showToast(message) {
 }
 
 function exportCurrentAssetPage() {
-  const rows = getFilteredAssetApiRows();
+  const rows = getAssetApiPageRows();
   if (assetApiState.status !== "ready" || rows.length === 0) return;
 
   const csv = buildAssetInventoryCsv(rows);
@@ -1115,17 +1208,38 @@ function exportCurrentAssetPage() {
   showToast(`ส่งออก ${formatNumber(rows.length)} รายการจากหน้าปัจจุบันตามคำค้นและตัวกรองที่เลือก`);
 }
 
+function exportAllMatchingAssetRows() {
+  if (assetApiState.status !== "ready" || assetApiState.matchedTotal === 0) return;
+
+  const endpoint = buildAssetInventoryExportUrl(ASSET_INVENTORY_API_ENDPOINT, {
+    search: elements.assetApiSearch.value,
+    status: elements.assetApiStatusFilter.value,
+    type: elements.assetApiTypeFilter.value,
+  });
+  window.location.assign(endpoint);
+  showToast(`กำลังส่งออกรายการที่ตรงกับตัวกรอง ${formatNumber(assetApiState.matchedTotal)} รายการ`);
+}
+
 function initInteractions() {
-  const renderFilteredAssetPage = () => {
-    renderAssetApiTable();
-    renderAssetApiSummary();
+  const loadFilteredAssetPage = () => {
+    window.clearTimeout(assetApiSearchTimer);
+    loadAssetRegister(1);
   };
-  elements.assetApiSearch.addEventListener("input", renderFilteredAssetPage);
-  elements.assetApiStatusFilter.addEventListener("change", renderFilteredAssetPage);
-  elements.assetApiTypeFilter.addEventListener("change", renderFilteredAssetPage);
+  elements.assetApiSearch.addEventListener("input", () => {
+    window.clearTimeout(assetApiSearchTimer);
+    assetApiRequestId += 1;
+    assetApiState.status = "loading";
+    assetApiState.error = null;
+    renderAssetApiState();
+    elements.refreshAssetApiButton.disabled = true;
+    assetApiSearchTimer = window.setTimeout(() => loadAssetRegister(1), 300);
+  });
+  elements.assetApiStatusFilter.addEventListener("change", loadFilteredAssetPage);
+  elements.assetApiTypeFilter.addEventListener("change", loadFilteredAssetPage);
   elements.assetApiPageSizeButtons.addEventListener("click", handleAssetApiPageSizeButtonClick);
   elements.refreshAssetApiButton.addEventListener("click", loadAssetRegister);
   elements.assetApiExportButton.addEventListener("click", exportCurrentAssetPage);
+  elements.assetApiExportAllButton.addEventListener("click", exportAllMatchingAssetRows);
   elements.assetApiPageNavigation.addEventListener("click", handleAssetApiPageButtonClick);
   elements.assetApiPageInput.addEventListener("change", jumpToAssetApiPage);
   elements.assetApiPageInput.addEventListener("keydown", (event) => {
