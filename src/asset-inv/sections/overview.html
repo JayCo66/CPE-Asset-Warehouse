@@ -1,0 +1,117 @@
+<section class="page-heading" aria-labelledby="page-title">
+  <div>
+    <p class="eyebrow">สมาชิก 1 · ตรวจนับสินทรัพย์ประจำปี</p>
+    <h1 id="page-title">ทะเบียนสินทรัพย์และวงจรชีวิต</h1>
+    <p class="page-intro">
+      ติดตามสินทรัพย์ทุกชิ้นให้ครบถ้วน ระบุตำแหน่งได้ และพร้อมสำหรับภาคการศึกษาถัดไป
+    </p>
+  </div>
+  <div class="heading-actions" aria-label="การดำเนินการบนแดชบอร์ด">
+    <button class="button button-secondary" type="button" id="export-button">
+      ส่งออกมุมมอง
+    </button>
+    <button class="button button-primary" type="button" id="start-check-button">
+      เริ่มตรวจนับประจำปี
+    </button>
+  </div>
+</section>
+
+<section class="data-notice" aria-label="สถานะข้อมูล">
+  <span class="notice-icon" aria-hidden="true">i</span>
+  <p>
+    <strong>ภาพข้อมูลตัวอย่าง</strong> ค่าต่าง ๆ เป็นข้อมูลจำลองตามโครงสร้างคลังข้อมูลของสมาชิก 1
+    และจะถูกแทนที่ด้วยข้อมูลจากคำสั่งค้นหาสินทรัพย์จริง
+  </p>
+  <span class="notice-date">ภาพข้อมูล · 22 ต.ค. 2569</span>
+</section>
+
+<section class="metric-grid" aria-label="สรุปภาพรวมสินทรัพย์">
+  <article class="metric-card metric-card-primary">
+    <div class="metric-label-row">
+      <span class="metric-label">สินทรัพย์ในขอบเขต</span>
+      <span class="metric-icon" aria-hidden="true">01</span>
+    </div>
+    <strong class="metric-value" id="metric-total">4,324</strong>
+    <p class="metric-footnote">กู้คืนจากชุดข้อมูลตรวจนับประจำปี</p>
+  </article>
+  <article class="metric-card">
+    <div class="metric-label-row">
+      <span class="metric-label">พร้อมใช้งาน</span>
+      <span class="metric-icon metric-icon-success" aria-hidden="true">✓</span>
+    </div>
+    <strong class="metric-value" id="metric-ready">79.0%</strong>
+    <p class="metric-footnote" id="metric-ready-footnote">3,416 รายการผ่านการตรวจสอบความพร้อม</p>
+  </article>
+  <article class="metric-card">
+    <div class="metric-label-row">
+      <span class="metric-label">ต่ำกว่าเกณฑ์</span>
+      <span class="metric-icon metric-icon-warning" aria-hidden="true">!</span>
+    </div>
+    <strong class="metric-value" id="metric-threshold">11.8%</strong>
+    <p class="metric-footnote" id="metric-threshold-footnote">512 รายการมีมูลค่าต่ำกว่า ฿5,000</p>
+  </article>
+  <article class="metric-card">
+    <div class="metric-label-row">
+      <span class="metric-label">ความครอบคลุมของตำแหน่ง</span>
+      <span class="metric-icon metric-icon-info" aria-hidden="true">⌖</span>
+    </div>
+    <strong class="metric-value" id="metric-location">96.9%</strong>
+    <p class="metric-footnote" id="metric-location-footnote">134 รายการยังต้องจับคู่ตำแหน่ง</p>
+  </article>
+</section>
+
+<section class="dashboard-grid" aria-label="สัญญาณความพร้อมและการตรวจนับประจำปี">
+  <article class="panel readiness-panel">
+    <div class="panel-heading">
+      <div>
+        <p class="panel-kicker">สัญญาณความพร้อม</p>
+        <h2>ความพร้อมตามหมวดหมู่</h2>
+      </div>
+      <label class="select-label" for="snapshot-select">
+        ภาพข้อมูล
+        <select id="snapshot-select">
+          <option value="current">มุมมองปัจจุบัน</option>
+          <option value="prior">การตรวจนับประจำปีครั้งก่อน</option>
+        </select>
+      </label>
+    </div>
+    <div class="chart-legend" aria-label="คำอธิบายสัญญาณความพร้อม">
+      <span><i class="legend-swatch legend-ready" aria-hidden="true"></i>พร้อม</span>
+      <span><i class="legend-swatch legend-watch" aria-hidden="true"></i>ต้องตรวจสอบ</span>
+    </div>
+    <div class="bar-chart" id="readiness-chart"></div>
+  </article>
+
+  <article class="panel audit-panel">
+    <div class="panel-heading">
+      <div>
+        <p class="panel-kicker">การตรวจนับสินทรัพย์ประจำปี</p>
+        <h2>รอบตรวจนับปี 2569</h2>
+      </div>
+      <span class="status-chip status-chip-info" id="audit-status">กำลังดำเนินการ</span>
+    </div>
+    <div class="audit-summary">
+      <strong id="audit-progress">82%</strong>
+      <span>ของสินทรัพย์ในขอบเขตที่ตรวจแล้ว</span>
+    </div>
+    <div
+      class="progress-track"
+      role="progressbar"
+      aria-label="ความคืบหน้าการตรวจนับสินทรัพย์ประจำปี"
+      aria-valuemin="0"
+      aria-valuemax="100"
+      aria-valuenow="82"
+    >
+      <span class="progress-fill" id="audit-progress-bar" style="width: 82%"></span>
+    </div>
+    <div class="progress-meta">
+      <span id="audit-checked">3,545 รายการตรวจแล้ว</span>
+      <span id="audit-remaining">779 รายการคงเหลือ</span>
+    </div>
+    <ol class="check-list" id="check-list"></ol>
+    <button class="button button-primary button-wide" type="button" id="mark-check-button">
+      ตรวจยืนยันชุดถัดไป
+    </button>
+    <p class="panel-note">การโต้ตอบตัวอย่าง · เปลี่ยนแปลงเฉพาะมุมมองนี้</p>
+  </article>
+</section>

@@ -92,6 +92,11 @@ const auditState = {
 
 const ASSET_API_BASE_URL = window.ASSET_API_BASE_URL || "https://cpe.eng.kps.ku.ac.th/CPEAssets/assets_api";
 const ASSET_API_PAGE_SIZE = 10;
+const DASHBOARD_SECTION_FILES = [
+  "sections/overview.html",
+  "sections/analysis.html",
+  "sections/asset-register.html",
+];
 
 const categoryLabels = {
   Computing: "คอมพิวเตอร์",
@@ -128,50 +133,87 @@ const assetApiState = {
   error: null,
 };
 
-const elements = {
-  moduleLinks: document.querySelector("#module-links"),
-  readinessChart: document.querySelector("#readiness-chart"),
-  ageChart: document.querySelector("#age-chart"),
-  checkList: document.querySelector("#check-list"),
-  exceptionsBody: document.querySelector("#exceptions-body"),
-  emptyState: document.querySelector("#empty-state"),
-  resultsCount: document.querySelector("#results-count"),
-  searchInput: document.querySelector("#search-input"),
-  categoryFilter: document.querySelector("#category-filter"),
-  snapshotSelect: document.querySelector("#snapshot-select"),
-  auditProgress: document.querySelector("#audit-progress"),
-  auditProgressBar: document.querySelector("#audit-progress-bar"),
-  auditChecked: document.querySelector("#audit-checked"),
-  auditRemaining: document.querySelector("#audit-remaining"),
-  auditStatus: document.querySelector("#audit-status"),
-  markCheckButton: document.querySelector("#mark-check-button"),
-  exportButton: document.querySelector("#export-button"),
-  startCheckButton: document.querySelector("#start-check-button"),
-  backToTop: document.querySelector("#back-to-top"),
-  toast: document.querySelector("#toast"),
-  assetApiStatus: document.querySelector("#asset-api-status"),
-  assetApiUpdated: document.querySelector("#asset-api-updated"),
-  assetApiTotal: document.querySelector("#asset-api-total"),
-  assetApiLoaded: document.querySelector("#asset-api-loaded"),
-  assetApiPages: document.querySelector("#asset-api-pages"),
-  assetApiTypeCount: document.querySelector("#asset-api-type-count"),
-  assetApiLatest: document.querySelector("#asset-api-latest"),
-  assetApiSearch: document.querySelector("#asset-api-search"),
-  assetApiStatusFilter: document.querySelector("#asset-api-status-filter"),
-  assetApiTypeFilter: document.querySelector("#asset-api-type-filter"),
-  refreshAssetApiButton: document.querySelector("#refresh-asset-api-button"),
-  assetApiLoading: document.querySelector("#asset-api-loading"),
-  assetApiError: document.querySelector("#asset-api-error"),
-  assetApiErrorMessage: document.querySelector("#asset-api-error-message"),
-  assetApiTableWrap: document.querySelector("#asset-api-table-wrap"),
-  assetApiBody: document.querySelector("#asset-api-body"),
-  assetApiEmpty: document.querySelector("#asset-api-empty"),
-  assetApiPrevious: document.querySelector("#asset-api-previous"),
-  assetApiNext: document.querySelector("#asset-api-next"),
-  assetApiPageLabel: document.querySelector("#asset-api-page-label"),
-  assetApiStatusMix: document.querySelector("#asset-api-status-mix"),
-  assetApiResultsCount: document.querySelector("#asset-api-results-count"),
-};
+let elements;
+
+function cacheElements() {
+  elements = {
+    moduleLinks: document.querySelector("#module-links"),
+    readinessChart: document.querySelector("#readiness-chart"),
+    ageChart: document.querySelector("#age-chart"),
+    checkList: document.querySelector("#check-list"),
+    exceptionsBody: document.querySelector("#exceptions-body"),
+    emptyState: document.querySelector("#empty-state"),
+    resultsCount: document.querySelector("#results-count"),
+    searchInput: document.querySelector("#search-input"),
+    categoryFilter: document.querySelector("#category-filter"),
+    snapshotSelect: document.querySelector("#snapshot-select"),
+    auditProgress: document.querySelector("#audit-progress"),
+    auditProgressBar: document.querySelector("#audit-progress-bar"),
+    auditChecked: document.querySelector("#audit-checked"),
+    auditRemaining: document.querySelector("#audit-remaining"),
+    auditStatus: document.querySelector("#audit-status"),
+    markCheckButton: document.querySelector("#mark-check-button"),
+    exportButton: document.querySelector("#export-button"),
+    startCheckButton: document.querySelector("#start-check-button"),
+    backToTop: document.querySelector("#back-to-top"),
+    toast: document.querySelector("#toast"),
+    assetApiStatus: document.querySelector("#asset-api-status"),
+    assetApiUpdated: document.querySelector("#asset-api-updated"),
+    assetApiTotal: document.querySelector("#asset-api-total"),
+    assetApiLoaded: document.querySelector("#asset-api-loaded"),
+    assetApiPages: document.querySelector("#asset-api-pages"),
+    assetApiTypeCount: document.querySelector("#asset-api-type-count"),
+    assetApiLatest: document.querySelector("#asset-api-latest"),
+    assetApiSearch: document.querySelector("#asset-api-search"),
+    assetApiStatusFilter: document.querySelector("#asset-api-status-filter"),
+    assetApiTypeFilter: document.querySelector("#asset-api-type-filter"),
+    refreshAssetApiButton: document.querySelector("#refresh-asset-api-button"),
+    assetApiLoading: document.querySelector("#asset-api-loading"),
+    assetApiError: document.querySelector("#asset-api-error"),
+    assetApiErrorMessage: document.querySelector("#asset-api-error-message"),
+    assetApiTableWrap: document.querySelector("#asset-api-table-wrap"),
+    assetApiBody: document.querySelector("#asset-api-body"),
+    assetApiEmpty: document.querySelector("#asset-api-empty"),
+    assetApiPrevious: document.querySelector("#asset-api-previous"),
+    assetApiNext: document.querySelector("#asset-api-next"),
+    assetApiPageLabel: document.querySelector("#asset-api-page-label"),
+    assetApiStatusMix: document.querySelector("#asset-api-status-mix"),
+    assetApiResultsCount: document.querySelector("#asset-api-results-count"),
+  };
+}
+
+async function loadDashboardSections() {
+  const container = document.querySelector("#dashboard-sections");
+  if (!container) throw new Error("ไม่พบพื้นที่สำหรับโหลดส่วนแดชบอร์ด");
+
+  const responses = await Promise.all(
+    DASHBOARD_SECTION_FILES.map((file) => fetch(file, { headers: { Accept: "text/html" } })),
+  );
+  const failedResponse = responses.find((response) => !response.ok);
+  if (failedResponse) throw new Error(`โหลดส่วนแดชบอร์ดไม่สำเร็จ (HTTP ${failedResponse.status})`);
+
+  const sections = await Promise.all(responses.map((response) => response.text()));
+  container.innerHTML = sections.join("\n");
+  container.removeAttribute("aria-busy");
+}
+
+function showDashboardLoadError() {
+  const container = document.querySelector("#dashboard-sections");
+  if (!container) return;
+
+  const errorState = document.createElement("div");
+  errorState.className = "api-state api-state-error";
+  errorState.setAttribute("role", "alert");
+
+  const heading = document.createElement("strong");
+  heading.textContent = "ไม่สามารถโหลดส่วนแดชบอร์ด";
+  const detail = document.createElement("span");
+  detail.textContent = "โปรดเปิดหน้านี้ผ่านเซิร์ฟเวอร์ภายในเครื่องแล้วลองใหม่อีกครั้ง";
+
+  errorState.append(heading, detail);
+  container.replaceChildren(errorState);
+  container.removeAttribute("aria-busy");
+}
 
 const formatNumber = (value) => new Intl.NumberFormat("en-US").format(value);
 const percent = (value) => `${value.toFixed(1)}%`;
@@ -650,7 +692,9 @@ function initInteractions() {
   });
 }
 
-function init() {
+async function init() {
+  await loadDashboardSections();
+  cacheElements();
   renderModuleNav();
   renderMetrics();
   renderReadiness();
@@ -664,4 +708,7 @@ function init() {
   loadAssetRegister();
 }
 
-init();
+init().catch((error) => {
+  console.error("Dashboard initialization failed", error);
+  showDashboardLoadError();
+});
