@@ -247,7 +247,12 @@ code {
   border: 1px solid var(--cpe-border);
   border-radius: 14px;
   box-shadow: var(--shadow-panel);
-  scrollbar-width: thin;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.module-nav::-webkit-scrollbar {
+  display: none;
 }
 
 .module-nav-label {
