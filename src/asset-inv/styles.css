@@ -1052,17 +1052,20 @@ input::placeholder {
 }
 
 .asset-pagination {
-  display: grid;
-  gap: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
   padding-top: 13px;
 }
 
 .asset-pagination-size {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   flex-wrap: wrap;
   gap: 8px;
+  flex: 0 0 auto;
 }
 
 .asset-pagination-label {
@@ -1087,14 +1090,16 @@ input::placeholder {
 }
 
 .asset-page-navigation {
-  display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+  display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: flex-end;
+  gap: 5px;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .asset-pagination-center {
-  display: flex;
+  display: contents;
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
@@ -1110,7 +1115,7 @@ input::placeholder {
 }
 
 .pagination-page-control input {
-  width: 76px;
+  width: 62px;
   min-width: 0;
   min-height: 34px;
   padding: 0 8px;
@@ -1118,15 +1123,10 @@ input::placeholder {
   text-align: center;
 }
 
-.asset-pagination-center > span {
-  color: var(--cpe-text-muted);
-  font-size: 0.75rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.asset-page-navigation > .button {
+.asset-page-navigation > .button,
+.asset-page-navigation .pagination-page-button {
   min-height: 34px;
-  padding: 0 12px;
+  padding: 0 9px;
 }
 
 .exceptions-panel {
@@ -1477,35 +1477,15 @@ tbody tr:hover td {
     width: 100%;
   }
 
-  .asset-pagination-size {
-    justify-content: flex-start;
+  .asset-pagination {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
   }
 
   .asset-page-navigation {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .asset-pagination-center {
-    grid-column: 1 / -1;
-    grid-row: 1;
-  }
-
-  .asset-page-navigation > .button {
-    width: 100%;
-    grid-row: 2;
-  }
-
-  .asset-page-navigation > .button:last-child {
-    grid-column: 2;
-  }
-
-  .asset-page-first,
-  .asset-page-final {
-    grid-row: 3;
-  }
-
-  .asset-page-final {
-    justify-content: flex-end;
+    justify-content: flex-start;
+    flex-wrap: wrap;
   }
 
   .table-controls input {

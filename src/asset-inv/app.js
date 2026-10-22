@@ -200,12 +200,14 @@ function cacheElements() {
     assetApiTableWrap: document.querySelector("#asset-api-table-wrap"),
     assetApiBody: document.querySelector("#asset-api-body"),
     assetApiEmpty: document.querySelector("#asset-api-empty"),
+    assetApiPageNavigation: document.querySelector(".asset-page-navigation"),
     assetApiPrevious: document.querySelector("#asset-api-previous"),
+    assetApiPageJumpBack: document.querySelector("#asset-api-page-jump-back"),
+    assetApiPageJumpForward: document.querySelector("#asset-api-page-jump-forward"),
     assetApiNext: document.querySelector("#asset-api-next"),
     assetApiFirstPageButton: document.querySelector("#asset-api-first-page-button"),
     assetApiFinalPageButtons: document.querySelector("#asset-api-final-page-buttons"),
     assetApiPageInput: document.querySelector("#asset-api-page-input"),
-    assetApiPageJump: document.querySelector("#asset-api-page-jump"),
     assetApiPageLabel: document.querySelector("#asset-api-page-label"),
     assetApiStatusMix: document.querySelector("#asset-api-status-mix"),
     assetApiResultsCount: document.querySelector("#asset-api-results-count"),
@@ -504,10 +506,26 @@ function renderAssetApiPagination() {
   elements.assetApiPageInput.max = String(totalPages);
   elements.assetApiPageInput.value = String(assetApiState.page);
   elements.assetApiPageInput.disabled = !isReady || !hasMultiplePages;
-  elements.assetApiPageJump.disabled = !isReady || !hasMultiplePages;
   elements.assetApiPageLabel.textContent = `หน้า ${formatNumber(assetApiState.page)} จาก ${formatNumber(totalPages)}`;
-  elements.assetApiPrevious.disabled = !isReady || assetApiState.page <= 1;
-  elements.assetApiNext.disabled = !isReady || assetApiState.page >= totalPages;
+
+  const currentPage = clampPage(assetApiState.page, totalPages);
+  const pageTargets = {
+    current: currentPage,
+    jumpBack: clampPage(currentPage - 2, totalPages),
+    previous: clampPage(currentPage - 1, totalPages),
+    next: clampPage(currentPage + 1, totalPages),
+    jumpForward: clampPage(currentPage + 2, totalPages),
+  };
+  const relativePageButtons = [
+    [elements.assetApiPageJumpBack, pageTargets.jumpBack, pageTargets.current > 1],
+    [elements.assetApiPrevious, pageTargets.previous, pageTargets.current > 1],
+    [elements.assetApiNext, pageTargets.next, pageTargets.current < totalPages],
+    [elements.assetApiPageJumpForward, pageTargets.jumpForward, pageTargets.current < totalPages],
+  ];
+  relativePageButtons.forEach(([button, targetPage, canMove]) => {
+    button.dataset.page = String(targetPage);
+    button.disabled = !isReady || !canMove;
+  });
 }
 
 function renderAssetApiPageSizeButtons() {
@@ -782,11 +800,8 @@ function initInteractions() {
   elements.assetApiTypeFilter.addEventListener("change", renderAssetApiTable);
   elements.assetApiPageSizeButtons.addEventListener("click", handleAssetApiPageSizeButtonClick);
   elements.refreshAssetApiButton.addEventListener("click", loadAssetRegister);
-  elements.assetApiPrevious.addEventListener("click", () => loadAssetRegister(assetApiState.page - 1));
-  elements.assetApiNext.addEventListener("click", () => loadAssetRegister(assetApiState.page + 1));
-  elements.assetApiFirstPageButton.addEventListener("click", handleAssetApiPageButtonClick);
-  elements.assetApiFinalPageButtons.addEventListener("click", handleAssetApiPageButtonClick);
-  elements.assetApiPageJump.addEventListener("click", jumpToAssetApiPage);
+  elements.assetApiPageNavigation.addEventListener("click", handleAssetApiPageButtonClick);
+  elements.assetApiPageInput.addEventListener("change", jumpToAssetApiPage);
   elements.assetApiPageInput.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
       event.preventDefault();

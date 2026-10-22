@@ -105,40 +105,41 @@
         </button>
       </div>
     </div>
-    <div class="asset-page-navigation">
-      <button class="button button-secondary" type="button" id="asset-api-previous" disabled>
-        หน้าก่อนหน้า
-      </button>
+    <div class="asset-page-navigation" role="group" aria-label="เลือกหน้าทะเบียนสินทรัพย์สด">
       <div class="asset-page-first" id="asset-api-first-page-button" role="group" aria-label="หน้าแรก">
         <button class="button button-primary pagination-page-button is-active" type="button" data-page="1" aria-label="ไปหน้าที่ 1" aria-current="page" disabled>
           1
         </button>
       </div>
-      <div class="asset-pagination-center">
-        <label class="pagination-page-control" for="asset-api-page-input">
-          <span>ไปที่หน้า</span>
-          <input
-            id="asset-api-page-input"
-            type="number"
-            min="1"
-            value="1"
-            inputmode="numeric"
-            aria-label="หมายเลขหน้าทะเบียนสินทรัพย์สด"
-            aria-describedby="asset-api-page-label"
-            disabled
-          />
-        </label>
-        <button class="button button-secondary pagination-page-jump" type="button" id="asset-api-page-jump" disabled>
-          ไป
-        </button>
-        <span id="asset-api-page-label" aria-live="polite">หน้า 1 จาก 1</span>
-      </div>
+      <button class="button button-secondary pagination-page-button" type="button" id="asset-api-page-jump-back" data-page="1" aria-label="ย้อนกลับสองหน้า" disabled>
+        &lt;&lt;
+      </button>
+      <button class="button button-secondary pagination-page-button" type="button" id="asset-api-previous" data-page="1" aria-label="หน้าก่อนหน้า" disabled>
+        &lt;
+      </button>
+      <label class="pagination-page-control" for="asset-api-page-input">
+        <span class="sr-only">ไปที่หน้า</span>
+        <input
+          id="asset-api-page-input"
+          type="number"
+          min="1"
+          value="1"
+          inputmode="numeric"
+          aria-label="หมายเลขหน้าทะเบียนสินทรัพย์สด กด Enter เพื่อไปหน้านี้"
+          aria-describedby="asset-api-page-label"
+          disabled
+        />
+      </label>
+      <button class="button button-secondary pagination-page-button" type="button" id="asset-api-next" data-page="1" aria-label="หน้าถัดไป" disabled>
+        &gt;
+      </button>
+      <button class="button button-secondary pagination-page-button" type="button" id="asset-api-page-jump-forward" data-page="1" aria-label="ข้ามไปข้างหน้าสองหน้า" disabled>
+        &gt;&gt;
+      </button>
       <div class="asset-page-final" id="asset-api-final-page-buttons" role="group" aria-label="หน้าท้าย">
       </div>
-      <button class="button button-secondary" type="button" id="asset-api-next" disabled>
-        หน้าถัดไป
-      </button>
     </div>
+    <span class="asset-pagination-status sr-only" id="asset-api-page-label" aria-live="polite">หน้า 1 จาก 1</span>
   </div>
   <div class="asset-api-status-mix" id="asset-api-status-mix" aria-live="polite"></div>
   <div class="table-footer">

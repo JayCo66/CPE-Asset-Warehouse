@@ -6,6 +6,7 @@ import {
   ASSET_API_PAGE_SIZE_OPTIONS,
   clampPage,
   getAssetApiPageButtons,
+  getAssetApiPageTargets,
   getAssetApiTotalPages,
   normalizePageSize,
 } from "../src/asset-inv/pagination.mjs";
@@ -33,4 +34,28 @@ test("keeps first and final page buttons available for large collections", () =>
   assert.deepEqual(getAssetApiPageButtons(1), [1]);
   assert.deepEqual(getAssetApiPageButtons(2), [1, 2]);
   assert.deepEqual(getAssetApiPageButtons(433), [1, 432, 433]);
+});
+
+test("calculates single and double page navigation targets", () => {
+  assert.deepEqual(getAssetApiPageTargets(5, 433), {
+    current: 5,
+    jumpBack: 3,
+    previous: 4,
+    next: 6,
+    jumpForward: 7,
+  });
+  assert.deepEqual(getAssetApiPageTargets(1, 433), {
+    current: 1,
+    jumpBack: 1,
+    previous: 1,
+    next: 2,
+    jumpForward: 3,
+  });
+  assert.deepEqual(getAssetApiPageTargets(433, 433), {
+    current: 433,
+    jumpBack: 431,
+    previous: 432,
+    next: 433,
+    jumpForward: 433,
+  });
 });

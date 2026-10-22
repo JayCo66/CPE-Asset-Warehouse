@@ -26,3 +26,16 @@ export function getAssetApiPageButtons(totalPages) {
     .filter((page) => page >= 1)
     .sort((pageA, pageB) => pageA - pageB);
 }
+
+export function getAssetApiPageTargets(page, totalPages) {
+  const normalizedTotalPages = Math.max(1, Number(totalPages) || 1);
+  const currentPage = clampPage(page, normalizedTotalPages);
+
+  return {
+    current: currentPage,
+    jumpBack: clampPage(currentPage - 2, normalizedTotalPages),
+    previous: clampPage(currentPage - 1, normalizedTotalPages),
+    next: clampPage(currentPage + 1, normalizedTotalPages),
+    jumpForward: clampPage(currentPage + 2, normalizedTotalPages),
+  };
+}
