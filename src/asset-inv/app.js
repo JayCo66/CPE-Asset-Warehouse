@@ -1,7 +1,7 @@
 const dashboardData = {
   moduleNav: [
-    { id: "inventory", label: "Asset inventory", marker: "AI", href: "#main-content", active: true },
-    { id: "asset-register", label: "Live register", marker: "AR", href: "#asset-register", active: false },
+    { id: "inventory", label: "ทะเบียนสินทรัพย์", marker: "AI", href: "#main-content", active: true },
+    { id: "asset-register", label: "ทะเบียนสด", marker: "AR", href: "#asset-register", active: false },
   ],
   metrics: {
     total: 4324,
@@ -11,30 +11,30 @@ const dashboardData = {
   },
   readiness: {
     current: [
-      { label: "Computing & peripherals", total: 1640, ready: 1297 },
-      { label: "Teaching & AV", total: 982, ready: 814 },
-      { label: "Networking", total: 712, ready: 589 },
-      { label: "Laboratory equipment", total: 546, ready: 426 },
-      { label: "Office equipment", total: 444, ready: 290 },
+      { label: "คอมพิวเตอร์และอุปกรณ์ต่อพ่วง", total: 1640, ready: 1297 },
+      { label: "การเรียนการสอนและโสตทัศนูปกรณ์", total: 982, ready: 814 },
+      { label: "ระบบเครือข่าย", total: 712, ready: 589 },
+      { label: "อุปกรณ์ห้องปฏิบัติการ", total: 546, ready: 426 },
+      { label: "อุปกรณ์สำนักงาน", total: 444, ready: 290 },
     ],
     prior: [
-      { label: "Computing & peripherals", total: 1640, ready: 1258 },
-      { label: "Teaching & AV", total: 982, ready: 785 },
-      { label: "Networking", total: 712, ready: 565 },
-      { label: "Laboratory equipment", total: 546, ready: 411 },
-      { label: "Office equipment", total: 444, ready: 272 },
+      { label: "คอมพิวเตอร์และอุปกรณ์ต่อพ่วง", total: 1640, ready: 1258 },
+      { label: "การเรียนการสอนและโสตทัศนูปกรณ์", total: 982, ready: 785 },
+      { label: "ระบบเครือข่าย", total: 712, ready: 565 },
+      { label: "อุปกรณ์ห้องปฏิบัติการ", total: 546, ready: 411 },
+      { label: "อุปกรณ์สำนักงาน", total: 444, ready: 272 },
     ],
   },
   ageBands: [
-    { label: "0–2 years", count: 1184 },
-    { label: "3–5 years", count: 1576 },
-    { label: "6–8 years", count: 1022 },
-    { label: "9+ years", count: 542 },
+    { label: "0–2 ปี", count: 1184 },
+    { label: "3–5 ปี", count: 1576 },
+    { label: "6–8 ปี", count: 1022 },
+    { label: "9 ปีขึ้นไป", count: 542 },
   ],
   checks: [
-    { label: "Asset register", status: "Complete", tone: "success" },
-    { label: "Physical confirmation", status: "In progress", tone: "info" },
-    { label: "Location reconciliation", status: "Next", tone: "warning" },
+    { label: "ทะเบียนสินทรัพย์", status: "เสร็จสมบูรณ์", tone: "success" },
+    { label: "การยืนยันสินทรัพย์จริง", status: "กำลังดำเนินการ", tone: "info" },
+    { label: "การกระทบยอดตำแหน่ง", status: "ถัดไป", tone: "warning" },
   ],
   exceptions: [
     {
@@ -92,6 +92,32 @@ const auditState = {
 
 const ASSET_API_BASE_URL = window.ASSET_API_BASE_URL || "https://cpe.eng.kps.ku.ac.th/CPEAssets/assets_api";
 const ASSET_API_PAGE_SIZE = 100;
+
+const categoryLabels = {
+  Computing: "คอมพิวเตอร์",
+  "Teaching & AV": "การเรียนการสอนและโสตทัศนูปกรณ์",
+  Networking: "ระบบเครือข่าย",
+  "Laboratory equipment": "อุปกรณ์ห้องปฏิบัติการ",
+  "Office equipment": "อุปกรณ์สำนักงาน",
+};
+
+const readinessLabels = {
+  "Needs review": "ต้องตรวจสอบ",
+  "Missing location": "ไม่พบตำแหน่ง",
+  "Damaged flag": "ติดธงชำรุด",
+};
+
+const locationLabels = {
+  "Building 9 · 8303": "อาคาร 9 · 8303",
+  Unmatched: "ไม่พบตำแหน่ง",
+  "Building 8 · 2F": "อาคาร 8 · ชั้น 2",
+  "Building 6 · Lab 2": "อาคาร 6 · ห้องปฏิบัติการ 2",
+  "Building 9 · Office 1": "อาคาร 9 · สำนักงาน 1",
+};
+
+const categoryLabel = (value) => categoryLabels[value] ?? value;
+const readinessLabel = (value) => readinessLabels[value] ?? value;
+const locationLabel = (value) => locationLabels[value] ?? value;
 
 const assetApiState = {
   status: "idle",
@@ -171,7 +197,7 @@ function formatApiDate(value, includeTime = false) {
   const date = value instanceof Date ? value : parseApiDate(value);
   if (!date) return "—";
 
-  return new Intl.DateTimeFormat("en-GB", {
+  return new Intl.DateTimeFormat("th-TH", {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -214,9 +240,9 @@ function renderMetrics() {
   document.querySelector("#metric-ready").textContent = percent(readyPercent);
   document.querySelector("#metric-threshold").textContent = percent(thresholdPercent);
   document.querySelector("#metric-location").textContent = percent(locationPercent);
-  document.querySelector("#metric-ready-footnote").textContent = `${formatNumber(ready)} assets pass the readiness check`;
-  document.querySelector("#metric-threshold-footnote").textContent = `${formatNumber(belowThreshold)} assets under ฿5,000`;
-  document.querySelector("#metric-location-footnote").textContent = `${formatNumber(missingLocation)} assets need a location match`;
+  document.querySelector("#metric-ready-footnote").textContent = `${formatNumber(ready)} รายการผ่านการตรวจสอบความพร้อม`;
+  document.querySelector("#metric-threshold-footnote").textContent = `${formatNumber(belowThreshold)} รายการมีมูลค่าต่ำกว่า ฿5,000`;
+  document.querySelector("#metric-location-footnote").textContent = `${formatNumber(missingLocation)} รายการยังต้องจับคู่ตำแหน่ง`;
 }
 
 function renderReadiness(snapshot = "current") {
@@ -228,7 +254,7 @@ function renderReadiness(snapshot = "current") {
       const reviewPercent = 100 - readyPercent;
 
       return `
-        <div class="bar-row" role="img" aria-label="${escapeHtml(row.label)}: ${percent(readyPercent)} ready, ${percent(reviewPercent)} needs review">
+        <div class="bar-row" role="img" aria-label="${escapeHtml(row.label)}: พร้อม ${percent(readyPercent)}, ต้องตรวจสอบ ${percent(reviewPercent)}">
           <div class="bar-label-row">
             <span>${escapeHtml(row.label)}</span>
             <strong>${percent(readyPercent)}</strong>
@@ -251,7 +277,7 @@ function renderAgeChart() {
       (band) => `
         <div class="age-column">
           <div class="age-bar-wrap">
-            <span class="age-bar" style="height: ${(band.count / maxCount) * 100}%" title="${formatNumber(band.count)} assets"></span>
+          <span class="age-bar" style="height: ${(band.count / maxCount) * 100}%" title="${formatNumber(band.count)} รายการ"></span>
           </div>
           <strong class="age-count">${formatNumber(band.count)}</strong>
           <span class="age-label">${escapeHtml(band.label)}</span>
@@ -278,7 +304,7 @@ function renderCategoryFilter() {
   const categories = [...new Set(dashboardData.exceptions.map((item) => item.category))];
   elements.categoryFilter.insertAdjacentHTML(
     "beforeend",
-    categories.map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`).join(""),
+    categories.map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(categoryLabel(category))}</option>`).join(""),
   );
 }
 
@@ -300,8 +326,8 @@ function renderAssetApiFilters() {
     String(a).localeCompare(String(b)),
   );
 
-  setAssetApiFilterOptions(elements.assetApiStatusFilter, statuses, "All statuses");
-  setAssetApiFilterOptions(elements.assetApiTypeFilter, types, "All types");
+  setAssetApiFilterOptions(elements.assetApiStatusFilter, statuses, "ทุกสถานะ");
+  setAssetApiFilterOptions(elements.assetApiTypeFilter, types, "ทุกประเภท");
 }
 
 function getFilteredAssetApiRows() {
@@ -343,13 +369,13 @@ function renderAssetApiSummary() {
   elements.assetApiLoaded.textContent = assetApiState.status === "ready" ? formatNumber(rows.length) : "—";
   elements.assetApiPages.textContent =
     assetApiState.status === "ready"
-      ? `Page ${formatNumber(assetApiState.page)} of ${formatNumber(totalPages)}`
-      : "Waiting for data";
+      ? `หน้า ${formatNumber(assetApiState.page)} จาก ${formatNumber(totalPages)}`
+      : "กำลังรอข้อมูล";
   elements.assetApiTypeCount.textContent = assetApiState.status === "ready" ? formatNumber(types.size) : "—";
   elements.assetApiLatest.textContent = assetApiState.status === "ready" ? formatApiDate(latestUpdate) : "—";
 
   if (assetApiState.status !== "ready") {
-    elements.assetApiStatusMix.textContent = "Status mix will appear after the live source responds.";
+    elements.assetApiStatusMix.textContent = "สัดส่วนสถานะจะแสดงหลังจากแหล่งข้อมูลสดตอบกลับ";
     return;
   }
 
@@ -365,8 +391,8 @@ function renderAssetApiSummary() {
     .join(" · ");
 
   elements.assetApiStatusMix.textContent = statusMix
-    ? `Status mix in preview · ${statusMix}`
-    : "No status values were returned in the preview.";
+    ? `สัดส่วนสถานะในตัวอย่าง · ${statusMix}`
+    : "ไม่พบค่าสถานะในข้อมูลตัวอย่าง";
 }
 
 function renderAssetApiTable() {
@@ -406,9 +432,9 @@ function renderAssetApiTable() {
   const hasRows = filtered.length > 0;
   elements.assetApiTableWrap.hidden = !hasRows;
   elements.assetApiEmpty.hidden = hasRows;
-  elements.assetApiResultsCount.textContent = `Showing ${formatNumber(filtered.length)} of ${formatNumber(assetApiState.rows.length)} loaded rows · ${formatNumber(assetApiState.total)} total in API`;
+  elements.assetApiResultsCount.textContent = `แสดง ${formatNumber(filtered.length)} จาก ${formatNumber(assetApiState.rows.length)} แถวที่โหลด · ทั้งหมด ${formatNumber(assetApiState.total)} รายการใน API`;
   const totalPages = getAssetApiTotalPages();
-  elements.assetApiPageLabel.textContent = `Page ${formatNumber(assetApiState.page)} of ${formatNumber(totalPages)}`;
+  elements.assetApiPageLabel.textContent = `หน้า ${formatNumber(assetApiState.page)} จาก ${formatNumber(totalPages)}`;
   elements.assetApiPrevious.disabled = assetApiState.page <= 1;
   elements.assetApiNext.disabled = assetApiState.page >= totalPages;
 }
@@ -422,23 +448,23 @@ function renderAssetApiState() {
   elements.assetApiError.hidden = !hasError;
   elements.assetApiTableWrap.hidden = !isReady;
   elements.assetApiEmpty.hidden = true;
-  elements.assetApiResultsCount.textContent = isLoading ? "Loading live rows…" : "Waiting for live data";
+  elements.assetApiResultsCount.textContent = isLoading ? "กำลังโหลดแถวข้อมูลสด…" : "กำลังรอข้อมูลสด";
   elements.assetApiPrevious.disabled = !isReady || assetApiState.page <= 1;
   elements.assetApiNext.disabled = !isReady || assetApiState.page >= getAssetApiTotalPages();
 
   if (isLoading) {
-    elements.assetApiStatus.textContent = "Connecting";
+    elements.assetApiStatus.textContent = "กำลังเชื่อมต่อ";
     elements.assetApiStatus.className = "status-chip status-chip-info";
-    elements.assetApiUpdated.textContent = `Requesting page ${formatNumber(assetApiState.page)}`;
+    elements.assetApiUpdated.textContent = `กำลังขอข้อมูลหน้า ${formatNumber(assetApiState.page)}`;
   } else if (hasError) {
-    elements.assetApiStatus.textContent = "Unavailable";
+    elements.assetApiStatus.textContent = "ไม่พร้อมใช้งาน";
     elements.assetApiStatus.className = "status-chip status-chip-danger";
-    elements.assetApiUpdated.textContent = "Request failed";
-    elements.assetApiErrorMessage.textContent = assetApiState.error || "Try refreshing the source.";
+    elements.assetApiUpdated.textContent = "คำขอล้มเหลว";
+    elements.assetApiErrorMessage.textContent = assetApiState.error || "ลองรีเฟรชแหล่งข้อมูลอีกครั้ง";
   } else if (isReady) {
-    elements.assetApiStatus.textContent = "Live API";
+    elements.assetApiStatus.textContent = "เชื่อมต่อ API แล้ว";
     elements.assetApiStatus.className = "status-chip status-chip-success";
-    elements.assetApiUpdated.textContent = `Loaded ${formatApiDate(assetApiState.loadedAt, true)}`;
+    elements.assetApiUpdated.textContent = `โหลดเมื่อ ${formatApiDate(assetApiState.loadedAt, true)}`;
   }
 
   renderAssetApiSummary();
@@ -458,15 +484,15 @@ async function loadAssetRegister(page = assetApiState.page) {
     endpoint.searchParams.set("page", String(assetApiState.page));
 
     const response = await fetch(endpoint, { headers: { Accept: "application/json" } });
-    if (!response.ok) throw new Error(`Request failed with HTTP ${response.status}.`);
+    if (!response.ok) throw new Error(`คำขอล้มเหลว (HTTP ${response.status})`);
 
     const payload = await response.json();
     if (!payload || payload.success !== true || !Array.isArray(payload.data)) {
-      throw new Error(payload?.message || "Unexpected response from assets.php.");
+      throw new Error(payload?.message || "ได้รับข้อมูลจาก assets.php ในรูปแบบที่ไม่คาดคิด");
     }
 
     if (payload.data.some((row) => !row || typeof row !== "object")) {
-      throw new Error("Unexpected asset row in the assets.php response.");
+      throw new Error("พบแถวสินทรัพย์ในคำตอบจาก assets.php ที่ไม่ถูกต้อง");
     }
 
     assetApiState.rows = payload.data;
@@ -478,7 +504,7 @@ async function loadAssetRegister(page = assetApiState.page) {
     renderAssetApiState();
   } catch (error) {
     assetApiState.status = "error";
-    assetApiState.error = error instanceof Error ? error.message : "Unknown API error.";
+    assetApiState.error = error instanceof Error ? error.message : "เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุจาก API";
     renderAssetApiState();
   } finally {
     elements.refreshAssetApiButton.disabled = false;
@@ -489,7 +515,16 @@ function renderExceptions() {
   const search = elements.searchInput.value.trim().toLowerCase();
   const category = elements.categoryFilter.value;
   const filtered = dashboardData.exceptions.filter((item) => {
-    const matchesSearch = [item.code, item.name, item.category, item.location]
+    const matchesSearch = [
+      item.code,
+      item.name,
+      item.category,
+      categoryLabel(item.category),
+      item.location,
+      locationLabel(item.location),
+      item.readiness,
+      readinessLabel(item.readiness),
+    ]
       .join(" ")
       .toLowerCase()
       .includes(search);
@@ -507,18 +542,18 @@ function renderExceptions() {
               <span>${escapeHtml(item.name)}</span>
             </div>
           </td>
-          <td>${escapeHtml(item.category)}</td>
-          <td class="age-cell">${item.age} years</td>
-          <td>${escapeHtml(item.location)}</td>
-          <td><span class="status-chip status-chip-${item.tone}">${escapeHtml(item.readiness)}</span></td>
-          <td><button class="row-action" type="button" data-asset="${escapeHtml(item.code)}">Queue check</button></td>
+          <td>${escapeHtml(categoryLabel(item.category))}</td>
+          <td class="age-cell">${item.age} ปี</td>
+          <td>${escapeHtml(locationLabel(item.location))}</td>
+          <td><span class="status-chip status-chip-${item.tone}">${escapeHtml(readinessLabel(item.readiness))}</span></td>
+          <td><button class="row-action" type="button" data-asset="${escapeHtml(item.code)}" aria-label="เพิ่ม ${escapeHtml(item.code)} เข้าคิวตรวจสอบ">เพิ่มเข้าคิวตรวจสอบ</button></td>
         </tr>
       `,
     )
     .join("");
 
   elements.emptyState.hidden = filtered.length > 0;
-  elements.resultsCount.textContent = `Showing ${filtered.length} of ${dashboardData.exceptions.length} visible records`;
+  elements.resultsCount.textContent = `แสดง ${filtered.length} จาก ${dashboardData.exceptions.length} รายการในมุมมอง`;
 }
 
 function renderAuditState() {
@@ -529,12 +564,12 @@ function renderAuditState() {
   elements.auditProgress.textContent = `${auditState.progress}%`;
   elements.auditProgressBar.style.width = `${auditState.progress}%`;
   elements.auditProgressBar.setAttribute("aria-valuenow", String(auditState.progress));
-  elements.auditChecked.textContent = `${formatNumber(auditState.checked)} checked`;
-  elements.auditRemaining.textContent = `${formatNumber(remaining)} remaining`;
-  elements.auditStatus.textContent = complete ? "Complete" : "In progress";
+  elements.auditChecked.textContent = `${formatNumber(auditState.checked)} รายการตรวจแล้ว`;
+  elements.auditRemaining.textContent = `${formatNumber(remaining)} รายการคงเหลือ`;
+  elements.auditStatus.textContent = complete ? "เสร็จสมบูรณ์" : "กำลังดำเนินการ";
   elements.auditStatus.className = `status-chip ${complete ? "status-chip-success" : "status-chip-info"}`;
   elements.markCheckButton.disabled = complete;
-  elements.markCheckButton.textContent = complete ? "Annual check complete" : "Mark next batch checked";
+  elements.markCheckButton.textContent = complete ? "การตรวจนับประจำปีเสร็จสมบูรณ์" : "ตรวจยืนยันชุดถัดไป";
 }
 
 function renderBackToTop() {
@@ -556,8 +591,15 @@ function showToast(message) {
 }
 
 function exportView() {
-  const headers = ["asset_code", "asset_name", "category", "asset_age_years", "location", "readiness"];
-  const rows = dashboardData.exceptions.map((item) => [item.code, item.name, item.category, item.age, item.location, item.readiness]);
+  const headers = ["รหัสสินทรัพย์", "ชื่อสินทรัพย์", "หมวดหมู่", "อายุ (ปี)", "ตำแหน่ง", "ความพร้อม"];
+  const rows = dashboardData.exceptions.map((item) => [
+    item.code,
+    item.name,
+    categoryLabel(item.category),
+    item.age,
+    locationLabel(item.location),
+    readinessLabel(item.readiness),
+  ]);
   const csv = [headers, ...rows]
     .map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(","))
     .join("\n");
@@ -566,7 +608,7 @@ function exportView() {
   link.download = "asset-inventory-exceptions.csv";
   link.click();
   URL.revokeObjectURL(link.href);
-  showToast("Exception queue exported as CSV.");
+  showToast("ส่งออกรายการที่ต้องตรวจสอบเป็น CSV แล้ว");
 }
 
 function initInteractions() {
@@ -589,18 +631,22 @@ function initInteractions() {
       Math.round((dashboardData.metrics.total * auditState.progress) / 100),
     );
     renderAuditState();
-    showToast(auditState.progress === 100 ? "Annual inventory check complete." : "Next audit batch marked checked.");
+    showToast(
+      auditState.progress === 100
+        ? "การตรวจนับสินทรัพย์ประจำปีเสร็จสมบูรณ์แล้ว"
+        : "ทำเครื่องหมายตรวจยืนยันชุดถัดไปแล้ว",
+    );
   });
 
   elements.startCheckButton.addEventListener("click", () => {
     document.querySelector(".audit-panel").scrollIntoView({ behavior: "smooth", block: "center" });
-    showToast("Annual check rail is ready for the next batch.");
+    showToast("รอบตรวจนับประจำปีพร้อมสำหรับชุดถัดไปแล้ว");
   });
 
   elements.exportButton.addEventListener("click", exportView);
   elements.exceptionsBody.addEventListener("click", (event) => {
     const action = event.target.closest("[data-asset]");
-    if (action) showToast(`${action.dataset.asset} added to the next physical check.`);
+    if (action) showToast(`${action.dataset.asset} ถูกเพิ่มเข้าคิวตรวจสอบภาคสนามถัดไปแล้ว`);
   });
 }
 
