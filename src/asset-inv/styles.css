@@ -17,6 +17,7 @@
   --cpe-warning: #ffc107;
   --cpe-warning-soft: #f0b503;
   --cpe-danger: #e43f0b;
+  --cpe-floating-tool: #1a243b;
   --cpe-border: rgba(232, 230, 227, 0.12);
   --cpe-border-strong: rgba(232, 230, 227, 0.2);
   --cpe-focus: #70b7ff;
@@ -1175,6 +1176,48 @@ tbody tr:hover td {
   padding: 22px 2px 0;
   color: var(--cpe-text-subtle);
   font-size: 0.72rem;
+}
+
+.back-to-top {
+  position: fixed;
+  z-index: 15;
+  right: clamp(16px, 3vw, 28px);
+  bottom: clamp(16px, 3vw, 28px);
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px 0 10px;
+  color: var(--cpe-text);
+  background: var(--cpe-floating-tool);
+  border: 1px solid var(--cpe-border-strong);
+  border-radius: var(--radius-control);
+  box-shadow: var(--shadow-panel);
+  font-size: 0.78rem;
+  font-weight: 700;
+  transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.back-to-top[hidden] {
+  display: none;
+}
+
+.back-to-top:hover {
+  background: var(--cpe-brand-blue-deep);
+  border-color: var(--cpe-focus);
+  transform: translateY(-1px);
+}
+
+.back-to-top-icon {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  color: var(--cpe-focus);
+  border: 1px solid currentColor;
+  border-radius: 7px;
+  font-size: 1rem;
+  line-height: 1;
 }
 
 .toast {

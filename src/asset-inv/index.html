@@ -37,7 +37,7 @@
         <div class="module-links" id="module-links"></div>
       </nav>
 
-      <main class="dashboard" id="main-content">
+      <main class="dashboard" id="main-content" tabindex="-1">
         <section class="page-heading" aria-labelledby="page-title">
           <div>
             <p class="eyebrow">Member 1 · Annual inventory checks</p>
@@ -350,6 +350,10 @@
       </footer>
     </div>
 
+    <button class="back-to-top" id="back-to-top" type="button" aria-label="Back to top" hidden>
+      <span class="back-to-top-icon" aria-hidden="true">↑</span>
+      <span>Back to top</span>
+    </button>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <noscript>
       <div class="no-script-message">This dashboard needs JavaScript enabled to render charts and filters.</div>

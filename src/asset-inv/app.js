@@ -121,6 +121,7 @@ const elements = {
   markCheckButton: document.querySelector("#mark-check-button"),
   exportButton: document.querySelector("#export-button"),
   startCheckButton: document.querySelector("#start-check-button"),
+  backToTop: document.querySelector("#back-to-top"),
   toast: document.querySelector("#toast"),
   assetApiStatus: document.querySelector("#asset-api-status"),
   assetApiUpdated: document.querySelector("#asset-api-updated"),
@@ -536,6 +537,16 @@ function renderAuditState() {
   elements.markCheckButton.textContent = complete ? "Annual check complete" : "Mark next batch checked";
 }
 
+function renderBackToTop() {
+  elements.backToTop.hidden = window.scrollY < 480;
+}
+
+function scrollToTop() {
+  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  document.querySelector("#main-content").focus({ preventScroll: true });
+  window.scrollTo({ top: 0, behavior: prefersReducedMotion ? "auto" : "smooth" });
+}
+
 let toastTimer;
 function showToast(message) {
   elements.toast.textContent = message;
@@ -568,6 +579,8 @@ function initInteractions() {
   elements.refreshAssetApiButton.addEventListener("click", loadAssetRegister);
   elements.assetApiPrevious.addEventListener("click", () => loadAssetRegister(assetApiState.page - 1));
   elements.assetApiNext.addEventListener("click", () => loadAssetRegister(assetApiState.page + 1));
+  window.addEventListener("scroll", renderBackToTop, { passive: true });
+  elements.backToTop.addEventListener("click", scrollToTop);
 
   elements.markCheckButton.addEventListener("click", () => {
     auditState.progress = Math.min(auditState.progress + 4, 100);
@@ -601,6 +614,7 @@ function init() {
   renderExceptions();
   renderAuditState();
   initInteractions();
+  renderBackToTop();
   loadAssetRegister();
 }
 
