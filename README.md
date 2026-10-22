@@ -1,11 +1,11 @@
 # ETL ระบบครุภัณฑ์ + ใบแจ้งซ่อม → Data Warehouse
 
-`etl_warehouse.py` รวมข้อมูลจาก 2 แหล่งให้เป็นรูปแบบเดียวกัน แล้วสร้างไฟล์ SQL สำหรับโหลดเข้า warehouse ตาม `warehouse schema (1).sql` ซึ่งมี 8 dimension และ 3 fact
+`etl_warehouse.py` รวมข้อมูลจาก 2 แหล่งให้เป็นรูปแบบเดียวกัน แล้วสร้างไฟล์ SQL สำหรับโหลดเข้า warehouse ตาม `warehouse schema.sql` ซึ่งมี 8 dimension และ 4 fact
 
 | แหล่ง | มาจาก | ไปที่ warehouse |
 |---|---|---|
 | Excel | ใบแจ้งซ่อม Google Form เดิม | `fact_general_maintenance` |
-| API | ระบบครุภัณฑ์ CPEAssets | `dim_asset` และ dimension อื่นๆ, `fact_asset_maintenance`, `fact_borrow_transaction`, `fact_general_maintenance` |
+| API | ระบบครุภัณฑ์ CPEAssets | `dim_asset` และ dimension อื่นๆ, `fact_asset_inventory`, `fact_asset_maintenance`, `fact_borrow_transaction`, `fact_general_maintenance` |
 
 ## วิธีรัน
 
@@ -14,7 +14,9 @@ pip install -r requirements.txt
 python etl_warehouse.py "ใบแจ้งซ่อม.xlsx" -o output
 ```
 
-แล้วรัน `output/warehouse_load.sql` บน MySQL 8 ที่สร้างตารางจาก `warehouse schema (1).sql` ไว้แล้ว ไฟล์นี้ TRUNCATE ทุกตารางก่อน INSERT จึงรันซ้ำได้
+แล้วรัน `output/warehouse_load.sql` บน MySQL 8 ที่สร้างตารางจาก `warehouse schema.sql` ไว้แล้ว ไฟล์นี้ TRUNCATE ทุกตารางก่อน INSERT จึงรันซ้ำได้
+
+รัน ETL เป็นรอบ (เช่น สัปดาห์ละครั้ง) เพื่อเก็บ snapshot ครุภัณฑ์ใน `fact_asset_inventory` ไว้ดูแนวโน้มตามเวลา (ดู [snapshot ครุภัณฑ์](#snapshot-ครุภัณฑ์-fact_asset_inventory))
 
 | ตัวเลือก | ความหมาย |
 |---|---|
@@ -23,6 +25,7 @@ python etl_warehouse.py "ใบแจ้งซ่อม.xlsx" -o output
 | `--mock-dir DIR` | โฟลเดอร์ mock JSON (default `mock_api/` ข้างสคริปต์) |
 | `--offline` | ไม่เรียก API จริง ใช้ข้อมูลที่ดึงไว้ใน `<out>/raw/` |
 | `--as-of YYYY-MM-DD` | วันที่อ้างอิงสำหรับคำนวณวันเกินกำหนดของรายการยืมที่ยังไม่คืน (default วันนี้) |
+| `--snapshot-date YYYY-MM-DD` | วันที่ของ snapshot ครุภัณฑ์รอบนี้ (default วันที่ดึง assets API) |
 | `--keep-invalid-place` | เก็บแถวที่สถานที่ใช้ไม่ได้ไว้ โดยเว้นสถานที่ว่าง แทนการลบแถว |
 
 **ผลลัพธ์**
@@ -33,6 +36,7 @@ python etl_warehouse.py "ใบแจ้งซ่อม.xlsx" -o output
 | `warehouse/*.csv` | ข้อมูลรายตาราง ไว้ตรวจหรือโหลดด้วยวิธีอื่น |
 | `repair_requests_clean.xlsx` | Excel ที่ clean แล้ว มี sheet `cleaning_log` (ทุกการแก้) และ `rejected_place` (แถวที่ถูกตัด) |
 | `raw/*.json` | ข้อมูลที่ดึงจาก API จริง ใช้กับ `--offline` |
+| `history/assets_YYYYMMDD.json` | snapshot ครุภัณฑ์ของแต่ละรอบ **ห้ามลบ** ไม่อย่างนั้นประวัติใน `fact_asset_inventory` หาย |
 
 ---
 
@@ -101,10 +105,12 @@ sheet อื่น เช่น `การตอบแบบฟอร์ม 2` �
 
 | endpoint | ตอนนี้ | ไปที่ warehouse |
 |---|---|---|
-| `assets` | **API จริง** | `dim_asset`, `dim_asset_type`, `dim_asset_category` |
+| `assets` | **API จริง** | `dim_asset`, `fact_asset_inventory` |
+| `asset_types` | mock (ค่าจริงจาก assets) | `dim_asset_type` |
+| `asset_categories` | mock | `dim_asset_category` |
 | `departments` | mock | `dim_department` |
 | `users` | mock | `dim_user` |
-| `locations` | mock | `dim_location` |
+| `locations` | mock | `dim_location` (`location_id`) |
 | `maintenance_type` | mock | `dim_maintenance_type` |
 | `maintenance_asset` | mock | `fact_asset_maintenance` |
 | `maintenance_general` | mock | `fact_general_maintenance` |
@@ -112,6 +118,8 @@ sheet อื่น เช่น `การตอบแบบฟอร์ม 2` �
 | `borrow_request_items` | mock | `fact_borrow_transaction` |
 
 เมื่อระบบจริงทำ endpoint ไหนเสร็จ ให้เปลี่ยนค่าใน `SOURCES` เป็น `"api"` ไม่ต้องแก้ส่วนอื่น ถ้า API ทำตามข้อกำหนดด้านล่าง
+
+โค้ด PHP ของ `borrow`, `borrow_request_items`, `maintenance_asset`, `maintenance_general`, `maintenance_type` อยู่ใน `assets_api/` แล้ว เปลี่ยนเป็น `"api"` ได้เมื่อขึ้น server
 
 ### ข้อกำหนดของ API
 
@@ -201,7 +209,9 @@ id ที่อ้างถึงต้องมีอยู่จริงใ�
 
 | endpoint | ต้องมี | ไม่บังคับ |
 |---|---|---|
-| `assets` | `asset_id, asset_code, asset_name, type_id, type_code, type_name, brand, year_purchase, year_fiscal, source, asset_status, location_id, department_id` | `model` |
+| `assets` | `asset_id, asset_code, asset_name, type_id, type_code, type_name, brand, year_purchase, year_fiscal, source, asset_status, location_id, department_id` | `model`, `category_id`, `purchase_date` |
+| `asset_types` | `type_id, type_code, type_name` | `is_deleted` |
+| `asset_categories` | `category_id, category_name_th` | `category_code` (ใช้ผูกหมวดเมื่อ asset ไม่มี `category_id`) |
 | `departments` | `department_id, department_name` | `shortname` (ใช้จับคู่ชื่อสังกัดใน Excel), `is_deleted` |
 | `users` | `user_id, fullname` | `role_status` (**ไม่มีใน DB schema แต่ `dim_user` ต้องใช้**), `department_id` |
 | `locations` | `location_id, location_name, building, floor, room_detail` | `is_deleted` |
@@ -226,6 +236,16 @@ id ที่อ้างถึงต้องมีอยู่จริงใ�
 }
 ```
 ควรเพิ่ม: `model`, `purchase_date`, `purchase_price`, `warranty_expire`, `serial_number` และใส่ค่า `brand`, `year_fiscal`, `category_id` ที่ตอนนี้ว่างเกือบทั้งหมด
+
+**`asset_types.php`** (ค่าจริงจาก assets)
+```json
+{"type_id": 12, "type_code": "FN05", "type_name": "ครุภัณฑ์สำนักงาน-ต่ำกว่าเกณฑ์ (ต่ำกว่า 5,000 บาท)", "description": null, "is_deleted": 0, "deleted_at": null}
+```
+
+**`asset_categories.php`** (`category_code` = เลข 2 หลักใน `type_code` เช่น FA**05** / FN**05** → 05)
+```json
+{"category_id": 4, "category_code": "05", "category_name_th": "ครุภัณฑ์สำนักงาน", "category_name_en": "Office equipment", "description": null, "status": "active", "created_at": "2024-10-01 09:00:00", "updated_at": "2024-10-01 09:00:00"}
+```
 
 **`departments.php`**
 ```json
@@ -306,7 +326,9 @@ id ที่อ้างถึงต้องมีอยู่จริงใ�
 
 ### สิ่งที่ ETL ทำกับข้อมูล API
 
-- **หมวดหมู่ครุภัณฑ์**: API ส่ง `category_id = null` ทุกแถว ETL จัดหมวดเองจาก `type_name` (`CATEGORY_RULES`)
+- **หมวดหมู่ครุภัณฑ์**: ใช้ `asset.category_id` ถ้ามี ถ้าไม่มี (ตอนนี้ API จริงเป็น null ทุกแถว) ใช้เลขหมวดใน `type_code` (FA05 → 05) จับกับ `asset_categories.category_code`
+- **ประเภทครุภัณฑ์**: ใช้ `asset_types`; ครุภัณฑ์ที่ `type_id` ว่างแต่มี `type_code` จะได้ประเภทจากรหัสนั้น
+- **ปีงบที่ได้มา (`year_fiscal`)**: ถ้า API ว่าง ถอดจากท้ายรหัสครุภัณฑ์ เช่น `.../001-68` → 2568, `.../ร.54-1` → 2554
 - **แหล่งเงิน (`source`)**: 8 แบบที่สะกดต่างกันรวมเป็น 4 กลุ่ม (`SOURCE_GROUP`)
 - **locations**: `building + floor + room_detail + location_name` ผ่านตัวแยกสถานที่เดียวกับ Excel ห้องเดียวกันจึงได้ `location_key` เดียวกันทั้งฝั่งครุภัณฑ์และฝั่งแจ้งซ่อม
 - **แถวที่ `is_deleted = 1`** (departments, locations): ตัดออก ยกเว้นยังมีข้อมูลอ้างถึงอยู่
@@ -315,10 +337,27 @@ id ที่อ้างถึงต้องมีอยู่จริงใ�
 - **วันเกินกำหนด**: คืนแล้วคิดจาก `actual_return_date − return_date`; ยังไม่คืนคิดถึงวันที่ `--as-of`; ใบที่ `status = ปฏิเสธ` ไม่คิด
 - **แจ้งซ่อมทั่วไป**: ถือว่า API เป็นระบบใหม่ที่ใช้ต่อจาก Excel ถ้ามีงานใน API ที่แจ้งก่อนหรือวันเดียวกับ Excel ใบสุดท้าย ETL จะเตือนในหัวไฟล์ SQL ว่าอาจซ้ำ
 
+### Snapshot ครุภัณฑ์ (`fact_asset_inventory`)
+
+fact นี้เป็น periodic snapshot: 1 แถว = ครุภัณฑ์ 1 ชิ้น ณ วันที่ดึงข้อมูล ทุกครั้งที่รัน ETL จะเก็บรายการ assets ของรอบนั้นไว้ที่ `<out>/history/assets_YYYYMMDD.json` แล้วสร้าง fact จาก**ทุก** snapshot ที่เก็บไว้ (รันซ้ำวันเดียวกันจะเขียนทับ snapshot ของวันนั้น)
+
+| คอลัมน์ | คิดจาก |
+|---|---|
+| `snapshot_date_key` | วันที่ดึง assets API (หรือ `--snapshot-date`) |
+| `acquisition_date_key` | `purchase_date` → ถ้าไม่มี ใช้ 1 ต.ค. ต้นปีงบจากท้ายรหัสครุภัณฑ์ → ถ้าไม่มี ใช้ 1 ม.ค. ของ `year_purchase` |
+| `department_key`, `type_key`, `category_key`, `location_key` | ค่าของครุภัณฑ์ ณ วันที่ snapshot |
+| `is_available_flag` | `asset_status = พร้อมใช้งาน` (ถูกยืม / ชำรุด / ส่งซ่อม = 0) |
+| `is_damaged_flag` | `asset_status` เป็น ชำรุด หรือ ส่งซ่อม |
+| `is_below_threshold_flag` | `type_code` ขึ้นต้น FN / FP / FU หรือชื่อประเภทมีคำว่า ต่ำกว่าเกณฑ์ |
+| `has_location_flag` | มี `location_key` |
+| `asset_age_years` | จำนวนปีเต็มจากวันที่ได้มาถึงวันที่ snapshot |
+
+warehouse โหลดแบบ full refresh ทุกครั้ง ประวัติ snapshot จึงอยู่ที่โฟลเดอร์ `history/` ไม่ได้อยู่ใน MySQL ถ้าโฟลเดอร์นี้หาย จะเหลือแค่ snapshot ของรอบล่าสุด
+
 ### Mock
 
 - `mock_api/*.json` คือตัวอย่าง response ตามข้อกำหนดข้างบน ทีมที่ทำ API ใช้เป็นแบบได้
-- `departments` ใช้ id และชื่อจริงจาก assets ส่วนที่เหลือเป็นค่าสมมติ อ้าง asset_id จริง
+- `departments` และ `asset_types` ใช้ id และชื่อจริงจาก assets ส่วน `asset_categories` ใช้เลขหมวดจริงใน `type_code` แต่ชื่อหมวดเป็นค่าที่ตั้งเอง ที่เหลือเป็นค่าสมมติที่อ้าง asset_id จริง
 - ช่วงข้อมูล: ปีงบประมาณ 2568–2569 ส่วนแจ้งซ่อมทั่วไปเริ่มหลัง Excel
 - สร้างใหม่ได้ด้วยคำสั่งนี้ (seed คงที่ ได้ข้อมูลชุดเดิมทุกครั้ง):
   ```bash
@@ -333,5 +372,7 @@ id ที่อ้างถึงต้องมีอยู่จริงใ�
 - `fact_general_maintenance` ไม่มีคอลัมน์รายละเอียดของปัญหาและชั่วโมงที่แจ้ง จึงไม่ได้โหลด 2 อย่างนี้
 - แถวจาก Excel ไม่มีวันเสร็จ สถานะงาน ผู้รับผิดชอบ และเวลาแก้ไข (เป็น NULL)
 - ใบแจ้งซ่อมที่ระบุหลายห้อง/ชั้น/อาคาร เก็บรวมในช่องเดียว เช่น ห้อง `4401, 4402` เพราะ fact มี `location_key` ได้ค่าเดียว
-- API จริงยังไม่ส่ง `model`, `purchase_price`, `category` และ `year_fiscal` เป็น null ทั้งหมด
+- API จริงยังไม่ส่ง `model`, `purchase_date`, `category_id` และ `year_fiscal` เป็น null ทั้งหมด (ETL ถอดปีงบและหมวดจากรหัสแทน)
+- ครุภัณฑ์ 83% ไม่มี `location_id` ใน API จริง จึงไม่มี `location_key`
+- `dim_location.location_id` มีค่าเฉพาะสถานที่ที่มาจากตาราง `locations`; สถานที่ที่มาจากใบแจ้งซ่อมอย่างเดียวเป็น NULL
 - `fiscal_year` ใน `dim_date` เป็นปีงบประมาณ **พ.ศ.** เริ่ม 1 ต.ค. (เปลี่ยนได้ที่ `FISCAL_YEAR_BE`)
