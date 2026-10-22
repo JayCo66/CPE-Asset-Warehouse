@@ -5,7 +5,14 @@ header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 header('X-Content-Type-Options: nosniff');
 
-function sendWarehouseInventoryResponse(bool $success, string $message, int $total, array $data, int $statusCode = 200): void
+function sendWarehouseInventoryResponse(
+    bool $success,
+    string $message,
+    int $total,
+    array $data,
+    int $statusCode = 200,
+    ?array $summary = null
+): void
 {
     http_response_code($statusCode);
     echo json_encode([
@@ -13,6 +20,7 @@ function sendWarehouseInventoryResponse(bool $success, string $message, int $tot
         'message' => $message,
         'total' => $total,
         'data' => $data,
+        'summary' => $summary ?? ['current' => null, 'previous' => null],
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -68,6 +76,65 @@ try {
     }
 
     $latestSnapshotDateKey = (int)$latestSnapshotDateKey;
+
+    $snapshotKeysStmt = $warehousePdo->query(
+        'SELECT DISTINCT `snapshot_date_key`
+        FROM `fact_asset_inventory`
+        ORDER BY `snapshot_date_key` DESC
+        LIMIT 2'
+    );
+    $snapshotDateKeys = array_map('intval', $snapshotKeysStmt->fetchAll(PDO::FETCH_COLUMN));
+    $summary = ['current' => null, 'previous' => null];
+
+    if ($snapshotDateKeys !== []) {
+        $snapshotPlaceholders = implode(', ', array_fill(0, count($snapshotDateKeys), '?'));
+        $summaryStmt = $warehousePdo->prepare(
+            'SELECT
+                fai.`snapshot_date_key`,
+                snapshot_date.`full_date` AS `snapshot_date`,
+                COUNT(*) AS `total`,
+                SUM(CASE WHEN fai.`is_available_flag` = 1 THEN 1 ELSE 0 END) AS `ready`,
+                SUM(CASE WHEN fai.`is_below_threshold_flag` = 1 THEN 1 ELSE 0 END) AS `below_threshold`,
+                SUM(CASE WHEN fai.`has_location_flag` = 0 THEN 1 ELSE 0 END) AS `missing_location`,
+                SUM(CASE WHEN fai.`asset_age_years` BETWEEN 0 AND 2 THEN 1 ELSE 0 END) AS `age_zero_to_two`,
+                SUM(CASE WHEN fai.`asset_age_years` BETWEEN 3 AND 5 THEN 1 ELSE 0 END) AS `age_three_to_five`,
+                SUM(CASE WHEN fai.`asset_age_years` BETWEEN 6 AND 8 THEN 1 ELSE 0 END) AS `age_six_to_eight`,
+                SUM(CASE WHEN fai.`asset_age_years` >= 9 THEN 1 ELSE 0 END) AS `age_nine_plus`,
+                SUM(CASE WHEN fai.`asset_age_years` IS NULL THEN 1 ELSE 0 END) AS `age_unknown`
+            FROM `fact_asset_inventory` fai
+            LEFT JOIN `dim_date` snapshot_date
+                ON snapshot_date.`date_key` = fai.`snapshot_date_key`
+            WHERE fai.`snapshot_date_key` IN (' . $snapshotPlaceholders . ')
+            GROUP BY fai.`snapshot_date_key`, snapshot_date.`full_date`
+            ORDER BY fai.`snapshot_date_key` DESC'
+        );
+        foreach ($snapshotDateKeys as $index => $snapshotDateKey) {
+            $summaryStmt->bindValue($index + 1, $snapshotDateKey, PDO::PARAM_INT);
+        }
+        $summaryStmt->execute();
+
+        $summaries = array_map(static function (array $row): array {
+            return [
+                'snapshotDateKey' => (int)$row['snapshot_date_key'],
+                'snapshotDate' => $row['snapshot_date'],
+                'total' => (int)$row['total'],
+                'ready' => (int)$row['ready'],
+                'belowThreshold' => (int)$row['below_threshold'],
+                'missingLocation' => (int)$row['missing_location'],
+                'ageBands' => [
+                    'zeroToTwo' => (int)$row['age_zero_to_two'],
+                    'threeToFive' => (int)$row['age_three_to_five'],
+                    'sixToEight' => (int)$row['age_six_to_eight'],
+                    'ninePlus' => (int)$row['age_nine_plus'],
+                    'unknown' => (int)$row['age_unknown'],
+                ],
+            ];
+        }, $summaryStmt->fetchAll());
+
+        $summary['current'] = $summaries[0] ?? null;
+        $summary['previous'] = $summaries[1] ?? null;
+    }
+
     $countStmt = $warehousePdo->prepare(
         'SELECT COUNT(*) FROM `fact_asset_inventory` WHERE `snapshot_date_key` = :snapshot_date_key'
     );
@@ -183,7 +250,7 @@ try {
         ];
     }, $rows);
 
-    sendWarehouseInventoryResponse(true, 'เรียกดูรายการสินทรัพย์จากคลังข้อมูลสำเร็จ', $total, $data);
+    sendWarehouseInventoryResponse(true, 'เรียกดูรายการสินทรัพย์จากคลังข้อมูลสำเร็จ', $total, $data, 200, $summary);
 } catch (Throwable $error) {
     error_log('Warehouse inventory API failed: ' . $error->getMessage());
     sendWarehouseInventoryResponse(false, 'ไม่สามารถอ่านข้อมูลจากคลังสินทรัพย์ได้', 0, [], 500);

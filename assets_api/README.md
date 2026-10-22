@@ -6,10 +6,24 @@ The asset-inventory dashboard reads the local warehouse through:
 GET /assets_api/fact_asset_inventory.php?page=1&limit=10
 ```
 
-The endpoint returns the latest `snapshot_date_key` only. It joins
-`fact_asset_inventory` with its date, asset, type, category, department, and
-location dimensions, and returns the dashboard's
-`{ success, message, total, data }` response format. `limit` accepts values
+The `data` list returns rows from the latest `snapshot_date_key` only. The
+existing `{ success, message, total, data }` fields and pagination behavior are
+unchanged. The response also includes an additive `summary` object with
+read-only aggregates for the latest and immediately previous snapshots, when
+available:
+
+`summary.current` and `summary.previous` have this shape:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `snapshotDateKey` | integer | Warehouse date key |
+| `snapshotDate` | string or `null` | Snapshot date from `dim_date` |
+| `total`, `ready`, `belowThreshold`, `missingLocation` | integer | Counts from the selected snapshot |
+| `ageBands.zeroToTwo`, `threeToFive`, `sixToEight`, `ninePlus`, `unknown` | integer | Age counts; unknown acquisition age is reported separately |
+
+Counts are aggregated from the existing one-row-per-asset snapshot facts and
+their stored flags/age values. `previous` is `null` when the warehouse has no
+earlier snapshot. No tables or source data are changed. `limit` accepts values
 from 1 to 100; `page` starts at 1.
 There is no university-API fallback in the dashboard.
 

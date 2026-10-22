@@ -42,3 +42,9 @@ test("module tabs stay in one row at every responsive breakpoint", () => {
   assert.ok(linkRules.every((rule) => !/overflow-wrap:\s*anywhere/.test(rule)));
   assert.ok(getRuleBlocks(".module-links").every((rule) => /flex-wrap:\s*nowrap/.test(rule)));
 });
+
+test("does not show an inactive workspace menu beside the working module navigation", () => {
+  assert.doesNotMatch(html, /aria-label="เปิดเมนูพื้นที่ทำงาน"/);
+  assert.match(html, /<nav\b[^>]*class="module-nav"/);
+  assert.match(html, /id="module-links"/);
+});

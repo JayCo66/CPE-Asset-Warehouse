@@ -1,11 +1,9 @@
 <section class="panel asset-register-panel" id="asset-register" aria-labelledby="asset-register-title">
   <div class="panel-heading asset-register-heading">
     <div>
-      <p class="panel-kicker">คลังข้อมูลสินทรัพย์ · warehouse</p>
-      <h2 id="asset-register-title">ตัวอย่างทะเบียนสินทรัพย์</h2>
+      <h2 id="asset-register-title">ทะเบียนสินทรัพย์จากคลังข้อมูล</h2>
       <p class="panel-description">
-        ค้นหาข้อมูลจาก snapshot ล่าสุดใน <code>fact_asset_inventory</code> โดยแสดงรหัสสินทรัพย์ ประเภท
-        สถานะ หน่วยงาน และรายละเอียดการอัปเดต
+        ค้นหาและตรวจสอบข้อมูลจากชุดข้อมูลล่าสุดใน <code>fact_asset_inventory</code>
       </p>
     </div>
     <div class="asset-source-status">
@@ -16,31 +14,31 @@
 
   <div class="asset-summary" aria-label="สรุปข้อมูลจากคลังสินทรัพย์">
     <div class="asset-summary-item">
-      <span class="asset-summary-label">ทั้งหมดในคลังข้อมูล</span>
+      <span class="asset-summary-label">สินทรัพย์ในชุดข้อมูลล่าสุด</span>
       <strong class="asset-summary-value" id="asset-api-total">—</strong>
-      <span class="asset-summary-detail">สินทรัพย์ที่ไม่ถูกลบ</span>
+      <span class="asset-summary-detail">จำนวนแถวในชุดข้อมูลล่าสุด</span>
     </div>
     <div class="asset-summary-item">
-      <span class="asset-summary-label">แถวข้อมูลตัวอย่าง</span>
+      <span class="asset-summary-label">แถวในหน้าที่เปิด</span>
       <strong class="asset-summary-value" id="asset-api-loaded">—</strong>
       <span class="asset-summary-detail" id="asset-api-pages">หน้า 1 จาก 1 · 10 แถวต่อหน้า</span>
     </div>
     <div class="asset-summary-item">
-      <span class="asset-summary-label">ประเภทในตัวอย่าง</span>
+      <span class="asset-summary-label">ประเภทในหน้าที่เปิด</span>
       <strong class="asset-summary-value" id="asset-api-type-count">—</strong>
-      <span class="asset-summary-detail">จำนวนชื่อประเภทที่ไม่ซ้ำกัน</span>
+      <span class="asset-summary-detail">ประเภทที่ไม่ซ้ำกันในหน้าปัจจุบัน</span>
     </div>
     <div class="asset-summary-item">
-      <span class="asset-summary-label">การอัปเดตล่าสุด</span>
+      <span class="asset-summary-label">วันที่ชุดข้อมูลล่าสุด</span>
       <strong class="asset-summary-value" id="asset-api-latest">—</strong>
-      <span class="asset-summary-detail">จากแถวข้อมูลที่โหลด</span>
+      <span class="asset-summary-detail">วันที่บันทึกข้อมูลในคลัง</span>
     </div>
   </div>
 
   <div class="asset-register-toolbar table-controls">
     <label class="input-label" for="asset-api-search">
-      <span class="sr-only">ค้นหาทะเบียนสินทรัพย์</span>
-      <input id="asset-api-search" type="search" placeholder="ค้นหาแถวข้อมูลตามรหัส ชื่อ ประเภท หรือหน่วยงาน" />
+      <span class="sr-only">ค้นหาในหน้าปัจจุบัน</span>
+      <input id="asset-api-search" type="search" placeholder="ค้นหาในหน้านี้: รหัส ชื่อ ประเภท หรือหน่วยงาน" />
     </label>
     <label class="select-label" for="asset-api-status-filter">
       สถานะ
@@ -57,6 +55,14 @@
     <button class="button button-secondary" type="button" id="refresh-asset-api-button">
       รีเฟรชแหล่งข้อมูล
     </button>
+    <div class="asset-export-control">
+      <button class="button button-secondary" type="button" id="asset-api-export-button" disabled>
+        ส่งออกผลลัพธ์หน้านี้ (CSV)
+      </button>
+      <span class="export-scope-note" id="asset-api-export-scope">
+        ส่งออกเฉพาะรายการที่ตรงกับคำค้นและตัวกรองในหน้าปัจจุบัน ไม่รวมหน้าอื่น
+      </span>
+    </div>
   </div>
 
   <div class="api-state api-state-loading" id="asset-api-loading" role="status" aria-live="polite">
@@ -68,7 +74,7 @@
   </div>
   <div class="table-wrap" id="asset-api-table-wrap" hidden>
     <table class="asset-api-table">
-      <caption class="sr-only">ทะเบียนสินทรัพย์จาก snapshot ล่าสุดใน fact_asset_inventory</caption>
+      <caption class="sr-only">ทะเบียนสินทรัพย์จากชุดข้อมูลล่าสุดใน fact_asset_inventory</caption>
       <thead>
         <tr>
           <th scope="col">สินทรัพย์</th>
@@ -77,7 +83,7 @@
           <th scope="col">ปีที่จัดซื้อ</th>
           <th scope="col">หน่วยงาน</th>
           <th scope="col">รหัสสถานที่</th>
-          <th scope="col">อัปเดตล่าสุด</th>
+          <th scope="col">วันที่ชุดข้อมูล</th>
           <th scope="col">ข้อมูล</th>
         </tr>
       </thead>
@@ -85,8 +91,8 @@
     </table>
   </div>
   <div class="empty-state" id="asset-api-empty" hidden>
-    <strong>ไม่พบสินทรัพย์ที่ตรงกับตัวกรอง</strong>
-    <p>ล้างคำค้นหรือเลือกสถานะหรือประเภทอื่น</p>
+      <strong>ไม่พบสินทรัพย์ในหน้านี้ที่ตรงกับตัวกรอง</strong>
+      <p>ล้างคำค้นหรือเลือกสถานะหรือประเภทอื่น หรือไปยังหน้าอื่น</p>
   </div>
   <div class="asset-pagination" aria-label="หน้าทะเบียนสินทรัพย์">
     <div class="asset-pagination-size">
@@ -145,6 +151,6 @@
   <div class="asset-api-status-mix" id="asset-api-status-mix" aria-live="polite"></div>
   <div class="table-footer">
     <span id="asset-api-results-count">กำลังรอข้อมูลจากคลังข้อมูล</span>
-    <span>API · <code>assets_api/fact_asset_inventory.php</code></span>
+    <span>แหล่งข้อมูล · <code>assets_api/fact_asset_inventory.php</code></span>
   </div>
 </section>
