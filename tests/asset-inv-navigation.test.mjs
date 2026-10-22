@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const styles = readFileSync(new URL("../src/asset-inv/styles.css", import.meta.url), "utf8");
+const html = readFileSync(new URL("../src/asset-inv/index.html", import.meta.url), "utf8");
 
 function getRuleBlocks(selector) {
   const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -10,6 +11,13 @@ function getRuleBlocks(selector) {
 
   return [...styles.matchAll(rulePattern)].map((match) => match[1]);
 }
+
+test("dashboard stylesheet URL is versioned to prevent stale navigation styles", () => {
+  const stylesheetHref = html.match(/<link\b[^>]*\bhref="([^"]*styles\.css[^"]*)"/)?.[1];
+
+  assert.ok(stylesheetHref, "dashboard stylesheet link should exist");
+  assert.match(stylesheetHref, /[?&]v=[\w.-]+/, "stylesheet URL should change when its version is bumped");
+});
 
 test("floating navigation scrolls horizontally without vertical overflow", () => {
   const [nav] = getRuleBlocks(".module-nav");
