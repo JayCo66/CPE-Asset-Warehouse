@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Asset inventory and lifecycle dashboard for the CPE Asset Warehouse."
+    />
+    <title>Asset inventory | CPE Asset Warehouse</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to dashboard</a>
+
+    <div class="app-shell">
+      <header class="app-header">
+        <a class="brand" href="#main-content" aria-label="CPE Asset Warehouse home">
+          <span class="brand-mark" aria-hidden="true">CPE</span>
+          <span class="brand-copy">
+            <span class="brand-kicker">Engineering operations</span>
+            <strong>Asset Warehouse</strong>
+          </span>
+        </a>
+
+        <div class="header-status">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span>Demo workspace</span>
+          <button class="icon-button" type="button" aria-label="Open workspace menu">
+            <span aria-hidden="true">•••</span>
+          </button>
+        </div>
+      </header>
+
+      <nav class="module-nav" aria-label="Workspace modules">
+        <span class="module-nav-label">Workspace</span>
+        <div class="module-links" id="module-links"></div>
+      </nav>
+
+      <main class="dashboard" id="main-content">
+        <section class="page-heading" aria-labelledby="page-title">
+          <div>
+            <p class="eyebrow">Member 1 · Annual inventory checks</p>
+            <h1 id="page-title">Asset inventory &amp; lifecycle</h1>
+            <p class="page-intro">
+              Keep every asset accounted for, locatable, and ready for the next
+              teaching cycle.
+            </p>
+          </div>
+          <div class="heading-actions" aria-label="Dashboard actions">
+            <button class="button button-secondary" type="button" id="export-button">
+              Export view
+            </button>
+            <button class="button button-primary" type="button" id="start-check-button">
+              Start annual check
+            </button>
+          </div>
+        </section>
+
+        <section class="data-notice" aria-label="Data status">
+          <span class="notice-icon" aria-hidden="true">i</span>
+          <p>
+            <strong>Illustrative snapshot.</strong> Values are fixture data shaped
+            from the Member 1 warehouse schema and will be replaced by the live
+            inventory query.
+          </p>
+          <span class="notice-date">Snapshot · 22 Oct 2026</span>
+        </section>
+
+        <section class="metric-grid" aria-label="Inventory summary">
+          <article class="metric-card metric-card-primary">
+            <div class="metric-label-row">
+              <span class="metric-label">Assets in scope</span>
+              <span class="metric-icon" aria-hidden="true">01</span>
+            </div>
+            <strong class="metric-value" id="metric-total">4,324</strong>
+            <p class="metric-footnote">Restored from the annual inventory extract</p>
+          </article>
+          <article class="metric-card">
+            <div class="metric-label-row">
+              <span class="metric-label">Ready for use</span>
+              <span class="metric-icon metric-icon-success" aria-hidden="true">✓</span>
+            </div>
+            <strong class="metric-value" id="metric-ready">79.0%</strong>
+            <p class="metric-footnote" id="metric-ready-footnote">3,416 assets pass the readiness check</p>
+          </article>
+          <article class="metric-card">
+            <div class="metric-label-row">
+              <span class="metric-label">Below threshold</span>
+              <span class="metric-icon metric-icon-warning" aria-hidden="true">!</span>
+            </div>
+            <strong class="metric-value" id="metric-threshold">11.8%</strong>
+            <p class="metric-footnote" id="metric-threshold-footnote">512 assets under ฿5,000</p>
+          </article>
+          <article class="metric-card">
+            <div class="metric-label-row">
+              <span class="metric-label">Location coverage</span>
+              <span class="metric-icon metric-icon-info" aria-hidden="true">⌖</span>
+            </div>
+            <strong class="metric-value" id="metric-location">96.9%</strong>
+            <p class="metric-footnote" id="metric-location-footnote">134 assets need a location match</p>
+          </article>
+        </section>
+
+        <section class="dashboard-grid" aria-label="Readiness and annual check">
+          <article class="panel readiness-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="panel-kicker">Readiness signal</p>
+                <h2>Readiness by category</h2>
+              </div>
+              <label class="select-label" for="snapshot-select">
+                Snapshot
+                <select id="snapshot-select">
+                  <option value="current">Current view</option>
+                  <option value="prior">Prior annual check</option>
+                </select>
+              </label>
+            </div>
+            <div class="chart-legend" aria-label="Readiness legend">
+              <span><i class="legend-swatch legend-ready" aria-hidden="true"></i>Ready</span>
+              <span><i class="legend-swatch legend-watch" aria-hidden="true"></i>Needs review</span>
+            </div>
+            <div class="bar-chart" id="readiness-chart"></div>
+          </article>
+
+          <article class="panel audit-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="panel-kicker">Annual inventory check</p>
+                <h2>2026 audit rail</h2>
+              </div>
+              <span class="status-chip status-chip-info" id="audit-status">In progress</span>
+            </div>
+            <div class="audit-summary">
+              <strong id="audit-progress">82%</strong>
+              <span>of scoped assets checked</span>
+            </div>
+            <div
+              class="progress-track"
+              role="progressbar"
+              aria-label="Annual inventory check progress"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow="82"
+            >
+              <span class="progress-fill" id="audit-progress-bar" style="width: 82%"></span>
+            </div>
+            <div class="progress-meta">
+              <span id="audit-checked">3,545 checked</span>
+              <span id="audit-remaining">779 remaining</span>
+            </div>
+            <ol class="check-list" id="check-list"></ol>
+            <button class="button button-primary button-wide" type="button" id="mark-check-button">
+              Mark next batch checked
+            </button>
+            <p class="panel-note">Demo interaction · updates this view only</p>
+          </article>
+        </section>
+
+        <section class="analysis-grid" aria-label="Lifecycle analysis">
+          <article class="panel age-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="panel-kicker">Lifecycle lens</p>
+                <h2>Asset age profile</h2>
+              </div>
+              <span class="panel-aside">Median age · 4.8 years</span>
+            </div>
+            <div class="age-chart" id="age-chart"></div>
+          </article>
+
+          <article class="panel location-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="panel-kicker">Control point</p>
+                <h2>Location coverage</h2>
+              </div>
+              <span class="panel-aside">Target · 98%</span>
+            </div>
+            <div class="location-score">
+              <div class="score-ring" aria-hidden="true"><span>96.9%</span></div>
+              <div>
+                <strong>4,190 assets matched</strong>
+                <p>134 records still need a room or building reference.</p>
+              </div>
+            </div>
+            <div class="location-meter" aria-label="Location coverage 96.9 percent">
+              <span style="width: 96.9%"></span>
+            </div>
+            <a class="text-link" href="#exceptions">Review unmatched locations <span aria-hidden="true">↗</span></a>
+          </article>
+        </section>
+
+        <section class="panel exceptions-panel" id="exceptions" aria-labelledby="exceptions-title">
+          <div class="panel-heading exceptions-heading">
+            <div>
+              <p class="panel-kicker">Action queue</p>
+              <h2 id="exceptions-title">Below-threshold exceptions</h2>
+              <p class="panel-description">Prioritize records below the ฿5,000 threshold during the next physical check.</p>
+            </div>
+            <div class="table-controls">
+              <label class="input-label" for="search-input">
+                <span class="sr-only">Search exceptions</span>
+                <input id="search-input" type="search" placeholder="Search asset or category" />
+              </label>
+              <label class="select-label" for="category-filter">
+                <span class="sr-only">Filter by category</span>
+                <select id="category-filter">
+                  <option value="all">All categories</option>
+                </select>
+              </label>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <caption class="sr-only">Assets below the value threshold requiring review</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Asset</th>
+                  <th scope="col">Category</th>
+                  <th scope="col">Age</th>
+                  <th scope="col">Location</th>
+                  <th scope="col">Readiness</th>
+                  <th scope="col"><span class="sr-only">Action</span></th>
+                </tr>
+              </thead>
+              <tbody id="exceptions-body"></tbody>
+            </table>
+          </div>
+          <div class="empty-state" id="empty-state" hidden>
+            <strong>No matching exceptions</strong>
+            <p>Try a different asset code or category.</p>
+          </div>
+          <div class="table-footer">
+            <span id="results-count">Showing 0 records</span>
+            <span>Source field · <code>is_below_threshold_flag</code></span>
+          </div>
+        </section>
+      </main>
+
+      <footer class="app-footer">
+        <span>Member 1 · Asset Inventory &amp; Lifecycle</span>
+        <span>Schema surface · <code>fact_asset_inventory</code></span>
+      </footer>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <noscript>
+      <div class="no-script-message">This dashboard needs JavaScript enabled to render charts and filters.</div>
+    </noscript>
+    <script src="app.js" defer></script>
+  </body>
+</html>
