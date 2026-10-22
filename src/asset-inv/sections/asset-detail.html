@@ -1,0 +1,66 @@
+<section class="panel asset-detail-panel" id="asset-detail-section" aria-labelledby="asset-detail-title">
+  <div class="asset-detail-heading">
+    <div>
+      <p class="panel-kicker">ทะเบียนสินทรัพย์ · assets_api</p>
+      <h1 id="asset-detail-title">รายละเอียดสินทรัพย์</h1>
+      <p class="panel-description" id="asset-detail-subtitle">
+        เลือกสินทรัพย์จากทะเบียนเพื่อดูข้อมูลเต็มและประวัติที่เชื่อมต่อได้
+      </p>
+    </div>
+    <a class="button button-secondary" href="#/inventory">กลับไปทะเบียนสินทรัพย์</a>
+  </div>
+
+  <div class="api-state api-state-loading" id="asset-detail-loading" role="status" aria-live="polite" hidden>
+    กำลังโหลดรายละเอียดสินทรัพย์…
+  </div>
+  <div class="api-state api-state-error" id="asset-detail-error" role="alert" hidden>
+    <strong>ไม่สามารถโหลดรายละเอียดสินทรัพย์</strong>
+    <span id="asset-detail-error-message">ลองกลับไปที่ทะเบียนแล้วเปิดรายการนี้อีกครั้ง</span>
+  </div>
+
+  <div id="asset-detail-content" hidden>
+    <div class="asset-detail-identity">
+      <div>
+        <p class="panel-kicker">ข้อมูลสินทรัพย์</p>
+        <h2 id="asset-detail-name">—</h2>
+        <p class="asset-detail-code" id="asset-detail-code">—</p>
+      </div>
+      <span class="status-chip status-chip-info" id="asset-detail-status">รอข้อมูล</span>
+    </div>
+
+    <section class="asset-detail-card" aria-labelledby="asset-detail-fields-title">
+      <div class="panel-heading">
+        <div>
+          <p class="panel-kicker">ข้อมูลเต็ม</p>
+          <h2 id="asset-detail-fields-title">รายละเอียดจาก assets_api</h2>
+        </div>
+        <span class="panel-aside" id="asset-detail-updated">ยังไม่มีข้อมูล</span>
+      </div>
+      <dl class="asset-detail-fields" id="asset-detail-fields"></dl>
+    </section>
+
+    <div class="asset-history-grid">
+      <section class="asset-detail-card asset-history-card" aria-labelledby="asset-borrow-history-title">
+        <div class="panel-heading">
+          <div>
+            <p class="panel-kicker">วงจรชีวิต · การยืมคืน</p>
+            <h2 id="asset-borrow-history-title">ประวัติการยืมคืน</h2>
+          </div>
+          <span class="status-chip status-chip-info" id="asset-borrow-history-status">กำลังรอข้อมูล</span>
+        </div>
+        <div id="asset-borrow-history" class="asset-history-content"></div>
+      </section>
+
+      <section class="asset-detail-card asset-history-card" aria-labelledby="asset-maintenance-history-title">
+        <div class="panel-heading">
+          <div>
+            <p class="panel-kicker">วงจรชีวิต · ระบบซ่อม</p>
+            <h2 id="asset-maintenance-history-title">ประวัติการซ่อม</h2>
+          </div>
+          <span class="status-chip status-chip-info" id="asset-maintenance-history-status">กำลังรอข้อมูล</span>
+        </div>
+        <div id="asset-maintenance-history" class="asset-history-content"></div>
+      </section>
+    </div>
+  </div>
+</section>

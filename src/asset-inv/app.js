@@ -5,6 +5,13 @@ import {
   getAssetApiTotalPages as getTotalPages,
   normalizePageSize,
 } from "./pagination.mjs";
+import {
+  ASSET_DETAIL_API_ENDPOINTS,
+  ASSET_DETAIL_API_PAGE_SIZE,
+  combineBorrowHistory,
+  normalizeAssetId,
+  sortMaintenanceHistory,
+} from "./asset-detail.mjs";
 
 const dashboardData = {
   moduleNav: [
@@ -117,6 +124,7 @@ const DASHBOARD_SECTION_FILES = [
   "sections/analysis.html",
   "sections/asset-register.html",
 ];
+const ASSET_DETAIL_SECTION_FILE = "sections/asset-detail.html";
 
 const categoryLabels = {
   Computing: "คอมพิวเตอร์",
@@ -154,12 +162,24 @@ const assetApiState = {
   error: null,
 };
 
+const assetDetailState = {
+  status: "idle",
+  assetId: null,
+  asset: null,
+  error: null,
+  borrow: { status: "idle", rows: [], error: null },
+  maintenance: { status: "idle", rows: [], error: null },
+};
+
+let assetDetailRequestId = 0;
+
 let elements;
 
 function cacheElements() {
   elements = {
     moduleLinks: document.querySelector("#module-links"),
     dashboardSections: document.querySelector("#dashboard-sections"),
+    assetDetailContainer: document.querySelector("#asset-detail-container"),
     modulePlaceholder: document.querySelector("#module-placeholder"),
     modulePlaceholderTitle: document.querySelector("#module-placeholder-title"),
     modulePlaceholderDescription: document.querySelector("#module-placeholder-description"),
@@ -211,6 +231,21 @@ function cacheElements() {
     assetApiPageLabel: document.querySelector("#asset-api-page-label"),
     assetApiStatusMix: document.querySelector("#asset-api-status-mix"),
     assetApiResultsCount: document.querySelector("#asset-api-results-count"),
+    assetDetailLoading: document.querySelector("#asset-detail-loading"),
+    assetDetailError: document.querySelector("#asset-detail-error"),
+    assetDetailErrorMessage: document.querySelector("#asset-detail-error-message"),
+    assetDetailContent: document.querySelector("#asset-detail-content"),
+    assetDetailTitle: document.querySelector("#asset-detail-title"),
+    assetDetailSubtitle: document.querySelector("#asset-detail-subtitle"),
+    assetDetailName: document.querySelector("#asset-detail-name"),
+    assetDetailCode: document.querySelector("#asset-detail-code"),
+    assetDetailStatus: document.querySelector("#asset-detail-status"),
+    assetDetailUpdated: document.querySelector("#asset-detail-updated"),
+    assetDetailFields: document.querySelector("#asset-detail-fields"),
+    assetBorrowHistoryStatus: document.querySelector("#asset-borrow-history-status"),
+    assetBorrowHistory: document.querySelector("#asset-borrow-history"),
+    assetMaintenanceHistoryStatus: document.querySelector("#asset-maintenance-history-status"),
+    assetMaintenanceHistory: document.querySelector("#asset-maintenance-history"),
   };
 }
 
@@ -226,6 +261,17 @@ async function loadDashboardSections() {
 
   const sections = await Promise.all(responses.map((response) => response.text()));
   container.innerHTML = sections.join("\n");
+  container.removeAttribute("aria-busy");
+}
+
+async function loadAssetDetailSection() {
+  const container = document.querySelector("#asset-detail-container");
+  if (!container) throw new Error("ไม่พบพื้นที่สำหรับโหลดหน้ารายละเอียดสินทรัพย์");
+
+  const response = await fetch(ASSET_DETAIL_SECTION_FILE, { headers: { Accept: "text/html" } });
+  if (!response.ok) throw new Error(`โหลดหน้ารายละเอียดสินทรัพย์ไม่สำเร็จ (HTTP ${response.status})`);
+
+  container.innerHTML = await response.text();
   container.removeAttribute("aria-busy");
 }
 
@@ -283,6 +329,59 @@ function getAssetApiTotalPages() {
   return getTotalPages(assetApiState.total, assetApiState.pageSize);
 }
 
+async function fetchAssetApiPage(endpointName, page = 1, limit = ASSET_DETAIL_API_PAGE_SIZE) {
+  const endpoint = new URL(endpointName, `${ASSET_API_BASE_URL.replace(/\/+$/, "")}/`);
+  endpoint.searchParams.set("limit", String(limit));
+  endpoint.searchParams.set("page", String(page));
+
+  const response = await fetch(endpoint, { headers: { Accept: "application/json" } });
+  if (!response.ok) throw new Error(`${endpointName} คำขอล้มเหลว (HTTP ${response.status})`);
+
+  const payload = await response.json();
+  if (!payload || payload.success !== true || !Array.isArray(payload.data)) {
+    throw new Error(payload?.message || `${endpointName} ตอบกลับในรูปแบบที่ไม่คาดคิด`);
+  }
+
+  return {
+    rows: payload.data.filter((row) => row && typeof row === "object"),
+    total: Number(payload.total) || payload.data.length,
+  };
+}
+
+async function fetchAssetApiCollection(endpointName) {
+  const rows = [];
+  let page = 1;
+  let total = 0;
+
+  while (page <= 100) {
+    const result = await fetchAssetApiPage(endpointName, page);
+    rows.push(...result.rows);
+    total = Math.max(total, result.total);
+
+    if (result.rows.length === 0 || rows.length >= total) return rows;
+    page += 1;
+  }
+
+  throw new Error(`${endpointName} มีจำนวนหน้ามากเกินกว่าจะโหลดในหน้ารายละเอียด`);
+}
+
+async function fetchAssetById(assetId) {
+  const existingAsset = assetApiState.rows.find((row) => Number(row.asset_id) === assetId);
+  if (existingAsset) return existingAsset;
+
+  const estimatedPage = Math.max(1, Math.ceil(assetId / ASSET_DETAIL_API_PAGE_SIZE));
+  const estimatedPageResult = await fetchAssetApiPage(
+    ASSET_DETAIL_API_ENDPOINTS.assets,
+    estimatedPage,
+    ASSET_DETAIL_API_PAGE_SIZE,
+  );
+  const estimatedAsset = estimatedPageResult.rows.find((row) => Number(row.asset_id) === assetId);
+  if (estimatedAsset) return estimatedAsset;
+
+  const allAssets = await fetchAssetApiCollection(ASSET_DETAIL_API_ENDPOINTS.assets);
+  return allAssets.find((row) => Number(row.asset_id) === assetId) || null;
+}
+
 function assetStatusTone(status) {
   const normalized = String(status || "").toLowerCase();
   if (/ready|available|พร้อม|ใช้งาน/.test(normalized)) return "success";
@@ -291,8 +390,17 @@ function assetStatusTone(status) {
   return "info";
 }
 
+function getCurrentRouteSegments() {
+  return window.location.hash.replace(/^#\/?/, "").split("/").filter(Boolean);
+}
+
+function getCurrentAssetId() {
+  const [moduleId, routeName, rawAssetId] = getCurrentRouteSegments();
+  return moduleId === "inventory" && routeName === "asset" ? normalizeAssetId(rawAssetId) : null;
+}
+
 function getCurrentModuleId() {
-  const route = window.location.hash.replace(/^#\/?/, "").split("/")[0];
+  const [route] = getCurrentRouteSegments();
   return dashboardData.moduleNav.some((module) => module.id === route) ? route : "inventory";
 }
 
@@ -309,14 +417,285 @@ function renderModuleNav(activeModuleId = getCurrentModuleId()) {
     .join("");
 }
 
+function formatApiCurrency(value) {
+  if (value === null || value === undefined || String(value).trim() === "") return "—";
+
+  const amount = Number(value);
+  return Number.isFinite(amount)
+    ? new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB", maximumFractionDigits: 2 }).format(amount)
+    : displayValue(value);
+}
+
+function renderAssetDetailFields(asset) {
+  const fields = [
+    ["รหัสสินทรัพย์", asset.asset_code],
+    ["ชื่อสินทรัพย์", asset.asset_name],
+    ["รหัสฐานข้อมูล", asset.asset_id],
+    ["ประเภท", asset.type_name],
+    ["รหัสประเภท", asset.type_code],
+    ["รหัสประเภทฐานข้อมูล", asset.type_id],
+    ["รหัสหมวดหมู่", asset.category_id],
+    ["ยี่ห้อ", asset.brand],
+    ["ปีที่จัดซื้อ", asset.year_purchase],
+    ["ปีงบประมาณ", asset.year_fiscal],
+    ["แหล่งเงิน", asset.source],
+    ["สถานะสินทรัพย์", asset.asset_status],
+    ["หน่วยงาน", asset.department_name],
+    ["รหัสหน่วยงาน", asset.department_id],
+    ["รหัสสถานที่", asset.location_id],
+    ["อัปเดตล่าสุด", formatApiDate(asset.update_date, true)],
+  ];
+
+  elements.assetDetailFields.innerHTML = fields
+    .map(
+      ([label, value]) => `
+        <div>
+          <dt>${escapeHtml(label)}</dt>
+          <dd>${escapeHtml(displayValue(value))}</dd>
+        </div>
+      `,
+    )
+    .join("");
+}
+
+function setAssetHistoryStatus(element, state) {
+  const status = {
+    loading: ["กำลังโหลด", "info"],
+    ready: [`${formatNumber(state.rows.length)} รายการ`, "success"],
+    unavailable: ["รอ API", "warning"],
+  }[state.status] || ["กำลังรอข้อมูล", "info"];
+
+  element.textContent = status[0];
+  element.className = `status-chip status-chip-${status[1]}`;
+}
+
+function renderHistoryMessage(container, heading, detail) {
+  container.innerHTML = `
+    <div class="asset-history-state">
+      <strong>${escapeHtml(heading)}</strong>
+      <p>${escapeHtml(detail)}</p>
+    </div>
+  `;
+}
+
+function renderAssetBorrowHistory() {
+  const state = assetDetailState.borrow;
+  setAssetHistoryStatus(elements.assetBorrowHistoryStatus, state);
+
+  if (state.status === "loading") {
+    renderHistoryMessage(elements.assetBorrowHistory, "กำลังโหลดประวัติการยืมคืน", "กำลังตรวจสอบข้อมูลจากโมดูลการยืมคืน");
+    return;
+  }
+
+  if (state.status === "unavailable") {
+    renderHistoryMessage(
+      elements.assetBorrowHistory,
+      "ยังไม่พบ API ประวัติการยืมคืน",
+      "ส่วนนี้จะเริ่มแสดงข้อมูลเมื่อโมดูลการยืมคืนของสมาชิก 2 เปิด endpoint แล้ว",
+    );
+    return;
+  }
+
+  if (state.rows.length === 0) {
+    renderHistoryMessage(elements.assetBorrowHistory, "ยังไม่พบประวัติการยืมคืน", "สินทรัพย์นี้ยังไม่มีรายการในข้อมูลที่เชื่อมต่อ");
+    return;
+  }
+
+  elements.assetBorrowHistory.innerHTML = `
+    <div class="table-wrap asset-history-table-wrap">
+      <table class="asset-history-table">
+        <caption class="sr-only">ประวัติการยืมคืนของสินทรัพย์</caption>
+        <thead>
+          <tr>
+            <th scope="col">วันที่ยืม</th>
+            <th scope="col">กำหนดคืน</th>
+            <th scope="col">สถานะคำขอ</th>
+            <th scope="col">สถานะคืน</th>
+            <th scope="col">คืนจริง</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${state.rows
+            .map(
+              (row) => `
+                <tr>
+                  <td>${escapeHtml(formatApiDate(row.borrow_date || row.created_at))}</td>
+                  <td>${escapeHtml(formatApiDate(row.return_date))}</td>
+                  <td><span class="status-chip status-chip-${assetStatusTone(row.status)}">${escapeHtml(displayValue(row.status))}</span></td>
+                  <td>${escapeHtml(displayValue(row.return_status || row.item_status))}</td>
+                  <td>${escapeHtml(formatApiDate(row.actual_return_date || row.returned_at))}</td>
+                </tr>
+              `,
+            )
+            .join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderAssetMaintenanceHistory() {
+  const state = assetDetailState.maintenance;
+  setAssetHistoryStatus(elements.assetMaintenanceHistoryStatus, state);
+
+  if (state.status === "loading") {
+    renderHistoryMessage(elements.assetMaintenanceHistory, "กำลังโหลดประวัติการซ่อม", "กำลังตรวจสอบข้อมูลจากโมดูลระบบซ่อม");
+    return;
+  }
+
+  if (state.status === "unavailable") {
+    renderHistoryMessage(
+      elements.assetMaintenanceHistory,
+      "ยังไม่พบ API ประวัติการซ่อม",
+      "ส่วนนี้จะเริ่มแสดงข้อมูลเมื่อโมดูลระบบซ่อมของสมาชิก 3 เปิด endpoint แล้ว",
+    );
+    return;
+  }
+
+  if (state.rows.length === 0) {
+    renderHistoryMessage(elements.assetMaintenanceHistory, "ยังไม่พบประวัติการซ่อม", "สินทรัพย์นี้ยังไม่มีรายการในข้อมูลที่เชื่อมต่อ");
+    return;
+  }
+
+  elements.assetMaintenanceHistory.innerHTML = `
+    <div class="table-wrap asset-history-table-wrap">
+      <table class="asset-history-table">
+        <caption class="sr-only">ประวัติการซ่อมของสินทรัพย์</caption>
+        <thead>
+          <tr>
+            <th scope="col">วันที่แจ้ง</th>
+            <th scope="col">รายละเอียด</th>
+            <th scope="col">สถานะ</th>
+            <th scope="col">ค่าใช้จ่าย</th>
+            <th scope="col">วันที่เสร็จ</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${state.rows
+            .map(
+              (row) => `
+                <tr>
+                  <td>${escapeHtml(formatApiDate(row.repair_date || row.created_at))}</td>
+                  <td>${escapeHtml(displayValue(row.detail))}</td>
+                  <td><span class="status-chip status-chip-${assetStatusTone(row.status)}">${escapeHtml(displayValue(row.status))}</span></td>
+                  <td class="age-cell">${escapeHtml(formatApiCurrency(row.cost))}</td>
+                  <td>${escapeHtml(formatApiDate(row.complete_date))}</td>
+                </tr>
+              `,
+            )
+            .join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderAssetDetailHistory() {
+  renderAssetBorrowHistory();
+  renderAssetMaintenanceHistory();
+}
+
+function renderAssetDetailState() {
+  const isLoading = assetDetailState.status === "loading";
+  const hasError = assetDetailState.status === "error";
+  const isReady = assetDetailState.status === "ready";
+
+  elements.assetDetailLoading.hidden = !isLoading;
+  elements.assetDetailError.hidden = !hasError;
+  elements.assetDetailContent.hidden = !isReady;
+
+  if (hasError) {
+    elements.assetDetailErrorMessage.textContent = assetDetailState.error || "ลองกลับไปที่ทะเบียนแล้วเปิดรายการนี้อีกครั้ง";
+    return;
+  }
+
+  if (!isReady || !assetDetailState.asset) return;
+
+  const asset = assetDetailState.asset;
+  const code = displayValue(asset.asset_code);
+  elements.assetDetailTitle.textContent = `รายละเอียดสินทรัพย์ ${code}`;
+  elements.assetDetailSubtitle.textContent = "ข้อมูลเต็มจาก assets_api พร้อมประวัติการยืมคืนและการซ่อมเมื่อ endpoint พร้อมใช้งาน";
+  elements.assetDetailName.textContent = displayValue(asset.asset_name);
+  elements.assetDetailCode.textContent = code;
+  elements.assetDetailStatus.textContent = displayValue(asset.asset_status);
+  elements.assetDetailStatus.className = `status-chip status-chip-${assetStatusTone(asset.asset_status)}`;
+  elements.assetDetailUpdated.textContent = `อัปเดต ${formatApiDate(asset.update_date, true)}`;
+  renderAssetDetailFields(asset);
+  renderAssetDetailHistory();
+}
+
+async function loadAssetDetailHistory(assetId, requestId) {
+  const [borrowItemsResult, borrowRequestsResult, maintenanceResult] = await Promise.allSettled([
+    fetchAssetApiCollection(ASSET_DETAIL_API_ENDPOINTS.borrowItems),
+    fetchAssetApiCollection(ASSET_DETAIL_API_ENDPOINTS.borrowRequests),
+    fetchAssetApiCollection(ASSET_DETAIL_API_ENDPOINTS.maintenance),
+  ]);
+
+  if (requestId !== assetDetailRequestId || assetDetailState.assetId !== assetId) return;
+
+  const borrowItems = borrowItemsResult.status === "fulfilled" ? borrowItemsResult.value : [];
+  const borrowRequests = borrowRequestsResult.status === "fulfilled" ? borrowRequestsResult.value : [];
+  const borrowUnavailable = borrowItemsResult.status === "rejected" || borrowRequestsResult.status === "rejected";
+  const maintenanceUnavailable = maintenanceResult.status === "rejected";
+
+  assetDetailState.borrow = {
+    status: borrowUnavailable ? "unavailable" : "ready",
+    rows: combineBorrowHistory(borrowItems, borrowRequests, assetId),
+    error: borrowUnavailable
+      ? borrowItemsResult.reason?.message || borrowRequestsResult.reason?.message
+      : null,
+  };
+  assetDetailState.maintenance = {
+    status: maintenanceUnavailable ? "unavailable" : "ready",
+    rows: maintenanceUnavailable ? [] : sortMaintenanceHistory(maintenanceResult.value, assetId),
+    error: maintenanceUnavailable ? maintenanceResult.reason?.message : null,
+  };
+  renderAssetDetailState();
+}
+
+async function loadAssetDetail(assetId) {
+  const normalizedAssetId = normalizeAssetId(assetId);
+  if (!normalizedAssetId) return;
+
+  const requestId = ++assetDetailRequestId;
+  assetDetailState.status = "loading";
+  assetDetailState.assetId = normalizedAssetId;
+  assetDetailState.asset = null;
+  assetDetailState.error = null;
+  assetDetailState.borrow = { status: "loading", rows: [], error: null };
+  assetDetailState.maintenance = { status: "loading", rows: [], error: null };
+  renderAssetDetailState();
+
+  try {
+    const asset = await fetchAssetById(normalizedAssetId);
+    if (requestId !== assetDetailRequestId) return;
+    if (!asset) throw new Error(`ไม่พบสินทรัพย์รหัส ${normalizedAssetId} ใน assets_api`);
+
+    assetDetailState.status = "ready";
+    assetDetailState.asset = asset;
+    renderAssetDetailState();
+    loadAssetDetailHistory(normalizedAssetId, requestId);
+  } catch (error) {
+    if (requestId !== assetDetailRequestId) return;
+    assetDetailState.status = "error";
+    assetDetailState.error = error instanceof Error ? error.message : "เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุจาก API";
+    renderAssetDetailState();
+  }
+}
+
 function renderModuleView(moduleId = getCurrentModuleId()) {
   const activeModule = dashboardData.moduleNav.find((module) => module.id === moduleId) || dashboardData.moduleNav[0];
   const isInventory = activeModule.id === "inventory";
+  const assetId = getCurrentAssetId();
+  const isAssetDetail = isInventory && assetId !== null;
 
-  elements.dashboardSections.hidden = !isInventory;
+  elements.dashboardSections.hidden = !isInventory || isAssetDetail;
+  elements.assetDetailContainer.hidden = !isAssetDetail;
   elements.modulePlaceholder.hidden = isInventory;
 
-  if (!isInventory) {
+  if (isAssetDetail) {
+    loadAssetDetail(assetId);
+  } else if (!isInventory) {
     elements.modulePlaceholderTitle.textContent = activeModule.label;
     elements.modulePlaceholderDescription.textContent = activeModule.description;
     elements.modulePlaceholderTitle.focus({ preventScroll: true });
@@ -325,9 +704,10 @@ function renderModuleView(moduleId = getCurrentModuleId()) {
 
 function handleModuleRoute() {
   const activeModuleId = getCurrentModuleId();
+  const isAssetDetail = getCurrentAssetId() !== null;
   renderModuleNav(activeModuleId);
   renderModuleView(activeModuleId);
-  if (activeModuleId !== "inventory") window.scrollTo({ top: 0, behavior: "auto" });
+  if (activeModuleId !== "inventory" || isAssetDetail) window.scrollTo({ top: 0, behavior: "auto" });
 }
 
 function renderMetrics() {
@@ -589,6 +969,11 @@ function renderAssetApiTable() {
           <td>${escapeHtml(displayValue(row.department_name))}</td>
           <td>${escapeHtml(displayValue(row.location_id))}</td>
           <td>${escapeHtml(formatApiDate(row.update_date))}</td>
+          <td>
+            <a class="button button-secondary asset-detail-action" href="#/inventory/asset/${encodeURIComponent(String(row.asset_id))}" aria-label="ดูรายละเอียด ${escapeHtml(displayValue(row.asset_code))}">
+              ดูรายละเอียด
+            </a>
+          </td>
         </tr>
       `;
     })
@@ -841,7 +1226,7 @@ function initInteractions() {
 }
 
 async function init() {
-  await loadDashboardSections();
+  await Promise.all([loadDashboardSections(), loadAssetDetailSection()]);
   cacheElements();
   renderModuleNav();
   renderModuleView();
