@@ -2,8 +2,10 @@
 
 แหล่งที่ 1  Excel : ใบแจ้งซ่อม Google Form (sheet "การตอบแบบฟอร์ม 1/3/4") -> fact_general_maintenance
 แหล่งที่ 2  API   : ระบบครุภัณฑ์ CPEAssets (assets = API จริง, endpoint อื่น = mock_api/*.json)
-                    -> dim_asset ฯลฯ, fact_asset_maintenance, fact_borrow_transaction, fact_general_maintenance
+                    -> dim_asset ฯลฯ, fact_asset_inventory (snapshot), fact_asset_maintenance,
+                       fact_borrow_transaction, fact_general_maintenance
 ผลลัพธ์ (<out-dir>): warehouse_load.sql, warehouse/*.csv, raw/*.json (API ที่ดึงมา),
+                    history/assets_YYYYMMDD.json (snapshot ครุภัณฑ์ทุกรอบ ห้ามลบ),
                     repair_requests_clean.xlsx/.csv (Excel ที่ clean แล้ว + cleaning_log + rejected_place)
 """
 import argparse
@@ -611,6 +613,8 @@ API_BASE = "https://cpe.eng.kps.ku.ac.th/CPEAssets/assets_api/"
 # เมื่อระบบจริงเปิด endpoint ไหนแล้ว ให้เปลี่ยนเป็น "api" ได้เลย รูปแบบ JSON เหมือนกัน
 SOURCES = {
     "assets": "api",
+    "asset_types": "mock",
+    "asset_categories": "mock",
     "departments": "mock",
     "users": "mock",
     "locations": "mock",
@@ -633,17 +637,6 @@ SOURCE_GROUP = {
     "เงินรายได้โครงการฯ": "เงินรายได้", "งบประมาณ": "เงินงบประมาณ", "เงินงบประมาณ": "เงินงบประมาณ",
     "โครงการภาคพิเศษ": "โครงการภาคพิเศษ", "บริจาค": "บริจาค",
 }
-
-# หมวดหมู่ครุภัณฑ์: API ไม่มี category (category_id = null ทั้งหมด) -> จัดกลุ่มจาก type_name (อันแรกที่เจอชนะ)
-CATEGORY_RULES = [
-    ("สิ่งก่อสร้าง", "สิ่งก่อสร้าง"), ("อาคารถาวร", "อาคารถาวร"), ("สินทรัพย์ไม่มีตัวตน", "สินทรัพย์ไม่มีตัวตน"),
-    ("สำนักงาน", "ครุภัณฑ์สำนักงาน"), ("คอมพิวเตอร์", "ครุภัณฑ์คอมพิวเตอร์"), ("ไฟฟ้า", "ครุภัณฑ์ไฟฟ้าและวิทยุ"),
-    ("โฆษณา", "ครุภัณฑ์โฆษณาและเผยแพร่"), ("การเกษตร", "ครุภัณฑ์การเกษตร"), ("โรงงาน", "ครุภัณฑ์โรงงาน"),
-    ("สำรวจ", "ครุภัณฑ์สำรวจ"), ("วิทยาศาสตร์", "ครุภัณฑ์วิทยาศาสตร์หรือการแพทย์"),
-    ("งานบ้านงานครัว", "ครุภัณฑ์งานบ้านงานครัว"), ("ยานพาหนะ", "ครุภัณฑ์ยานพาหนะและขนส่ง"),
-    ("ก่อสร้าง", "ครุภัณฑ์ก่อสร้าง"), ("การศึกษา", "ครุภัณฑ์การศึกษา"),
-]
-
 
 def fetch(endpoint, mock_dir, raw_dir, offline=False):
     """ดึงทุกหน้าของ endpoint -> list ของ record; เก็บ raw ไว้ที่ raw_dir/<endpoint>.json"""
@@ -681,6 +674,48 @@ def dkey(v):
     return None if v is None else int(v.strftime("%Y%m%d"))
 
 
+# ปีงบที่ได้มา ถอดจากท้ายรหัสครุภัณฑ์: ".../001-68" หรือ ".../ร.54-1" -> ปีงบ 2568 / 2554
+ASSET_CODE_FY = [re.compile(r"/\d{3}-(\d{2})\s*$"), re.compile(r"/[ก-๙]{1,3}\.?-?(\d{2})-\d+\s*$")]
+BELOW_THRESHOLD_PREFIX = ("FN", "FP", "FU")   # ต่ำกว่าเกณฑ์ / ต่ำกว่าเกณฑ์จากบริจาค / ต่ำกว่าเกณฑ์รับโอน
+
+
+def fy_from_code(code):
+    for pat in ASSET_CODE_FY:
+        m = pat.search(code or "")
+        if m and 2530 <= 2500 + int(m.group(1)) <= 2600:
+            return 2500 + int(m.group(1))
+    return None
+
+
+def category_code_of(type_code):
+    """FA05 / FN05 / FT05 -> "05" (เลขหมวดใน type_code)"""
+    m = re.fullmatch(r"[A-Z]{2}(\d{2})", (type_code or "").strip())
+    return m.group(1) if m else None
+
+
+def acquisition_date(a):
+    """วันที่ได้มา: purchase_date > ปีงบจากรหัส (1 ต.ค. ต้นปีงบ) > year_purchase (1 ม.ค.)"""
+    if a.get("purchase_date"):
+        return dt(a["purchase_date"])
+    fy = fy_from_code(a.get("asset_code"))
+    if fy:
+        return datetime(fy - 544, 10, 1)
+    y = txt(a.get("year_purchase"))
+    return datetime(int(y), 1, 1) if y and y.isdigit() and 1950 <= int(y) <= 2100 else None
+
+
+def load_history(history_dir):
+    """snapshot ครุภัณฑ์ที่เคยดึงไว้ทุกครั้ง: {datetime: [asset, ...]} จากไฟล์ assets_YYYYMMDD.json"""
+    snaps = {}
+    for f in sorted(os.listdir(history_dir)):
+        m = re.fullmatch(r"assets_(\d{8})\.json", f)
+        if m:
+            with open(os.path.join(history_dir, f), encoding="utf-8") as fh:
+                snaps[datetime.strptime(m.group(1), "%Y%m%d")] = json.load(fh)["data"]
+    return snaps
+
+
+
 class Dim:
     """dimension ที่ให้ surrogate key ตามลำดับที่เพิ่ม; lookup ด้วย natural key"""
 
@@ -697,12 +732,13 @@ class Dim:
         return self.index.get(nk)
 
 
-def build_warehouse(excel, api, as_of):
+def build_warehouse(excel, api, snapshots, as_of):
     """รวม 2 แหล่ง -> dict ของตาราง warehouse (list of dict) + รายการปัญหาที่พบ"""
     notes = []
     # ---------- dim_department ----------
     # แถวที่ถูกลบ (is_deleted = 1) เก็บไว้เฉพาะที่ยังมีข้อมูลอ้างถึง เพื่อไม่ให้ประวัติเดิมหาย
     dep_used = {r.get("department_id") for ep in ("assets", "users", "borrow", "maintenance_general") for r in api[ep]}
+    dep_used |= {a.get("department_id") for rows in snapshots.values() for a in rows}
     dep = Dim(["department_key", "department_id", "department_name"])
     dep_by_id, name_to_key = {}, {}
     for d in api["departments"]:
@@ -731,23 +767,26 @@ def build_warehouse(excel, api, as_of):
         mt_by_id[t["type_id"]] = mt.add(txt(t["type_name"]), type_id=t["type_id"], type_name=txt(t["type_name"]))
 
     # ---------- dim_location (ใช้ร่วม: ห้องของครุภัณฑ์ + สถานที่แจ้งซ่อม) ----------
-    loc = Dim(["location_key", "building", "floor", "room", "area_name"])
+    loc = Dim(["location_key", "location_id", "building", "floor", "room", "area_name"])
 
-    def loc_key(b, f, r, a):
-        """มีรหัสห้อง: 1 ห้อง = 1 แถว (ชื่อพื้นที่ใช้ค่าแรกที่เจอ ซึ่งมาจากตาราง location ก่อน)"""
+    def loc_key(b, f, r, a, location_id=None):
+        """มีรหัสห้อง: 1 ห้อง = 1 แถว (ชื่อพื้นที่/location_id ใช้ค่าแรกที่เจอ ซึ่งมาจากตาราง locations ก่อน)
+        location_id = NULL สำหรับสถานที่ที่มาจากใบแจ้งซ่อมเท่านั้น (ไม่มีในตาราง locations)"""
         if not any([b, f, r, a]):
             return None
-        if not r:
-            return loc.add((b, f, None, a), building=b, floor=f, room=None, area_name=a)
-        k = loc.add((b, f, r), building=b, floor=f, room=r, area_name=a)
-        if a and not loc.rows[k - 1]["area_name"]:
-            loc.rows[k - 1]["area_name"] = a
+        nk = (b, f, r) if r else (b, f, None, a)
+        k = loc.add(nk, location_id=location_id, building=b, floor=f, room=r or None, area_name=a)
+        row = loc.rows[k - 1]
+        if a and not row["area_name"]:
+            row["area_name"] = a
+        if location_id is not None and row["location_id"] is None:
+            row["location_id"] = location_id
         return k
 
     # ตาราง location ของระบบครุภัณฑ์ (location_name, building, floor, room_detail) กรอกอิสระ
     # -> ผ่านตัวแยกสถานที่ตัวเดียวกับ Excel เพื่อให้ห้องเดียวกันได้ location_key เดียวกัน
     loc_by_id, loc_issue = {}, []
-    loc_used = {a["location_id"] for a in api["assets"]}
+    loc_used = {a["location_id"] for rows in [api["assets"], *snapshots.values()] for a in rows}
     for l in api["locations"]:
         if l.get("is_deleted") and l["location_id"] not in loc_used:
             continue
@@ -756,40 +795,101 @@ def build_warehouse(excel, api, as_of):
         if pl.valid:
             pc = place_columns(pl)
             area = pc["ชื่อพื้นที่"] or (None if pc["ห้อง"] else name)    # ห้องมีรหัสแล้ว ไม่ต้องใช้ชื่อห้องแยก
-            loc_by_id[l["location_id"]] = loc_key(pc["อาคาร"], pc["ชั้น"], pc["ห้อง"], area)
+            loc_by_id[l["location_id"]] = loc_key(pc["อาคาร"], pc["ชั้น"], pc["ห้อง"], area, l["location_id"])
         else:
             loc_issue.append(f"{l['location_id']} ({pl.reason})")
-            loc_by_id[l["location_id"]] = loc_key(b, f, rd, name)
+            loc_by_id[l["location_id"]] = loc_key(b, f, rd, name, l["location_id"])
     if loc_issue:
         notes.append("locations: แยกอาคาร/ชั้น/ห้องไม่ได้ ใช้ค่าตามที่กรอก: " + ", ".join(loc_issue))
 
     # ---------- dim_asset_category / dim_asset_type / dim_asset ----------
-    cat = Dim(["category_key", "category_id", "category_name"])
-    typ = Dim(["type_key", "type_id", "type_code", "type_name"])
-    ast = Dim(["asset_key", "asset_id", "asset_code", "asset_name", "brand", "model", "year_purchase", "year_fiscal", "source", "asset_status", "category_key", "type_key", "location_key"])
-    codes = {}
+    # asset ใช้รายการล่าสุด + ครุภัณฑ์ที่มีเฉพาะใน snapshot เก่า (ถูกลบไปแล้ว) เพื่อให้ snapshot เก่ายังหา asset_key ได้
+    latest = {}
+    for d in sorted(snapshots):
+        for a in snapshots[d]:
+            latest[a["asset_id"]] = a
     for a in api["assets"]:
-        if a["type_id"] is not None and a["type_code"]:
-            codes.setdefault(a["type_id"], a["type_code"])
-    asset_dep = {}
-    for a in sorted(api["assets"], key=lambda a: a["asset_id"]):
-        tk = ck = None
+        latest[a["asset_id"]] = a
+    all_assets = [latest[k] for k in sorted(latest)]
+
+    cat = Dim(["category_key", "category_id", "category_name"])
+    cat_by_id, cat_by_code = {}, {}
+    for c in api["asset_categories"]:
+        k = cat.add(c["category_id"], category_id=c["category_id"], category_name=txt(c["category_name_th"]))
+        cat_by_id[c["category_id"]] = k
+        if c.get("category_code"):
+            cat_by_code[txt(c["category_code"])] = k
+
+    typ = Dim(["type_key", "type_id", "type_code", "type_name"])
+    type_used = {a["type_id"] for a in all_assets}
+    type_code_of = {}
+    for t in api["asset_types"]:
+        if t.get("is_deleted") and t["type_id"] not in type_used:
+            continue
+        typ.add(t["type_id"], type_id=t["type_id"], type_code=txt(t["type_code"]), type_name=txt(t["type_name"]))
+        type_code_of[t["type_id"]] = txt(t["type_code"])
+    for a in all_assets:                                   # ประเภทที่ asset อ้างแต่ asset_types ไม่มี
+        if a["type_id"] is not None and typ.get(a["type_id"]) is None:
+            typ.add(a["type_id"], type_id=a["type_id"], type_code=txt(a["type_code"]), type_name=txt(a["type_name"]))
+            type_code_of[a["type_id"]] = txt(a["type_code"])
+    code_to_type = {}
+    for tid, code in type_code_of.items():
+        code_to_type.setdefault(code, []).append(tid)
+
+    def type_id_of(a):
+        """type_id ของ asset; ถ้าว่างแต่มี type_code ที่ตรงกับประเภทเดียว ใช้ประเภทนั้น"""
         if a["type_id"] is not None:
-            tname = txt(a["type_name"])
-            tk = typ.add(a["type_id"], type_id=a["type_id"], type_code=codes.get(a["type_id"]), type_name=tname)
-            cname = next((c for k, c in CATEGORY_RULES if k in (tname or "")), "ไม่ระบุ")
-            ck = cat.add(cname, category_id=None, category_name=cname)
+            return a["type_id"]
+        ids = code_to_type.get(txt(a.get("type_code")), [])
+        return ids[0] if len(ids) == 1 else None
+
+    def category_key_of(a):
+        """category_id ของ asset ถ้ามี; ถ้าไม่มี ใช้เลขหมวดใน type_code (FA05 -> 05) จับกับ asset_categories.category_code"""
+        if a.get("category_id") in cat_by_id:
+            return cat_by_id[a["category_id"]]
+        tid = type_id_of(a)
+        return cat_by_code.get(category_code_of(txt(a.get("type_code")) or type_code_of.get(tid)))
+
+    ast = Dim(["asset_key", "asset_id", "asset_code", "asset_name", "brand", "model", "year_purchase", "year_fiscal",
+               "source", "asset_status", "category_key", "type_key", "location_key"])
+    asset_dep = {}
+    for a in all_assets:
         src = txt(a["source"])
+        fy = txt(a["year_fiscal"]) or (str(fy_from_code(a["asset_code"])) if fy_from_code(a["asset_code"]) else None)
         ast.add(a["asset_id"], asset_id=a["asset_id"], asset_code=txt(a["asset_code"]), asset_name=txt(a["asset_name"]),
-                brand=txt(a["brand"]), model=txt(a.get("model")), year_purchase=txt(a["year_purchase"]), year_fiscal=txt(a["year_fiscal"]),
-                source=SOURCE_GROUP.get(src, src), asset_status=txt(a["asset_status"]), category_key=ck, type_key=tk,
-                location_key=loc_by_id.get(a["location_id"]))
+                brand=txt(a["brand"]), model=txt(a.get("model")), year_purchase=txt(a["year_purchase"]), year_fiscal=fy,
+                source=SOURCE_GROUP.get(src, src), asset_status=txt(a["asset_status"]),
+                category_key=category_key_of(a), type_key=typ.get(type_id_of(a)), location_key=loc_by_id.get(a["location_id"]))
         asset_dep[a["asset_id"]] = dep_by_id.get(a["department_id"])
-    lost = sorted({a["location_id"] for a in api["assets"] if a["location_id"] and a["location_id"] not in loc_by_id})
+    lost = sorted({a["location_id"] for a in all_assets if a["location_id"] and a["location_id"] not in loc_by_id})
     if lost:
         notes.append(f"dim_asset: location_id ที่ไม่มีใน locations (หรือถูกลบ) -> location_key = NULL: {lost}")
+    no_cat = sum(1 for r in ast.rows if r["category_key"] is None)
+    if no_cat:
+        notes.append(f"dim_asset: {no_cat} รายการหาหมวดไม่ได้ (ไม่มี type_code) -> category_key = NULL")
     if any(r["type_name"] and re.fullmatch(r"[A-Z]{2}\d{2}", r["type_name"]) for r in typ.rows):
-        notes.append("dim_asset_type: บาง type_name ใน API เป็นรหัส (เช่น FN08, FN13) ไม่ใช่ชื่อประเภท")
+        notes.append("dim_asset_type: บาง type_name ในต้นทางเป็นรหัส (เช่น FN08, FN13) ไม่ใช่ชื่อประเภท")
+
+    # ---------- fact_asset_inventory (periodic snapshot: 1 แถว = ครุภัณฑ์ 1 ชิ้น ณ วันที่ดึงข้อมูล) ----------
+    fai = []
+    for snap in sorted(snapshots):
+        for a in snapshots[snap]:
+            acq = acquisition_date(a)
+            tid = type_id_of(a)
+            tcode = txt(a.get("type_code")) or type_code_of.get(tid) or ""
+            status = txt(a["asset_status"])
+            lk = loc_by_id.get(a["location_id"])
+            fai.append({"snapshot_date_key": dkey(snap), "acquisition_date_key": dkey(acq),
+                        "asset_key": ast.get(a["asset_id"]), "department_key": dep_by_id.get(a["department_id"]),
+                        "type_key": typ.get(tid), "category_key": category_key_of(a), "location_key": lk,
+                        "asset_count": 1, "is_available_flag": int(status == "พร้อมใช้งาน"),
+                        "is_damaged_flag": int(status in ("ชำรุด", "ส่งซ่อม")),
+                        "is_below_threshold_flag": int(tcode.startswith(BELOW_THRESHOLD_PREFIX) or "ต่ำกว่าเกณฑ์" in (txt(a["type_name"]) or "")),
+                        "has_location_flag": int(lk is not None),
+                        "asset_age_years": max(0, int((snap - acq).days // 365.25)) if acq else None})
+    no_acq = sum(1 for r in fai if r["acquisition_date_key"] is None)
+    if no_acq:
+        notes.append(f"fact_asset_inventory: {no_acq} แถวหาวันที่ได้มาไม่ได้ (ไม่มี purchase_date / ปีในรหัส / year_purchase)")
 
     # ---------- fact_general_maintenance: Excel (ฟอร์มเดิม) ----------
     fgm = []
@@ -864,7 +964,7 @@ def build_warehouse(excel, api, as_of):
                     "is_replaced_flag": int(it["replace_asset_id"] is not None)})
 
     # ---------- dim_date: ทุกวันของปีที่ครอบทุก date key ----------
-    keys = [v for rows in (fgm, fam, fbt) for r in rows for k, v in r.items() if k.endswith("date_key") and v]
+    keys = [v for rows in (fgm, fam, fbt, fai) for r in rows for k, v in r.items() if k.endswith("date_key") and v]
     d0, d1 = (datetime.strptime(str(min(keys)), "%Y%m%d"), datetime.strptime(str(max(keys)), "%Y%m%d"))
     dim_date = [dict(zip(["date_key", "full_date", "day_of_week", "month", "month_name", "quarter", "year", "fiscal_year"], r))
                 for r in date_rows(d0, d1)]
@@ -873,7 +973,7 @@ def build_warehouse(excel, api, as_of):
         "dim_date": dim_date, "dim_department": dep.rows, "dim_user": usr.rows,
         "dim_maintenance_type": mt.rows, "dim_asset_category": cat.rows, "dim_asset_type": typ.rows,
         "dim_location": loc.rows, "dim_asset": ast.rows,
-        "fact_borrow_transaction": fbt, "fact_asset_maintenance": fam,
+        "fact_borrow_transaction": fbt, "fact_asset_maintenance": fam, "fact_asset_inventory": fai,
         "fact_general_maintenance": [{k: v for k, v in r.items() if k != "_src"} for r in fgm],
     }
     src_count = pd.Series([r["_src"] for r in fgm]).value_counts().to_dict()
@@ -882,7 +982,8 @@ def build_warehouse(excel, api, as_of):
 
 WAREHOUSE_ORDER = ["dim_date", "dim_department", "dim_user", "dim_maintenance_type", "dim_asset_category",
                    "dim_asset_type", "dim_location", "dim_asset",
-                   "fact_borrow_transaction", "fact_asset_maintenance", "fact_general_maintenance"]
+                   "fact_borrow_transaction", "fact_asset_maintenance", "fact_general_maintenance",
+                   "fact_asset_inventory"]
 
 
 def write_load_sql(tables, path, header):
@@ -922,13 +1023,31 @@ def main(args):
         print(f"[api] {ep:<22} {SOURCES[ep]:<4} {len(api[ep]):>5} แถว")
 
     as_of = datetime.strptime(args.as_of, "%Y-%m-%d") if args.as_of else datetime.now()
-    tables, notes, src_count = build_warehouse(excel, api, as_of)
+
+    # snapshot ครุภัณฑ์: เก็บรายการ assets ของรอบนี้ไว้ใน <out-dir>/history/ แล้วสร้าง fact_asset_inventory
+    # จากทุก snapshot ที่เคยเก็บ (full refresh ของ warehouse จึงไม่ทำประวัติหาย ตราบใดที่โฟลเดอร์ history ยังอยู่)
+    history_dir = os.path.join(args.out_dir, "history")
+    os.makedirs(history_dir, exist_ok=True)
+    if args.snapshot_date:
+        snap = datetime.strptime(args.snapshot_date, "%Y-%m-%d")
+    elif SOURCES["assets"] == "api":
+        with open(os.path.join(raw_dir, "assets.json"), encoding="utf-8") as f:
+            snap = datetime.fromisoformat(json.load(f).get("fetched_at") or as_of.isoformat())
+    else:
+        snap = as_of
+    with open(os.path.join(history_dir, f"assets_{snap:%Y%m%d}.json"), "w", encoding="utf-8") as f:
+        json.dump({"snapshot_date": f"{snap:%Y-%m-%d}", "total": len(api["assets"]), "data": api["assets"]}, f, ensure_ascii=False)
+    snapshots = load_history(history_dir)
+    print(f"[history] snapshot ครุภัณฑ์ {len(snapshots)} ครั้ง: {', '.join(f'{d:%Y-%m-%d}' for d in sorted(snapshots))}")
+
+    tables, notes, src_count = build_warehouse(excel, api, snapshots, as_of)
 
     mocked = [ep for ep, s in SOURCES.items() if s == "mock"]
     header = [f"แหล่งข้อมูล: Excel ({src_count.get('excel', 0)} ใบแจ้งซ่อม) + API {API_BASE}",
               f"endpoint จาก MOCK (ไม่ใช่ข้อมูลจริง): {', '.join(mocked)}",
               f"as-of (คำนวณวันเกินกำหนดของรายการยืมที่ยังไม่คืน): {as_of:%Y-%m-%d}",
-              "รันซ้ำได้: TRUNCATE ทุกตารางก่อน INSERT (full refresh)"] + notes
+              "รันซ้ำได้: TRUNCATE ทุกตารางก่อน INSERT (full refresh)",
+              f"fact_asset_inventory: snapshot {len(snapshots)} ครั้ง จาก {history_dir} (ห้ามลบโฟลเดอร์นี้ ไม่อย่างนั้นประวัติ snapshot หาย)"] + notes
     write_load_sql(tables, os.path.join(args.out_dir, "warehouse_load.sql"), header)
     for t in WAREHOUSE_ORDER:
         pd.DataFrame(tables[t]).to_csv(os.path.join(wh_dir, f"{t}.csv"), index=False, encoding="utf-8-sig")
@@ -951,6 +1070,7 @@ if __name__ == "__main__":
     ap.add_argument("--api-base", default=API_BASE, help="URL ของ API ระบบครุภัณฑ์")
     ap.add_argument("--offline", action="store_true", help="ไม่เรียก API จริง ใช้ raw ที่ดึงไว้ใน <out-dir>/raw/")
     ap.add_argument("--as-of", help="วันที่อ้างอิงคำนวณวันเกินกำหนดของรายการยืมที่ยังไม่คืน YYYY-MM-DD (default: วันนี้)")
+    ap.add_argument("--snapshot-date", help="วันที่ของ snapshot ครุภัณฑ์รอบนี้ YYYY-MM-DD (default: วันที่ดึง assets API)")
     ap.add_argument("--keep-invalid-place", action="store_true",
                     help="เก็บแถวที่สถานที่ใช้ไม่ได้ไว้ (เว้นสถานที่ว่าง) แทนการลบแถว")
     args = ap.parse_args()

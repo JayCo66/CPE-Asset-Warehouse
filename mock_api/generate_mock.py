@@ -88,6 +88,45 @@ MT = ["งานระบบปรับอากาศ", "งานระบบ
 MT_W = [30, 24, 13, 10, 7, 8, 5, 3, 2, 2, 2]          # สัดส่วนใกล้เคียงข้อมูล Excel
 dump("maintenance_type", [{"type_id": i + 1, "type_name": n} for i, n in enumerate(MT)], "เรียกดูประเภทงานซ่อมสำเร็จ")
 
+# ---------- asset_types: ค่าจริงจาก assets API (type_id, type_code, type_name) ตามตาราง asset_types ----------
+type_rows = {}
+for a in assets:
+    if a["type_id"] is None:
+        continue
+    t = type_rows.setdefault(a["type_id"], {"type_id": a["type_id"], "type_code": None, "type_name": a["type_name"],
+                                            "description": None, "is_deleted": 0, "deleted_at": None})
+    t["type_code"] = t["type_code"] or a["type_code"]
+dump("asset_types", sorted(type_rows.values(), key=lambda t: t["type_id"]), "เรียกดูประเภทครุภัณฑ์สำเร็จ")
+
+# ---------- asset_categories: ตามตาราง asset_categories ----------
+# category_code = เลข 2 หลักใน type_code (FA05 / FN05 / FT05 -> 05 = ครุภัณฑ์สำนักงาน) ชื่อหมวดเป็นค่าที่ตั้งเองจากชื่อ type
+CATEGORIES = {
+    "01": ("อาคารถาวร", "Permanent buildings"),
+    "03": ("สิ่งก่อสร้าง (คอนกรีตเสริมเหล็ก/โครงสร้างเหล็ก)", "Structures - reinforced concrete or steel"),
+    "04": ("สิ่งก่อสร้าง (ไม้/วัสดุอื่น)", "Structures - wood or other materials"),
+    "05": ("ครุภัณฑ์สำนักงาน", "Office equipment"),
+    "06": ("ครุภัณฑ์ยานพาหนะและขนส่ง", "Vehicles and transport"),
+    "07": ("ครุภัณฑ์ไฟฟ้าและวิทยุ", "Electrical and radio equipment"),
+    "08": ("ครุภัณฑ์ไฟฟ้า (เครื่องกำเนิดไฟฟ้า)", "Power generators"),
+    "09": ("ครุภัณฑ์โฆษณาและเผยแพร่", "Advertising and media equipment"),
+    "10": ("ครุภัณฑ์การเกษตร (เครื่องมือและอุปกรณ์)", "Agricultural tools"),
+    "11": ("ครุภัณฑ์การเกษตร (เครื่องจักร)", "Agricultural machinery"),
+    "12": ("ครุภัณฑ์โรงงาน (เครื่องมือและอุปกรณ์)", "Workshop tools"),
+    "13": ("ครุภัณฑ์โรงงาน (เครื่องจักร)", "Workshop machinery"),
+    "14": ("ครุภัณฑ์ก่อสร้าง (เครื่องมือและอุปกรณ์)", "Construction tools"),
+    "15": ("ครุภัณฑ์ก่อสร้าง (เครื่องจักร)", "Construction machinery"),
+    "16": ("ครุภัณฑ์สำรวจ", "Survey equipment"),
+    "17": ("ครุภัณฑ์วิทยาศาสตร์หรือการแพทย์", "Scientific and medical equipment"),
+    "18": ("ครุภัณฑ์คอมพิวเตอร์", "Computer equipment"),
+    "19": ("ครุภัณฑ์การศึกษา", "Educational equipment"),
+    "20": ("ครุภัณฑ์งานบ้านงานครัว", "Household and kitchen equipment"),
+    "32": ("สินทรัพย์ไม่มีตัวตน (โปรแกรมคอมพิวเตอร์)", "Intangible assets - software"),
+}
+dump("asset_categories", [{"category_id": i + 1, "category_code": c, "category_name_th": th, "category_name_en": en,
+                           "description": None, "status": "active", "created_at": "2024-10-01 09:00:00",
+                           "updated_at": "2024-10-01 09:00:00"} for i, (c, (th, en)) in enumerate(CATEGORIES.items())],
+     "เรียกดูหมวดหมู่ครุภัณฑ์สำเร็จ")
+
 # ---------- users ----------
 roles = ["อาจารย์"] * 15 + ["เจ้าหน้าที่"] * 12 + ["นิสิต"] * 33
 users = [{"user_id": i + 1, "fullname": f"ผู้ใช้ตัวอย่าง {i + 1:02d}", "role_status": r,
@@ -282,7 +321,7 @@ GDET = {1: ["แอร์ไม่เย็น", "แอร์มีน้ำห
         7: ["ก๊อกน้ำรั่ว", "ท่อน้ำอุดตัน"], 8: ["ชักโครกกดไม่ลง", "สายฉีดชำระรั่ว"], 9: ["คอมพิวเตอร์เปิดไม่ติด"],
         10: ["กล้องวงจรปิดภาพไม่ขึ้น"], 11: ["เครื่องสแกนนิ้วไม่ทำงาน"]}
 mg = []
-for _ in range(48):
+for _ in range(13):                       # ~4 งาน/เดือน ใกล้อัตราจริงของ Excel ปีงบ 2568-2569
     rep = pick_dt(GENERAL_START, NOW - timedelta(hours=2))
     t = rnd.choices(range(1, 12), weights=MT_W)[0]
     age = (NOW - rep).days
@@ -300,6 +339,6 @@ for i, g in enumerate(mg):
     g["id"] = i + 1
 dump("maintenance_general", mg, "เรียกดูรายการแจ้งซ่อมทั่วไปสำเร็จ")
 
-print({"departments": len(deps), "users": len(users), "locations": len(locs), "maintenance_asset": len(ma),
+print({"asset_types": len(type_rows), "asset_categories": len(CATEGORIES), "departments": len(deps), "users": len(users), "locations": len(locs), "maintenance_asset": len(ma),
        "followups": sum(m["is_followup"] for m in ma), "borrow": len(borrows), "borrow_request_items": len(items),
        "maintenance_general": len(mg)})
