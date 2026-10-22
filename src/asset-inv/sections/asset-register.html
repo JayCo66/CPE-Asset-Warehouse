@@ -54,6 +54,15 @@
         <option value="all">ทุกประเภท</option>
       </select>
     </label>
+    <label class="select-label asset-page-size-label" for="asset-api-page-size">
+      แถวต่อหน้า
+      <select id="asset-api-page-size" aria-label="จำนวนแถวสินทรัพย์สดต่อหน้า">
+        <option value="10" selected>10 แถว</option>
+        <option value="25">25 แถว</option>
+        <option value="50">50 แถว</option>
+        <option value="100">100 แถว</option>
+      </select>
+    </label>
     <button class="button button-secondary" type="button" id="refresh-asset-api-button">
       รีเฟรชแหล่งข้อมูล
     </button>
@@ -91,7 +100,25 @@
     <button class="button button-secondary" type="button" id="asset-api-previous" disabled>
       หน้าก่อนหน้า
     </button>
-    <span id="asset-api-page-label">หน้า 1 จาก 1</span>
+    <div class="asset-pagination-center">
+      <label class="pagination-page-control" for="asset-api-page-input">
+        <span>ไปที่หน้า</span>
+        <input
+          id="asset-api-page-input"
+          type="number"
+          min="1"
+          value="1"
+          inputmode="numeric"
+          aria-label="หมายเลขหน้าทะเบียนสินทรัพย์สด"
+          aria-describedby="asset-api-page-label"
+          disabled
+        />
+      </label>
+      <button class="button button-secondary pagination-page-jump" type="button" id="asset-api-page-jump" disabled>
+        ไป
+      </button>
+      <span id="asset-api-page-label" aria-live="polite">หน้า 1 จาก 1</span>
+    </div>
     <button class="button button-secondary" type="button" id="asset-api-next" disabled>
       หน้าถัดไป
     </button>

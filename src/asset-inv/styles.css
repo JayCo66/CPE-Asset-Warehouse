@@ -312,11 +312,19 @@ code {
   gap: 20px;
 }
 
+.dashboard-sections[hidden] {
+  display: none;
+}
+
 .module-placeholder-panel {
   min-height: 320px;
   display: grid;
   place-items: center;
   text-align: center;
+}
+
+.module-placeholder-panel[hidden] {
+  display: none;
 }
 
 .module-placeholder-panel > div {
@@ -989,6 +997,10 @@ input::placeholder {
   min-width: 150px;
 }
 
+.asset-register-toolbar .asset-page-size-label {
+  min-width: 125px;
+}
+
 .asset-register-toolbar .button {
   min-height: 36px;
   white-space: nowrap;
@@ -1044,14 +1056,39 @@ input::placeholder {
 }
 
 .asset-pagination {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
   padding-top: 13px;
 }
 
-.asset-pagination span {
+.asset-pagination-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pagination-page-control {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--cpe-text-muted);
+  font-size: 0.75rem;
+}
+
+.pagination-page-control input {
+  width: 76px;
+  min-width: 0;
+  min-height: 34px;
+  padding: 0 8px;
+  font-size: 0.78rem;
+  text-align: center;
+}
+
+.asset-pagination-center > span {
   color: var(--cpe-text-muted);
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
@@ -1408,6 +1445,24 @@ tbody tr:hover td {
 
   .asset-register-toolbar .button {
     width: 100%;
+  }
+
+  .asset-pagination {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .asset-pagination-center {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+
+  .asset-pagination > .button {
+    width: 100%;
+    grid-row: 2;
+  }
+
+  .asset-pagination > .button:last-child {
+    grid-column: 2;
   }
 
   .table-controls input {

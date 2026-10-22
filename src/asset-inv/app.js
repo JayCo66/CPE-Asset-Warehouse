@@ -1,3 +1,10 @@
+import {
+  ASSET_API_DEFAULT_PAGE_SIZE,
+  clampPage,
+  getAssetApiTotalPages as getTotalPages,
+  normalizePageSize,
+} from "./pagination.mjs";
+
 const dashboardData = {
   moduleNav: [
     { id: "inventory", label: "ทะเบียนสินทรัพย์", marker: "AI", href: "#/inventory" },
@@ -104,7 +111,6 @@ const auditState = {
 };
 
 const ASSET_API_BASE_URL = window.ASSET_API_BASE_URL || "https://cpe.eng.kps.ku.ac.th/CPEAssets/assets_api";
-const ASSET_API_PAGE_SIZE = 10;
 const DASHBOARD_SECTION_FILES = [
   "sections/overview.html",
   "sections/analysis.html",
@@ -140,6 +146,7 @@ const locationLabel = (value) => locationLabels[value] ?? value;
 const assetApiState = {
   status: "idle",
   page: 1,
+  pageSize: ASSET_API_DEFAULT_PAGE_SIZE,
   rows: [],
   total: 0,
   loadedAt: null,
@@ -184,6 +191,7 @@ function cacheElements() {
     assetApiSearch: document.querySelector("#asset-api-search"),
     assetApiStatusFilter: document.querySelector("#asset-api-status-filter"),
     assetApiTypeFilter: document.querySelector("#asset-api-type-filter"),
+    assetApiPageSize: document.querySelector("#asset-api-page-size"),
     refreshAssetApiButton: document.querySelector("#refresh-asset-api-button"),
     assetApiLoading: document.querySelector("#asset-api-loading"),
     assetApiError: document.querySelector("#asset-api-error"),
@@ -193,6 +201,8 @@ function cacheElements() {
     assetApiEmpty: document.querySelector("#asset-api-empty"),
     assetApiPrevious: document.querySelector("#asset-api-previous"),
     assetApiNext: document.querySelector("#asset-api-next"),
+    assetApiPageInput: document.querySelector("#asset-api-page-input"),
+    assetApiPageJump: document.querySelector("#asset-api-page-jump"),
     assetApiPageLabel: document.querySelector("#asset-api-page-label"),
     assetApiStatusMix: document.querySelector("#asset-api-status-mix"),
     assetApiResultsCount: document.querySelector("#asset-api-results-count"),
@@ -265,7 +275,7 @@ function formatApiDate(value, includeTime = false) {
 }
 
 function getAssetApiTotalPages() {
-  return Math.max(1, Math.ceil(assetApiState.total / ASSET_API_PAGE_SIZE));
+  return getTotalPages(assetApiState.total, assetApiState.pageSize);
 }
 
 function assetStatusTone(status) {
@@ -454,7 +464,7 @@ function renderAssetApiSummary() {
   elements.assetApiLoaded.textContent = assetApiState.status === "ready" ? formatNumber(rows.length) : "—";
   elements.assetApiPages.textContent =
     assetApiState.status === "ready"
-      ? `หน้า ${formatNumber(assetApiState.page)} จาก ${formatNumber(totalPages)} · ${formatNumber(ASSET_API_PAGE_SIZE)} แถวต่อหน้า`
+      ? `หน้า ${formatNumber(assetApiState.page)} จาก ${formatNumber(totalPages)} · ${formatNumber(assetApiState.pageSize)} แถวต่อหน้า`
       : "กำลังรอข้อมูล";
   elements.assetApiTypeCount.textContent = assetApiState.status === "ready" ? formatNumber(types.size) : "—";
   elements.assetApiLatest.textContent = assetApiState.status === "ready" ? formatApiDate(latestUpdate) : "—";
@@ -478,6 +488,23 @@ function renderAssetApiSummary() {
   elements.assetApiStatusMix.textContent = statusMix
     ? `สัดส่วนสถานะในตัวอย่าง · ${statusMix}`
     : "ไม่พบค่าสถานะในข้อมูลตัวอย่าง";
+}
+
+function renderAssetApiPagination() {
+  const totalPages = getAssetApiTotalPages();
+  const isReady = assetApiState.status === "ready";
+  const hasMultiplePages = totalPages > 1;
+
+  elements.assetApiPageInput.min = "1";
+  elements.assetApiPageInput.max = String(totalPages);
+  elements.assetApiPageInput.value = String(assetApiState.page);
+  elements.assetApiPageInput.disabled = !isReady || !hasMultiplePages;
+  elements.assetApiPageJump.disabled = !isReady || !hasMultiplePages;
+  elements.assetApiPageSize.value = String(assetApiState.pageSize);
+  elements.assetApiPageSize.disabled = !isReady;
+  elements.assetApiPageLabel.textContent = `หน้า ${formatNumber(assetApiState.page)} จาก ${formatNumber(totalPages)}`;
+  elements.assetApiPrevious.disabled = !isReady || assetApiState.page <= 1;
+  elements.assetApiNext.disabled = !isReady || assetApiState.page >= totalPages;
 }
 
 function renderAssetApiTable() {
@@ -518,10 +545,7 @@ function renderAssetApiTable() {
   elements.assetApiTableWrap.hidden = !hasRows;
   elements.assetApiEmpty.hidden = hasRows;
   elements.assetApiResultsCount.textContent = `แสดง ${formatNumber(filtered.length)} จาก ${formatNumber(assetApiState.rows.length)} แถวที่โหลด · ทั้งหมด ${formatNumber(assetApiState.total)} รายการใน API`;
-  const totalPages = getAssetApiTotalPages();
-  elements.assetApiPageLabel.textContent = `หน้า ${formatNumber(assetApiState.page)} จาก ${formatNumber(totalPages)}`;
-  elements.assetApiPrevious.disabled = assetApiState.page <= 1;
-  elements.assetApiNext.disabled = assetApiState.page >= totalPages;
+  renderAssetApiPagination();
 }
 
 function renderAssetApiState() {
@@ -534,8 +558,6 @@ function renderAssetApiState() {
   elements.assetApiTableWrap.hidden = !isReady;
   elements.assetApiEmpty.hidden = true;
   elements.assetApiResultsCount.textContent = isLoading ? "กำลังโหลดแถวข้อมูลสด…" : "กำลังรอข้อมูลสด";
-  elements.assetApiPrevious.disabled = !isReady || assetApiState.page <= 1;
-  elements.assetApiNext.disabled = !isReady || assetApiState.page >= getAssetApiTotalPages();
 
   if (isLoading) {
     elements.assetApiStatus.textContent = "กำลังเชื่อมต่อ";
@@ -553,19 +575,21 @@ function renderAssetApiState() {
   }
 
   renderAssetApiSummary();
+  renderAssetApiPagination();
   if (isReady) renderAssetApiTable();
 }
 
-async function loadAssetRegister(page = assetApiState.page) {
+async function loadAssetRegister(page = assetApiState.page, pageSize = assetApiState.pageSize) {
   assetApiState.status = "loading";
-  assetApiState.page = Math.max(1, page);
+  assetApiState.page = Math.max(1, Number.parseInt(page, 10) || 1);
+  assetApiState.pageSize = normalizePageSize(pageSize);
   assetApiState.error = null;
   renderAssetApiState();
   elements.refreshAssetApiButton.disabled = true;
 
   try {
     const endpoint = new URL("assets.php", `${ASSET_API_BASE_URL.replace(/\/+$/, "")}/`);
-    endpoint.searchParams.set("limit", String(ASSET_API_PAGE_SIZE));
+    endpoint.searchParams.set("limit", String(assetApiState.pageSize));
     endpoint.searchParams.set("page", String(assetApiState.page));
 
     const response = await fetch(endpoint, { headers: { Accept: "application/json" } });
@@ -582,7 +606,7 @@ async function loadAssetRegister(page = assetApiState.page) {
 
     assetApiState.rows = payload.data;
     assetApiState.total = Number(payload.total) || payload.data.length;
-    assetApiState.page = Math.min(assetApiState.page, getAssetApiTotalPages());
+    assetApiState.page = clampPage(assetApiState.page, getAssetApiTotalPages());
     assetApiState.loadedAt = new Date();
     assetApiState.status = "ready";
     renderAssetApiFilters();
@@ -661,6 +685,12 @@ function renderBackToTop() {
   elements.backToTop.hidden = window.scrollY < 480;
 }
 
+function jumpToAssetApiPage() {
+  const page = clampPage(elements.assetApiPageInput.value, getAssetApiTotalPages());
+  elements.assetApiPageInput.value = String(page);
+  loadAssetRegister(page);
+}
+
 function scrollToTop() {
   const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   document.querySelector("#main-content").focus({ preventScroll: true });
@@ -703,9 +733,17 @@ function initInteractions() {
   elements.assetApiSearch.addEventListener("input", renderAssetApiTable);
   elements.assetApiStatusFilter.addEventListener("change", renderAssetApiTable);
   elements.assetApiTypeFilter.addEventListener("change", renderAssetApiTable);
+  elements.assetApiPageSize.addEventListener("change", (event) => loadAssetRegister(1, event.target.value));
   elements.refreshAssetApiButton.addEventListener("click", loadAssetRegister);
   elements.assetApiPrevious.addEventListener("click", () => loadAssetRegister(assetApiState.page - 1));
   elements.assetApiNext.addEventListener("click", () => loadAssetRegister(assetApiState.page + 1));
+  elements.assetApiPageJump.addEventListener("click", jumpToAssetApiPage);
+  elements.assetApiPageInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      jumpToAssetApiPage();
+    }
+  });
   window.addEventListener("hashchange", handleModuleRoute);
   window.addEventListener("scroll", renderBackToTop, { passive: true });
   elements.backToTop.addEventListener("click", scrollToTop);
