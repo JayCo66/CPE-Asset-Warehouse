@@ -1,0 +1,150 @@
+<section class="panel asset-register-panel" id="asset-register" aria-labelledby="asset-register-title">
+  <div class="panel-heading asset-register-heading">
+    <div>
+      <p class="panel-kicker">คลังข้อมูลสินทรัพย์ · warehouse</p>
+      <h2 id="asset-register-title">ตัวอย่างทะเบียนสินทรัพย์</h2>
+      <p class="panel-description">
+        ค้นหาข้อมูลจาก snapshot ล่าสุดใน <code>fact_asset_inventory</code> โดยแสดงรหัสสินทรัพย์ ประเภท
+        สถานะ หน่วยงาน และรายละเอียดการอัปเดต
+      </p>
+    </div>
+    <div class="asset-source-status">
+      <span class="status-chip status-chip-info" id="asset-api-status">กำลังเชื่อมต่อ</span>
+      <span class="panel-aside" id="asset-api-updated">กำลังรอการตอบกลับ</span>
+    </div>
+  </div>
+
+  <div class="asset-summary" aria-label="สรุปข้อมูลจากคลังสินทรัพย์">
+    <div class="asset-summary-item">
+      <span class="asset-summary-label">ทั้งหมดในคลังข้อมูล</span>
+      <strong class="asset-summary-value" id="asset-api-total">—</strong>
+      <span class="asset-summary-detail">สินทรัพย์ที่ไม่ถูกลบ</span>
+    </div>
+    <div class="asset-summary-item">
+      <span class="asset-summary-label">แถวข้อมูลตัวอย่าง</span>
+      <strong class="asset-summary-value" id="asset-api-loaded">—</strong>
+      <span class="asset-summary-detail" id="asset-api-pages">หน้า 1 จาก 1 · 10 แถวต่อหน้า</span>
+    </div>
+    <div class="asset-summary-item">
+      <span class="asset-summary-label">ประเภทในตัวอย่าง</span>
+      <strong class="asset-summary-value" id="asset-api-type-count">—</strong>
+      <span class="asset-summary-detail">จำนวนชื่อประเภทที่ไม่ซ้ำกัน</span>
+    </div>
+    <div class="asset-summary-item">
+      <span class="asset-summary-label">การอัปเดตล่าสุด</span>
+      <strong class="asset-summary-value" id="asset-api-latest">—</strong>
+      <span class="asset-summary-detail">จากแถวข้อมูลที่โหลด</span>
+    </div>
+  </div>
+
+  <div class="asset-register-toolbar table-controls">
+    <label class="input-label" for="asset-api-search">
+      <span class="sr-only">ค้นหาทะเบียนสินทรัพย์</span>
+      <input id="asset-api-search" type="search" placeholder="ค้นหาแถวข้อมูลตามรหัส ชื่อ ประเภท หรือหน่วยงาน" />
+    </label>
+    <label class="select-label" for="asset-api-status-filter">
+      สถานะ
+      <select id="asset-api-status-filter">
+        <option value="all">ทุกสถานะ</option>
+      </select>
+    </label>
+    <label class="select-label" for="asset-api-type-filter">
+      ประเภท
+      <select id="asset-api-type-filter">
+        <option value="all">ทุกประเภท</option>
+      </select>
+    </label>
+    <button class="button button-secondary" type="button" id="refresh-asset-api-button">
+      รีเฟรชแหล่งข้อมูล
+    </button>
+  </div>
+
+  <div class="api-state api-state-loading" id="asset-api-loading" role="status" aria-live="polite">
+    กำลังโหลดทะเบียนสินทรัพย์…
+  </div>
+  <div class="api-state api-state-error" id="asset-api-error" role="alert" hidden>
+    <strong>คลังข้อมูลไม่พร้อมใช้งาน</strong>
+    <span id="asset-api-error-message">ลองรีเฟรชแหล่งข้อมูลอีกครั้ง</span>
+  </div>
+  <div class="table-wrap" id="asset-api-table-wrap" hidden>
+    <table class="asset-api-table">
+      <caption class="sr-only">ทะเบียนสินทรัพย์จาก snapshot ล่าสุดใน fact_asset_inventory</caption>
+      <thead>
+        <tr>
+          <th scope="col">สินทรัพย์</th>
+          <th scope="col">ประเภท / ยี่ห้อ</th>
+          <th scope="col">สถานะ</th>
+          <th scope="col">ปีที่จัดซื้อ</th>
+          <th scope="col">หน่วยงาน</th>
+          <th scope="col">รหัสสถานที่</th>
+          <th scope="col">อัปเดตล่าสุด</th>
+          <th scope="col">ข้อมูล</th>
+        </tr>
+      </thead>
+      <tbody id="asset-api-body"></tbody>
+    </table>
+  </div>
+  <div class="empty-state" id="asset-api-empty" hidden>
+    <strong>ไม่พบสินทรัพย์ที่ตรงกับตัวกรอง</strong>
+    <p>ล้างคำค้นหรือเลือกสถานะหรือประเภทอื่น</p>
+  </div>
+  <div class="asset-pagination" aria-label="หน้าทะเบียนสินทรัพย์">
+    <div class="asset-pagination-size">
+      <span class="asset-pagination-label">แถวต่อหน้า</span>
+      <div class="pagination-button-group" id="asset-api-page-size-buttons" role="group" aria-label="จำนวนแถวสินทรัพย์ต่อหน้า">
+        <button class="button button-primary pagination-size-button is-active" type="button" data-page-size="10" aria-pressed="true" disabled>
+          10
+        </button>
+        <button class="button button-secondary pagination-size-button" type="button" data-page-size="25" aria-pressed="false" disabled>
+          25
+        </button>
+        <button class="button button-secondary pagination-size-button" type="button" data-page-size="50" aria-pressed="false" disabled>
+          50
+        </button>
+        <button class="button button-secondary pagination-size-button" type="button" data-page-size="100" aria-pressed="false" disabled>
+          100
+        </button>
+      </div>
+    </div>
+    <div class="asset-page-navigation" role="group" aria-label="เลือกหน้าทะเบียนสินทรัพย์">
+      <div class="asset-page-first" id="asset-api-first-page-button" role="group" aria-label="หน้าแรก">
+        <button class="button button-primary pagination-page-button is-active" type="button" data-page="1" aria-label="ไปหน้าที่ 1" aria-current="page" disabled>
+          1
+        </button>
+      </div>
+      <button class="button button-secondary pagination-page-button" type="button" id="asset-api-page-jump-back" data-page="1" aria-label="ย้อนกลับสองหน้า" disabled>
+        &lt;&lt;
+      </button>
+      <button class="button button-secondary pagination-page-button" type="button" id="asset-api-previous" data-page="1" aria-label="หน้าก่อนหน้า" disabled>
+        &lt;
+      </button>
+      <label class="pagination-page-control" for="asset-api-page-input">
+        <span class="sr-only">ไปที่หน้า</span>
+        <input
+          id="asset-api-page-input"
+          type="number"
+          min="1"
+          value="1"
+          inputmode="numeric"
+          aria-label="หมายเลขหน้าทะเบียนสินทรัพย์ กด Enter เพื่อไปหน้านี้"
+          aria-describedby="asset-api-page-label"
+          disabled
+        />
+      </label>
+      <button class="button button-secondary pagination-page-button" type="button" id="asset-api-next" data-page="1" aria-label="หน้าถัดไป" disabled>
+        &gt;
+      </button>
+      <button class="button button-secondary pagination-page-button" type="button" id="asset-api-page-jump-forward" data-page="1" aria-label="ข้ามไปข้างหน้าสองหน้า" disabled>
+        &gt;&gt;
+      </button>
+      <div class="asset-page-final" id="asset-api-final-page-buttons" role="group" aria-label="หน้าท้าย">
+      </div>
+    </div>
+    <span class="asset-pagination-status sr-only" id="asset-api-page-label" aria-live="polite">หน้า 1 จาก 1</span>
+  </div>
+  <div class="asset-api-status-mix" id="asset-api-status-mix" aria-live="polite"></div>
+  <div class="table-footer">
+    <span id="asset-api-results-count">กำลังรอข้อมูลจากคลังข้อมูล</span>
+    <span>API · <code>assets_api/fact_asset_inventory.php</code></span>
+  </div>
+</section>

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="แดชบอร์ดทะเบียนและวงจรชีวิตสินทรัพย์ของคลังสินทรัพย์ CPE"
+    />
+    <title>คลังสินทรัพย์ CPE</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">ข้ามไปยังแดชบอร์ด</a>
+
+    <div class="app-shell">
+      <header class="app-header">
+        <a class="brand" href="#main-content" aria-label="หน้าแรกคลังสินทรัพย์ CPE">
+          <span class="brand-mark" aria-hidden="true">CPE</span>
+          <span class="brand-copy">
+            <span class="brand-kicker">งานปฏิบัติการวิศวกรรม</span>
+            <strong>คลังสินทรัพย์</strong>
+          </span>
+        </a>
+
+        <div class="header-status">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span>พื้นที่ทำงานตัวอย่าง</span>
+          <button class="icon-button" type="button" aria-label="เปิดเมนูพื้นที่ทำงาน">
+            <span aria-hidden="true">•••</span>
+          </button>
+        </div>
+      </header>
+
+      <nav class="module-nav" aria-label="โมดูลพื้นที่ทำงาน">
+        <span class="module-nav-label">พื้นที่ทำงาน</span>
+        <div class="module-links" id="module-links"></div>
+      </nav>
+
+      <main class="dashboard" id="main-content" tabindex="-1">
+        <div id="dashboard-sections" class="dashboard-sections" aria-busy="true">
+          <div class="api-state api-state-loading" role="status" aria-live="polite">
+            กำลังโหลดแดชบอร์ด…
+          </div>
+        </div>
+        <div id="asset-detail-container" aria-busy="true" hidden></div>
+        <section class="panel module-placeholder-panel" id="module-placeholder" aria-labelledby="module-placeholder-title" hidden>
+          <div>
+            <p class="panel-kicker">โมดูลหลัก · อยู่ระหว่างเตรียมระบบ</p>
+            <h1 id="module-placeholder-title" tabindex="-1"></h1>
+            <p class="panel-description" id="module-placeholder-description"></p>
+          </div>
+        </section>
+      </main>
+
+      <footer class="app-footer">
+        <span>สมาชิก 1 · ทะเบียนสินทรัพย์และวงจรชีวิต</span>
+        <span>โครงสร้างข้อมูล · <code>fact_asset_inventory</code></span>
+      </footer>
+    </div>
+
+    <button class="back-to-top" id="back-to-top" type="button" aria-label="กลับไปด้านบน" hidden>
+      <span class="back-to-top-icon" aria-hidden="true">↑</span>
+      <span>กลับไปด้านบน</span>
+    </button>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <noscript>
+      <div class="no-script-message">แดชบอร์ดนี้ต้องเปิดใช้งาน JavaScript เพื่อแสดงกราฟและตัวกรอง</div>
+    </noscript>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
