@@ -237,20 +237,32 @@ code {
 .module-nav {
   width: max-content;
   max-width: 100%;
+  height: auto;
   margin: 0 auto 36px;
   padding: 7px;
+  overflow-x: auto;
+  overflow-y: hidden;
   background: var(--cpe-surface);
   border: 1px solid var(--cpe-border);
   border-radius: 999px;
   box-shadow: var(--shadow-panel);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.module-nav::-webkit-scrollbar {
+  display: none;
 }
 
 .module-links {
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
   gap: 6px;
 }
 
 .module-link {
   display: inline-flex;
+  flex: 0 0 auto;
   min-height: 43px;
   min-width: 0;
   align-items: center;
@@ -1518,17 +1530,19 @@ tbody tr:hover td {
     justify-content: center;
     align-items: stretch;
     gap: 2px;
+    flex-wrap: nowrap;
   }
 
   .module-link {
-    flex: 1 1 0;
+    flex: 1 0 0;
     min-height: 40px;
+    min-width: max-content;
     justify-content: center;
     gap: 5px;
     padding: 9px 7px;
     font-size: 0.75rem;
     text-align: center;
-    white-space: normal;
+    white-space: nowrap;
   }
 
   .page-heading,
@@ -1663,7 +1677,6 @@ tbody tr:hover td {
 
   .module-link {
     padding: 8px 4px;
-    overflow-wrap: anywhere;
   }
 
   .metric-grid {
