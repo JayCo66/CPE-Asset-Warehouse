@@ -1,0 +1,211 @@
+{
+ "success": true,
+ "message": "เรียกดูหมวดหมู่ครุภัณฑ์สำเร็จ",
+ "total": 20,
+ "data": [
+  {
+   "category_id": 1,
+   "category_code": "01",
+   "category_name_th": "อาคารถาวร",
+   "category_name_en": "Permanent buildings",
+   "description": null,
+   "status": "active",
+   "created_at": "2024-10-01 09:00:00",
+   "updated_at": "2024-10-01 09:00:00"
+  },
+  {
+   "category_id": 2,
+   "category_code": "03",
+   "category_name_th": "สิ่งก่อสร้าง (คอนกรีตเสริมเหล็ก/โครงสร้างเหล็ก)",
+   "category_name_en": "Structures - reinforced concrete or steel",
+   "description": null,
+   "status": "active",
+   "created_at": "2024-10-01 09:00:00",
+   "updated_at": "2024-10-01 09:00:00"
+  },
+  {
+   "category_id": 3,
+   "category_code": "04",
+   "category_name_th": "สิ่งก่อสร้าง (ไม้/วัสดุอื่น)",
+   "category_name_en": "Structures - wood or other materials",
+   "description": null,
+   "status": "active",
+   "created_at": "2024-10-01 09:00:00",
+   "updated_at": "2024-10-01 09:00:00"
+  },
+  {
+   "category_id": 4,
+   "category_code": "05",
+   "category_name_th": "ครุภัณฑ์สำนักงาน",
+   "category_name_en": "Office equipment",
+   "description": null,
+   "status": "active",
+   "created_at": "2024-10-01 09:00:00",
+   "updated_at": "2024-10-01 09:00:00"
+  },
+  {
+   "category_id": 5,
+   "category_code": "06",
+   "category_name_th": "ครุภัณฑ์ยานพาหนะและขนส่ง",
+   "category_name_en": "Vehicles and transport",
+   "description": null,
+   "status": "active",
+   "created_at": "2024-10-01 09:00:00",
+   "updated_at": "2024-10-01 09:00:00"
+  },
+  {
+   "category_id": 6,
+   "category_code": "07",
+   "category_name_th": "ครุภัณฑ์ไฟฟ้าและวิทยุ",
+   "category_name_en": "Electrical and radio equipment",
+   "description": null,
+   "status": "active",
+   "created_at": "2024-10-01 09:00:00",
+   "updated_at": "2024-10-01 09:00:00"
+  },
+  {
+   "category_id": 7,
+   "category_code": "08",
+   "category_name_th": "ครุภัณฑ์ไฟฟ้า (เครื่องกำเนิดไฟฟ้า)",
+   "category_name_en": "Power generators",
+   "description": null,
+   "status": "active",
+   "created_at": "2024-10-01 09:00:00",
+   "updated_at": "2024-10-01 09:00:00"
+  },
+  {
+   "category_id": 8,
+   "category_code": "09",
+   "category_name_th": "ครุภัณฑ์โฆษณาและเผยแพร่",
+   "category_name_en": "Advertising and media equipment",
+   "description": null,
+   "status": "active",
+   "created_at": "2024-10-01 09:00:00",
+   "updated_at": "2024-10-01 09:00:00"
+  },
+  {
+   "category_id": 9,
+   "category_code": "10",
+   "category_name_th": "ครุภัณฑ์การเกษตร (เครื่องมือและอุปกรณ์)",
+   "category_name_en": "Agricultural tools",
+   "description": null,
+   "status": "active",
+   "created_at": "2024-10-01 09:00:00",
+   "updated_at": "2024-10-01 09:00:00"
+  },
+  {
+   "category_id": 10,
+   "category_code": "11",
+   "category_name_th": "ครุภัณฑ์การเกษตร (เครื่องจักร)",
+   "category_name_en": "Agricultural machinery",
+   "description": null,
+   "status": "active",
+   "created_at": "2024-10-01 09:00:00",
+   "updated_at": "2024-10-01 09:00:00"
+  },
+  {
+   "category_id": 11,
+   "category_code": "12",
+   "category_name_th": "ครุภัณฑ์โรงงาน (เครื่องมือและอุปกรณ์)",
+   "category_name_en": "Workshop tools",
+   "description": null,
+   "status": "active",
+   "created_at": "2024-10-01 09:00:00",
+   "updated_at": "2024-10-01 09:00:00"
+  },
+  {
+   "category_id": 12,
+   "category_code": "13",
+   "category_name_th": "ครุภัณฑ์โรงงาน (เครื่องจักร)",
+   "category_name_en": "Workshop machinery",
+   "description": null,
+   "status": "active",
+   "created_at": "2024-10-01 09:00:00",
+   "updated_at": "2024-10-01 09:00:00"
+  },
+  {
+   "category_id": 13,
+   "category_code": "14",
+   "category_name_th": "ครุภัณฑ์ก่อสร้าง (เครื่องมือและอุปกรณ์)",
+   "category_name_en": "Construction tools",
+   "description": null,
+   "status": "active",
+   "created_at": "2024-10-01 09:00:00",
+   "updated_at": "2024-10-01 09:00:00"
+  },
+  {
+   "category_id": 14,
+   "category_code": "15",
+   "category_name_th": "ครุภัณฑ์ก่อสร้าง (เครื่องจักร)",
+   "category_name_en": "Construction machinery",
+   "description": null,
+   "status": "active",
+   "created_at": "2024-10-01 09:00:00",
+   "updated_at": "2024-10-01 09:00:00"
+  },
+  {
+   "category_id": 15,
+   "category_code": "16",
+   "category_name_th": "ครุภัณฑ์สำรวจ",
+   "category_name_en": "Survey equipment",
+   "description": null,
+   "status": "active",
+   "created_at": "2024-10-01 09:00:00",
+   "updated_at": "2024-10-01 09:00:00"
+  },
+  {
+   "category_id": 16,
+   "category_code": "17",
+   "category_name_th": "ครุภัณฑ์วิทยาศาสตร์หรือการแพทย์",
+   "category_name_en": "Scientific and medical equipment",
+   "description": null,
+   "status": "active",
+   "created_at": "2024-10-01 09:00:00",
+   "updated_at": "2024-10-01 09:00:00"
+  },
+  {
+   "category_id": 17,
+   "category_code": "18",
+   "category_name_th": "ครุภัณฑ์คอมพิวเตอร์",
+   "category_name_en": "Computer equipment",
+   "description": null,
+   "status": "active",
+   "created_at": "2024-10-01 09:00:00",
+   "updated_at": "2024-10-01 09:00:00"
+  },
+  {
+   "category_id": 18,
+   "category_code": "19",
+   "category_name_th": "ครุภัณฑ์การศึกษา",
+   "category_name_en": "Educational equipment",
+   "description": null,
+   "status": "active",
+   "created_at": "2024-10-01 09:00:00",
+   "updated_at": "2024-10-01 09:00:00"
+  },
+  {
+   "category_id": 19,
+   "category_code": "20",
+   "category_name_th": "ครุภัณฑ์งานบ้านงานครัว",
+   "category_name_en": "Household and kitchen equipment",
+   "description": null,
+   "status": "active",
+   "created_at": "2024-10-01 09:00:00",
+   "updated_at": "2024-10-01 09:00:00"
+  },
+  {
+   "category_id": 20,
+   "category_code": "32",
+   "category_name_th": "สินทรัพย์ไม่มีตัวตน (โปรแกรมคอมพิวเตอร์)",
+   "category_name_en": "Intangible assets - software",
+   "description": null,
+   "status": "active",
+   "created_at": "2024-10-01 09:00:00",
+   "updated_at": "2024-10-01 09:00:00"
+  }
+ ],
+ "_mock": {
+  "endpoint": "https://cpe.eng.kps.ku.ac.th/CPEAssets/assets_api/asset_categories.php?limit=100&page=1",
+  "note": "MOCK DATA สำหรับทดสอบ ETL เท่านั้น ไม่ใช่ข้อมูลจริง"
+ }
+}

@@ -12,7 +12,9 @@ ETL จะดึงทีละหน้าจนได้ครบ `total` ไ�
 
 | endpoint | สถานะ | ตารางต้นทาง | ใช้เติม warehouse |
 |---|---|---|---|
-| `assets` | **มีจริง** | asset | dim_asset, dim_asset_type, dim_asset_category |
+| `assets` | **มีจริง** | asset | dim_asset, fact_asset_inventory |
+| `asset_types` | mock (ค่าจริงจาก assets) | asset_types | dim_asset_type |
+| `asset_categories` | mock | asset_categories | dim_asset_category |
 | `departments` | mock (ค่าจริงจาก assets) | departments | dim_department |
 | `users` | mock | users | dim_user |
 | `locations` | mock | location (`location_id, location_name, building, floor, room_detail, remark, is_deleted, deleted_at`) | dim_location |

@@ -1,0 +1,515 @@
+{
+ "success": true,
+ "message": "เรียกดูประเภทครุภัณฑ์สำเร็จ",
+ "total": 63,
+ "data": [
+  {
+   "type_id": 1,
+   "type_code": "FA04",
+   "type_name": "สิ่งก่อสร้าง-ใช้ไม้หรือวัสดุอื่นๆ เป็นส่วนประกอบหลัก",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 2,
+   "type_code": "FA05",
+   "type_name": "ครุภัณฑ์สำนักงาน",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 3,
+   "type_code": "FA07",
+   "type_name": "ครุภัณฑ์ไฟฟ้าและวิทยุ",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 4,
+   "type_code": "FA09",
+   "type_name": "ครุภัณฑ์โฆษณาและเผยแพร่",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 5,
+   "type_code": "FA10",
+   "type_name": "ครุภัณฑ์การเกษตร (เครื่องมือและอุปกรณ์)",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 6,
+   "type_code": "FA12",
+   "type_name": "ครุภัณฑ์โรงงาน (เครื่องมือและอุปกรณ์)",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 7,
+   "type_code": "FA13",
+   "type_name": "ครุภัณฑ์โรงงาน (เครื่องจักร)",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 8,
+   "type_code": "FA16",
+   "type_name": "ครุภัณฑ์สำรวจ",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 9,
+   "type_code": "FA17",
+   "type_name": "ครุภัณฑ์วิทยาศาสตร์หรือการแพทย์",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 10,
+   "type_code": "FA18",
+   "type_name": "ครุภัณฑ์คอมพิวเตอร์",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 11,
+   "type_code": "FA32",
+   "type_name": "สินทรัพย์ไม่มีตัวตน (โปรแกรม)",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 12,
+   "type_code": "FN05",
+   "type_name": "ครุภัณฑ์สำนักงาน-ต่ำกว่าเกณฑ์ (ต่ำกว่า 5,000 บาท)",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 13,
+   "type_code": "FN07",
+   "type_name": "ครุภัณฑ์ไฟฟ้า-ต่ำกว่าเกณฑ์ (ต่ำกว่า 5,000 บาท)",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 14,
+   "type_code": "FN09",
+   "type_name": "ครุภัณฑ์โฆษณา-ต่ำกว่าเกณฑ์ (ต่ำกว่า 5,000 บาท)",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 15,
+   "type_code": "FN18",
+   "type_name": "ครุภัณฑ์คอมพิวเตอร์-ต่ำกว่าเกณฑ์ (ต่ำกว่า 5,000 บาท)",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 16,
+   "type_code": "FA03",
+   "type_name": "สิ่งก่อสร้าง-ใช้คอนกรีตเสริมเหล็กหรือโครงสร้างเหล็กเป็นส่วนประกอบหลัก",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 17,
+   "type_code": "FN20",
+   "type_name": "ครุภัณฑ์งานบ้านงานครัว (ต่ำกว่าเกณฑ์)",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 18,
+   "type_code": "FA20",
+   "type_name": "ครุภัณฑ์งานบ้านงานครัว",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 19,
+   "type_code": "FA01",
+   "type_name": "อาคารถาวร",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 21,
+   "type_code": "FA08",
+   "type_name": "ครุภัณฑ์ไฟฟ้าและวิทยุ(เครื่องกำเนิดไฟฟ้า)",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 22,
+   "type_code": "FA06",
+   "type_name": "ครุภัณฑ์ยานพาหนะและขนส่ง",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 23,
+   "type_code": "FA11",
+   "type_name": "ครุภัณฑ์การเกษตร (เครื่องจักร)",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 24,
+   "type_code": "FA14",
+   "type_name": "ครุภัณฑ์ก่อสร้าง (เครื่องมือและอุปกรณ์)",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 25,
+   "type_code": "FA15",
+   "type_name": "ครุภัณฑ์ก่อสร้าง  (เครื่องจักร)",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 26,
+   "type_code": "FA19",
+   "type_name": "ครุภัณฑ์การศึกษา",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 43,
+   "type_code": "FD03",
+   "type_name": "สิ่งก่อสร้าง-ใช้คอนกรีตเสริมเหล็กหรือโครงสร้างเหล็กเป็นส่วนประกอบหลัก- จากการบริจาค",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 45,
+   "type_code": "FD05",
+   "type_name": "ครุภัณฑ์สำนักงาน- จากการบริจาค",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 46,
+   "type_code": "FD06",
+   "type_name": "ครุภัณฑ์ยานพาหนะและขนส่ง- จากการบริจาค",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 47,
+   "type_code": "FD07",
+   "type_name": "ครุภัณฑ์ไฟฟ้าและวิทยุ- จากการบริจาค",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 51,
+   "type_code": "FD11",
+   "type_name": "ครุภัณฑ์การเกษตร (เครื่องจักร)- จากการบริจาค",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 53,
+   "type_code": "FD13",
+   "type_name": "ครุภัณฑ์โรงงาน  (เครื่องจักร)- จากการบริจาค",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 54,
+   "type_code": "FD14",
+   "type_name": "ครุภัณฑ์ก่อสร้าง (เครื่องมือและอุปกรณ์)- จากการบริจาค",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 56,
+   "type_code": "FD16",
+   "type_name": "ครุภัณฑ์สำรวจ- จากการบริจาค",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 57,
+   "type_code": "FD17",
+   "type_name": "ครุภัณฑ์วิทยาศาสตร์หรือการแพทย์- จากการบริจาค",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 58,
+   "type_code": "FD18",
+   "type_name": "ครุภัณฑ์คอมพิวเตอร์- จากการบริจาค",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 74,
+   "type_code": "FN10",
+   "type_name": "ครุภัณฑ์การเกษตร  (ต่ำกว่าเกณฑ์)",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 75,
+   "type_code": "FN12",
+   "type_name": "ครุภัณฑ์โรงงาน  (ต่ำกว่าเกณฑ์)",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 76,
+   "type_code": "FN14",
+   "type_name": "ครุภัณฑ์ก่อสร้าง  (ต่ำกว่าเกณฑ์)",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 77,
+   "type_code": "FN16",
+   "type_name": "ครุภัณฑ์สำรวจ  (ต่ำกว่าเกณฑ์)",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 78,
+   "type_code": "FN17",
+   "type_name": "ครุภัณฑ์วิทยาศาสตร์ หรือการแพทย์ (ต่ำกว่าเกณฑ์)",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 84,
+   "type_code": "FP05",
+   "type_name": "ครุภัณฑ์สำนักงาน (ต่ำกว่าเกณฑ์) -จากการบริจาค",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 86,
+   "type_code": "FP07",
+   "type_name": "ครุภัณฑ์ไฟฟ้าและวิทยุ (ต่ำกว่าเกณฑ์)- จากการบริจาค",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 99,
+   "type_code": "FT01",
+   "type_name": "อาคารถาวร (รับโอนหน่วยงานภายใน)",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 101,
+   "type_code": "FT03",
+   "type_name": "สิ่งก่อสร้าง-ใช้คอนกรีตเสริมเหล็กหรือโครงสร้างเหล็กเป็นส่วนประกอบหลัก",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 103,
+   "type_code": "FT05",
+   "type_name": "ครุภัณฑ์สำนักงาน (รับโอนหน่วยงานภายใน)",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 104,
+   "type_code": "FT06",
+   "type_name": "ครุภัณฑ์ยานพาหนะและขนส่ง (รับโอนหน่วยงานภายใน)",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 105,
+   "type_code": "FT07",
+   "type_name": "ครุภัณฑ์ไฟฟ้าและวิทยุ (รับโอนหน่วยงานภายใน)",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 107,
+   "type_code": "FT09",
+   "type_name": "ครุภัณฑ์โฆษณาและเผยแพร่ (รับโอนหน่วยงานภายใน)",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 108,
+   "type_code": "FT10",
+   "type_name": "ครุภัณฑ์การเกษตร (เครื่องมือและอุปกรณ์)(รับโอนหน่วยงานภายใน)",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 109,
+   "type_code": "FT11",
+   "type_name": "ครุภัณฑ์การเกษตร (เครื่องจักร)(รับโอนหน่วยงานภายใน)",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 110,
+   "type_code": "FT12",
+   "type_name": "ครุภัณฑ์โรงงาน (เครื่องมือและอุปกรณ์) (รับโอนหน่วยงานภายใน)",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 111,
+   "type_code": "FT13",
+   "type_name": "ครุภัณฑ์โรงงาน (เครื่องจักร) (รับโอนหน่วยงานภายใน)",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 114,
+   "type_code": "FT16",
+   "type_name": "ครุภัณฑ์สำรวจ (รับโอนหน่วยงานภายใน)",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 115,
+   "type_code": "FT17",
+   "type_name": "ครุภัณฑ์วิทยาศาสตร์ หรือการแพทย์ (รับโอนหน่วยงานภายใน)",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 116,
+   "type_code": "FT18",
+   "type_name": "ครุภัณฑ์คอมพิวเตอร์ (รับโอนหน่วยงานภายใน)",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 118,
+   "type_code": "FT20",
+   "type_name": "ครุภัณฑ์งานบ้านงานครัว (รับโอนหน่วยงานภายใน)",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 123,
+   "type_code": "FT32",
+   "type_name": "สินทรัพย์ไม่มีตัวตน (โปรแกรมคอมพิวเตอร์ ) (รับโอนหน่วยงานภายใน)",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 125,
+   "type_code": "FU05",
+   "type_name": "ครุภัณฑ์สำนักงาน ต่ำกว่าเกณฑ์ (รับโอน)",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 133,
+   "type_code": "FU17",
+   "type_name": "ครุภัณฑ์วิทยาศาสตร์ หรือการแพทย์ ต่ำกว่าเกณฑ์ (รับโอน)",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 134,
+   "type_code": "FU18",
+   "type_name": "ครุภัณฑ์คอมพิวเตอร์ ต่ำกว่าเกณฑ์  (รับโอน)",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 136,
+   "type_code": "FU20",
+   "type_name": "ครุภัณฑ์งานบ้านงานครัว ต่ำกว่าเกณฑ์ (รับโอน)",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 142,
+   "type_code": "FN08",
+   "type_name": "FN08",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  },
+  {
+   "type_id": 143,
+   "type_code": "FN13",
+   "type_name": "FN13",
+   "description": null,
+   "is_deleted": 0,
+   "deleted_at": null
+  }
+ ],
+ "_mock": {
+  "endpoint": "https://cpe.eng.kps.ku.ac.th/CPEAssets/assets_api/asset_types.php?limit=100&page=1",
+  "note": "MOCK DATA สำหรับทดสอบ ETL เท่านั้น ไม่ใช่ข้อมูลจริง"
+ }
+}
