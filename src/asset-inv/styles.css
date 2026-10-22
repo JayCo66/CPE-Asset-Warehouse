@@ -312,6 +312,22 @@ code {
   gap: 20px;
 }
 
+.module-placeholder-panel {
+  min-height: 320px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+
+.module-placeholder-panel > div {
+  max-width: 560px;
+}
+
+.module-placeholder-panel .panel-description {
+  margin-right: auto;
+  margin-left: auto;
+}
+
 .page-heading {
   justify-content: space-between;
   gap: 24px;

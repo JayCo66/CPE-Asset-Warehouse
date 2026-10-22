@@ -1,7 +1,20 @@
 const dashboardData = {
   moduleNav: [
-    { id: "inventory", label: "ทะเบียนสินทรัพย์", marker: "AI", href: "#main-content", active: true },
-    { id: "asset-register", label: "ทะเบียนสด", marker: "AR", href: "#asset-register", active: false },
+    { id: "inventory", label: "ทะเบียนสินทรัพย์", marker: "AI", href: "#/inventory" },
+    {
+      id: "borrowing",
+      label: "การยืมคืน",
+      marker: "BR",
+      href: "#/borrowing",
+      description: "พื้นที่สำหรับจัดการคำขอยืมคืนจะเปิดใช้งานในขั้นตอนถัดไป",
+    },
+    {
+      id: "maintenance",
+      label: "ระบบซ่อม",
+      marker: "MT",
+      href: "#/maintenance",
+      description: "พื้นที่สำหรับติดตามงานซ่อมจะเปิดใช้งานในขั้นตอนถัดไป",
+    },
   ],
   metrics: {
     total: 4324,
@@ -138,6 +151,10 @@ let elements;
 function cacheElements() {
   elements = {
     moduleLinks: document.querySelector("#module-links"),
+    dashboardSections: document.querySelector("#dashboard-sections"),
+    modulePlaceholder: document.querySelector("#module-placeholder"),
+    modulePlaceholderTitle: document.querySelector("#module-placeholder-title"),
+    modulePlaceholderDescription: document.querySelector("#module-placeholder-description"),
     readinessChart: document.querySelector("#readiness-chart"),
     ageChart: document.querySelector("#age-chart"),
     checkList: document.querySelector("#check-list"),
@@ -259,17 +276,43 @@ function assetStatusTone(status) {
   return "info";
 }
 
-function renderModuleNav() {
+function getCurrentModuleId() {
+  const route = window.location.hash.replace(/^#\/?/, "").split("/")[0];
+  return dashboardData.moduleNav.some((module) => module.id === route) ? route : "inventory";
+}
+
+function renderModuleNav(activeModuleId = getCurrentModuleId()) {
   elements.moduleLinks.innerHTML = dashboardData.moduleNav
     .map(
       (module) => `
-        <a class="module-link" href="${escapeHtml(module.href)}"${module.active ? ' aria-current="page"' : ""}>
+        <a class="module-link" href="${escapeHtml(module.href)}"${module.id === activeModuleId ? ' aria-current="page"' : ""}>
           <span class="module-link-mark" aria-hidden="true">${escapeHtml(module.marker)}</span>
           ${escapeHtml(module.label)}
         </a>
       `,
     )
     .join("");
+}
+
+function renderModuleView(moduleId = getCurrentModuleId()) {
+  const activeModule = dashboardData.moduleNav.find((module) => module.id === moduleId) || dashboardData.moduleNav[0];
+  const isInventory = activeModule.id === "inventory";
+
+  elements.dashboardSections.hidden = !isInventory;
+  elements.modulePlaceholder.hidden = isInventory;
+
+  if (!isInventory) {
+    elements.modulePlaceholderTitle.textContent = activeModule.label;
+    elements.modulePlaceholderDescription.textContent = activeModule.description;
+    elements.modulePlaceholderTitle.focus({ preventScroll: true });
+  }
+}
+
+function handleModuleRoute() {
+  const activeModuleId = getCurrentModuleId();
+  renderModuleNav(activeModuleId);
+  renderModuleView(activeModuleId);
+  if (activeModuleId !== "inventory") window.scrollTo({ top: 0, behavior: "auto" });
 }
 
 function renderMetrics() {
@@ -663,6 +706,7 @@ function initInteractions() {
   elements.refreshAssetApiButton.addEventListener("click", loadAssetRegister);
   elements.assetApiPrevious.addEventListener("click", () => loadAssetRegister(assetApiState.page - 1));
   elements.assetApiNext.addEventListener("click", () => loadAssetRegister(assetApiState.page + 1));
+  window.addEventListener("hashchange", handleModuleRoute);
   window.addEventListener("scroll", renderBackToTop, { passive: true });
   elements.backToTop.addEventListener("click", scrollToTop);
 
@@ -696,6 +740,7 @@ async function init() {
   await loadDashboardSections();
   cacheElements();
   renderModuleNav();
+  renderModuleView();
   renderMetrics();
   renderReadiness();
   renderAgeChart();
