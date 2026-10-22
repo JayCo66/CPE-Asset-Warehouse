@@ -118,7 +118,7 @@ const auditState = {
   checked: 3545,
 };
 
-const ASSET_API_BASE_URL = window.ASSET_API_BASE_URL || "https://cpe.eng.kps.ku.ac.th/CPEAssets/assets_api";
+const ASSET_API_BASE_URL = new URL("../../assets_api/", import.meta.url).href;
 const DASHBOARD_SECTION_FILES = [
   "sections/overview.html",
   "sections/analysis.html",
@@ -614,7 +614,7 @@ function renderAssetDetailState() {
   const asset = assetDetailState.asset;
   const code = displayValue(asset.asset_code);
   elements.assetDetailTitle.textContent = `รายละเอียดสินทรัพย์ ${code}`;
-  elements.assetDetailSubtitle.textContent = "ข้อมูลเต็มจาก assets_api พร้อมประวัติการยืมคืนและการซ่อมเมื่อ endpoint พร้อมใช้งาน";
+  elements.assetDetailSubtitle.textContent = "ข้อมูลจากคลังสินทรัพย์ พร้อมประวัติการยืมคืนและการซ่อมเมื่อ endpoint พร้อมใช้งาน";
   elements.assetDetailName.textContent = displayValue(asset.asset_name);
   elements.assetDetailCode.textContent = code;
   elements.assetDetailStatus.textContent = displayValue(asset.asset_status);
@@ -669,7 +669,7 @@ async function loadAssetDetail(assetId) {
   try {
     const asset = await fetchAssetById(normalizedAssetId);
     if (requestId !== assetDetailRequestId) return;
-    if (!asset) throw new Error(`ไม่พบสินทรัพย์รหัส ${normalizedAssetId} ใน assets_api`);
+    if (!asset) throw new Error(`ไม่พบสินทรัพย์รหัส ${normalizedAssetId} ในคลังข้อมูล`);
 
     assetDetailState.status = "ready";
     assetDetailState.asset = asset;
@@ -855,7 +855,7 @@ function renderAssetApiSummary() {
   elements.assetApiLatest.textContent = assetApiState.status === "ready" ? formatApiDate(latestUpdate) : "—";
 
   if (assetApiState.status !== "ready") {
-    elements.assetApiStatusMix.textContent = "สัดส่วนสถานะจะแสดงหลังจากแหล่งข้อมูลสดตอบกลับ";
+    elements.assetApiStatusMix.textContent = "สัดส่วนสถานะจะแสดงเมื่อโหลดข้อมูลจากคลังแล้ว";
     return;
   }
 
@@ -982,7 +982,7 @@ function renderAssetApiTable() {
   const hasRows = filtered.length > 0;
   elements.assetApiTableWrap.hidden = !hasRows;
   elements.assetApiEmpty.hidden = hasRows;
-  elements.assetApiResultsCount.textContent = `แสดง ${formatNumber(filtered.length)} จาก ${formatNumber(assetApiState.rows.length)} แถวที่โหลด · ทั้งหมด ${formatNumber(assetApiState.total)} รายการใน API`;
+  elements.assetApiResultsCount.textContent = `แสดง ${formatNumber(filtered.length)} จาก ${formatNumber(assetApiState.rows.length)} แถวที่โหลด · ทั้งหมด ${formatNumber(assetApiState.total)} รายการใน snapshot ล่าสุด`;
   renderAssetApiPagination();
 }
 
@@ -995,7 +995,7 @@ function renderAssetApiState() {
   elements.assetApiError.hidden = !hasError;
   elements.assetApiTableWrap.hidden = !isReady;
   elements.assetApiEmpty.hidden = true;
-  elements.assetApiResultsCount.textContent = isLoading ? "กำลังโหลดแถวข้อมูลสด…" : "กำลังรอข้อมูลสด";
+  elements.assetApiResultsCount.textContent = isLoading ? "กำลังโหลดข้อมูลจากคลัง…" : "กำลังรอข้อมูลจากคลังข้อมูล";
 
   if (isLoading) {
     elements.assetApiStatus.textContent = "กำลังเชื่อมต่อ";
@@ -1007,7 +1007,7 @@ function renderAssetApiState() {
     elements.assetApiUpdated.textContent = "คำขอล้มเหลว";
     elements.assetApiErrorMessage.textContent = assetApiState.error || "ลองรีเฟรชแหล่งข้อมูลอีกครั้ง";
   } else if (isReady) {
-    elements.assetApiStatus.textContent = "เชื่อมต่อ API แล้ว";
+    elements.assetApiStatus.textContent = "เชื่อมต่อคลังข้อมูลแล้ว";
     elements.assetApiStatus.className = "status-chip status-chip-success";
     elements.assetApiUpdated.textContent = `โหลดเมื่อ ${formatApiDate(assetApiState.loadedAt, true)}`;
   }
@@ -1026,7 +1026,7 @@ async function loadAssetRegister(page = assetApiState.page, pageSize = assetApiS
   elements.refreshAssetApiButton.disabled = true;
 
   try {
-    const endpoint = new URL("assets.php", `${ASSET_API_BASE_URL.replace(/\/+$/, "")}/`);
+    const endpoint = new URL(ASSET_DETAIL_API_ENDPOINTS.assets, `${ASSET_API_BASE_URL.replace(/\/+$/, "")}/`);
     endpoint.searchParams.set("limit", String(assetApiState.pageSize));
     endpoint.searchParams.set("page", String(assetApiState.page));
 
@@ -1035,11 +1035,11 @@ async function loadAssetRegister(page = assetApiState.page, pageSize = assetApiS
 
     const payload = await response.json();
     if (!payload || payload.success !== true || !Array.isArray(payload.data)) {
-      throw new Error(payload?.message || "ได้รับข้อมูลจาก assets.php ในรูปแบบที่ไม่คาดคิด");
+      throw new Error(payload?.message || "ได้รับข้อมูลจาก fact_asset_inventory.php ในรูปแบบที่ไม่คาดคิด");
     }
 
     if (payload.data.some((row) => !row || typeof row !== "object")) {
-      throw new Error("พบแถวสินทรัพย์ในคำตอบจาก assets.php ที่ไม่ถูกต้อง");
+      throw new Error("พบแถวสินทรัพย์ในคำตอบจาก fact_asset_inventory.php ที่ไม่ถูกต้อง");
     }
 
     assetApiState.rows = payload.data;

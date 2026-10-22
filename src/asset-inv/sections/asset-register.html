@@ -1,10 +1,10 @@
 <section class="panel asset-register-panel" id="asset-register" aria-labelledby="asset-register-title">
   <div class="panel-heading asset-register-heading">
     <div>
-      <p class="panel-kicker">แหล่งข้อมูลสด · assets_api</p>
+      <p class="panel-kicker">คลังข้อมูลสินทรัพย์ · warehouse</p>
       <h2 id="asset-register-title">ตัวอย่างทะเบียนสินทรัพย์</h2>
       <p class="panel-description">
-        ค้นหาหน้าข้อมูลที่โหลดจาก <code>assets.php</code> แหล่งข้อมูลสดแสดงรหัสสินทรัพย์ ประเภท
+        ค้นหาข้อมูลจาก snapshot ล่าสุดใน <code>fact_asset_inventory</code> โดยแสดงรหัสสินทรัพย์ ประเภท
         สถานะ หน่วยงาน และรายละเอียดการอัปเดต
       </p>
     </div>
@@ -14,9 +14,9 @@
     </div>
   </div>
 
-  <div class="asset-summary" aria-label="สรุปแหล่งข้อมูลสินทรัพย์สด">
+  <div class="asset-summary" aria-label="สรุปข้อมูลจากคลังสินทรัพย์">
     <div class="asset-summary-item">
-      <span class="asset-summary-label">ทั้งหมดใน API</span>
+      <span class="asset-summary-label">ทั้งหมดในคลังข้อมูล</span>
       <strong class="asset-summary-value" id="asset-api-total">—</strong>
       <span class="asset-summary-detail">สินทรัพย์ที่ไม่ถูกลบ</span>
     </div>
@@ -39,7 +39,7 @@
 
   <div class="asset-register-toolbar table-controls">
     <label class="input-label" for="asset-api-search">
-      <span class="sr-only">ค้นหาทะเบียนสินทรัพย์สด</span>
+      <span class="sr-only">ค้นหาทะเบียนสินทรัพย์</span>
       <input id="asset-api-search" type="search" placeholder="ค้นหาแถวข้อมูลตามรหัส ชื่อ ประเภท หรือหน่วยงาน" />
     </label>
     <label class="select-label" for="asset-api-status-filter">
@@ -60,15 +60,15 @@
   </div>
 
   <div class="api-state api-state-loading" id="asset-api-loading" role="status" aria-live="polite">
-    กำลังโหลดทะเบียนสินทรัพย์สด…
+    กำลังโหลดทะเบียนสินทรัพย์…
   </div>
   <div class="api-state api-state-error" id="asset-api-error" role="alert" hidden>
-    <strong>แหล่งข้อมูลสดไม่พร้อมใช้งาน</strong>
+    <strong>คลังข้อมูลไม่พร้อมใช้งาน</strong>
     <span id="asset-api-error-message">ลองรีเฟรชแหล่งข้อมูลอีกครั้ง</span>
   </div>
   <div class="table-wrap" id="asset-api-table-wrap" hidden>
     <table class="asset-api-table">
-      <caption class="sr-only">ตัวอย่างทะเบียนสินทรัพย์สดจาก assets.php</caption>
+      <caption class="sr-only">ทะเบียนสินทรัพย์จาก snapshot ล่าสุดใน fact_asset_inventory</caption>
       <thead>
         <tr>
           <th scope="col">สินทรัพย์</th>
@@ -85,13 +85,13 @@
     </table>
   </div>
   <div class="empty-state" id="asset-api-empty" hidden>
-    <strong>ไม่พบสินทรัพย์สดที่ตรงกับตัวกรอง</strong>
+    <strong>ไม่พบสินทรัพย์ที่ตรงกับตัวกรอง</strong>
     <p>ล้างคำค้นหรือเลือกสถานะหรือประเภทอื่น</p>
   </div>
-  <div class="asset-pagination" aria-label="หน้าทะเบียนสินทรัพย์สด">
+  <div class="asset-pagination" aria-label="หน้าทะเบียนสินทรัพย์">
     <div class="asset-pagination-size">
       <span class="asset-pagination-label">แถวต่อหน้า</span>
-      <div class="pagination-button-group" id="asset-api-page-size-buttons" role="group" aria-label="จำนวนแถวสินทรัพย์สดต่อหน้า">
+      <div class="pagination-button-group" id="asset-api-page-size-buttons" role="group" aria-label="จำนวนแถวสินทรัพย์ต่อหน้า">
         <button class="button button-primary pagination-size-button is-active" type="button" data-page-size="10" aria-pressed="true" disabled>
           10
         </button>
@@ -106,7 +106,7 @@
         </button>
       </div>
     </div>
-    <div class="asset-page-navigation" role="group" aria-label="เลือกหน้าทะเบียนสินทรัพย์สด">
+    <div class="asset-page-navigation" role="group" aria-label="เลือกหน้าทะเบียนสินทรัพย์">
       <div class="asset-page-first" id="asset-api-first-page-button" role="group" aria-label="หน้าแรก">
         <button class="button button-primary pagination-page-button is-active" type="button" data-page="1" aria-label="ไปหน้าที่ 1" aria-current="page" disabled>
           1
@@ -126,7 +126,7 @@
           min="1"
           value="1"
           inputmode="numeric"
-          aria-label="หมายเลขหน้าทะเบียนสินทรัพย์สด กด Enter เพื่อไปหน้านี้"
+          aria-label="หมายเลขหน้าทะเบียนสินทรัพย์ กด Enter เพื่อไปหน้านี้"
           aria-describedby="asset-api-page-label"
           disabled
         />
@@ -144,7 +144,7 @@
   </div>
   <div class="asset-api-status-mix" id="asset-api-status-mix" aria-live="polite"></div>
   <div class="table-footer">
-    <span id="asset-api-results-count">กำลังรอข้อมูลสด</span>
-    <span>แหล่งข้อมูล · <code>assets_api/assets.php</code></span>
+    <span id="asset-api-results-count">กำลังรอข้อมูลจากคลังข้อมูล</span>
+    <span>API · <code>assets_api/fact_asset_inventory.php</code></span>
   </div>
 </section>

@@ -1,7 +1,7 @@
 export const ASSET_DETAIL_API_PAGE_SIZE = 100;
 
 export const ASSET_DETAIL_API_ENDPOINTS = Object.freeze({
-  assets: "assets.php",
+  assets: "fact_asset_inventory.php",
   borrowItems: "borrow_request_items.php",
   borrowRequests: "borrow.php",
   maintenance: "maintenance_asset.php",
