@@ -1,125 +1,123 @@
 <!doctype html>
-<html lang="en">
+<html lang="th">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Asset inventory and lifecycle dashboard for the CPE Asset Warehouse."
+      content="แดชบอร์ดทะเบียนและวงจรชีวิตสินทรัพย์ของคลังสินทรัพย์ CPE"
     />
-    <title>Asset inventory | CPE Asset Warehouse</title>
+    <title>คลังสินทรัพย์ | CPE Asset Warehouse</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <a class="skip-link" href="#main-content">Skip to dashboard</a>
+    <a class="skip-link" href="#main-content">ข้ามไปยังแดชบอร์ด</a>
 
     <div class="app-shell">
       <header class="app-header">
-        <a class="brand" href="#main-content" aria-label="CPE Asset Warehouse home">
+        <a class="brand" href="#main-content" aria-label="หน้าแรกคลังสินทรัพย์ CPE">
           <span class="brand-mark" aria-hidden="true">CPE</span>
           <span class="brand-copy">
-            <span class="brand-kicker">Engineering operations</span>
-            <strong>Asset Warehouse</strong>
+            <span class="brand-kicker">งานปฏิบัติการวิศวกรรม</span>
+            <strong>คลังสินทรัพย์</strong>
           </span>
         </a>
 
         <div class="header-status">
           <span class="status-dot" aria-hidden="true"></span>
-          <span>Demo workspace</span>
-          <button class="icon-button" type="button" aria-label="Open workspace menu">
+          <span>พื้นที่ทำงานตัวอย่าง</span>
+          <button class="icon-button" type="button" aria-label="เปิดเมนูพื้นที่ทำงาน">
             <span aria-hidden="true">•••</span>
           </button>
         </div>
       </header>
 
-      <nav class="module-nav" aria-label="Workspace modules">
-        <span class="module-nav-label">Workspace</span>
+      <nav class="module-nav" aria-label="โมดูลพื้นที่ทำงาน">
+        <span class="module-nav-label">พื้นที่ทำงาน</span>
         <div class="module-links" id="module-links"></div>
       </nav>
 
       <main class="dashboard" id="main-content">
         <section class="page-heading" aria-labelledby="page-title">
           <div>
-            <p class="eyebrow">Member 1 · Annual inventory checks</p>
-            <h1 id="page-title">Asset inventory &amp; lifecycle</h1>
+            <p class="eyebrow">สมาชิก 1 · ตรวจนับสินทรัพย์ประจำปี</p>
+            <h1 id="page-title">ทะเบียนสินทรัพย์และวงจรชีวิต</h1>
             <p class="page-intro">
-              Keep every asset accounted for, locatable, and ready for the next
-              teaching cycle.
+              ติดตามสินทรัพย์ทุกชิ้นให้ครบถ้วน ระบุตำแหน่งได้ และพร้อมสำหรับภาคการศึกษาถัดไป
             </p>
           </div>
-          <div class="heading-actions" aria-label="Dashboard actions">
+          <div class="heading-actions" aria-label="การดำเนินการบนแดชบอร์ด">
             <button class="button button-secondary" type="button" id="export-button">
-              Export view
+              ส่งออกมุมมอง
             </button>
             <button class="button button-primary" type="button" id="start-check-button">
-              Start annual check
+              เริ่มตรวจนับประจำปี
             </button>
           </div>
         </section>
 
-        <section class="data-notice" aria-label="Data status">
+        <section class="data-notice" aria-label="สถานะข้อมูล">
           <span class="notice-icon" aria-hidden="true">i</span>
           <p>
-            <strong>Illustrative snapshot.</strong> Values are fixture data shaped
-            from the Member 1 warehouse schema and will be replaced by the live
-            inventory query.
+            <strong>ภาพข้อมูลตัวอย่าง</strong> ค่าต่าง ๆ เป็นข้อมูลจำลองตามโครงสร้างคลังข้อมูลของสมาชิก 1
+            และจะถูกแทนที่ด้วยข้อมูลจากคำสั่งค้นหาสินทรัพย์จริง
           </p>
-          <span class="notice-date">Snapshot · 22 Oct 2026</span>
+          <span class="notice-date">ภาพข้อมูล · 22 ต.ค. 2569</span>
         </section>
 
-        <section class="metric-grid" aria-label="Inventory summary">
+        <section class="metric-grid" aria-label="สรุปภาพรวมสินทรัพย์">
           <article class="metric-card metric-card-primary">
             <div class="metric-label-row">
-              <span class="metric-label">Assets in scope</span>
+              <span class="metric-label">สินทรัพย์ในขอบเขต</span>
               <span class="metric-icon" aria-hidden="true">01</span>
             </div>
             <strong class="metric-value" id="metric-total">4,324</strong>
-            <p class="metric-footnote">Restored from the annual inventory extract</p>
+            <p class="metric-footnote">กู้คืนจากชุดข้อมูลตรวจนับประจำปี</p>
           </article>
           <article class="metric-card">
             <div class="metric-label-row">
-              <span class="metric-label">Ready for use</span>
+              <span class="metric-label">พร้อมใช้งาน</span>
               <span class="metric-icon metric-icon-success" aria-hidden="true">✓</span>
             </div>
             <strong class="metric-value" id="metric-ready">79.0%</strong>
-            <p class="metric-footnote" id="metric-ready-footnote">3,416 assets pass the readiness check</p>
+            <p class="metric-footnote" id="metric-ready-footnote">3,416 รายการผ่านการตรวจสอบความพร้อม</p>
           </article>
           <article class="metric-card">
             <div class="metric-label-row">
-              <span class="metric-label">Below threshold</span>
+              <span class="metric-label">ต่ำกว่าเกณฑ์</span>
               <span class="metric-icon metric-icon-warning" aria-hidden="true">!</span>
             </div>
             <strong class="metric-value" id="metric-threshold">11.8%</strong>
-            <p class="metric-footnote" id="metric-threshold-footnote">512 assets under ฿5,000</p>
+            <p class="metric-footnote" id="metric-threshold-footnote">512 รายการมีมูลค่าต่ำกว่า ฿5,000</p>
           </article>
           <article class="metric-card">
             <div class="metric-label-row">
-              <span class="metric-label">Location coverage</span>
+              <span class="metric-label">ความครอบคลุมของตำแหน่ง</span>
               <span class="metric-icon metric-icon-info" aria-hidden="true">⌖</span>
             </div>
             <strong class="metric-value" id="metric-location">96.9%</strong>
-            <p class="metric-footnote" id="metric-location-footnote">134 assets need a location match</p>
+            <p class="metric-footnote" id="metric-location-footnote">134 รายการยังต้องจับคู่ตำแหน่ง</p>
           </article>
         </section>
 
-        <section class="dashboard-grid" aria-label="Readiness and annual check">
+        <section class="dashboard-grid" aria-label="สัญญาณความพร้อมและการตรวจนับประจำปี">
           <article class="panel readiness-panel">
             <div class="panel-heading">
               <div>
-                <p class="panel-kicker">Readiness signal</p>
-                <h2>Readiness by category</h2>
+                <p class="panel-kicker">สัญญาณความพร้อม</p>
+                <h2>ความพร้อมตามหมวดหมู่</h2>
               </div>
               <label class="select-label" for="snapshot-select">
-                Snapshot
+                ภาพข้อมูล
                 <select id="snapshot-select">
-                  <option value="current">Current view</option>
-                  <option value="prior">Prior annual check</option>
+                  <option value="current">มุมมองปัจจุบัน</option>
+                  <option value="prior">การตรวจนับประจำปีครั้งก่อน</option>
                 </select>
               </label>
             </div>
-            <div class="chart-legend" aria-label="Readiness legend">
-              <span><i class="legend-swatch legend-ready" aria-hidden="true"></i>Ready</span>
-              <span><i class="legend-swatch legend-watch" aria-hidden="true"></i>Needs review</span>
+            <div class="chart-legend" aria-label="คำอธิบายสัญญาณความพร้อม">
+              <span><i class="legend-swatch legend-ready" aria-hidden="true"></i>พร้อม</span>
+              <span><i class="legend-swatch legend-watch" aria-hidden="true"></i>ต้องตรวจสอบ</span>
             </div>
             <div class="bar-chart" id="readiness-chart"></div>
           </article>
@@ -127,19 +125,19 @@
           <article class="panel audit-panel">
             <div class="panel-heading">
               <div>
-                <p class="panel-kicker">Annual inventory check</p>
-                <h2>2026 audit rail</h2>
+                <p class="panel-kicker">การตรวจนับสินทรัพย์ประจำปี</p>
+                <h2>รอบตรวจนับปี 2026</h2>
               </div>
-              <span class="status-chip status-chip-info" id="audit-status">In progress</span>
+              <span class="status-chip status-chip-info" id="audit-status">กำลังดำเนินการ</span>
             </div>
             <div class="audit-summary">
               <strong id="audit-progress">82%</strong>
-              <span>of scoped assets checked</span>
+              <span>ของสินทรัพย์ในขอบเขตที่ตรวจแล้ว</span>
             </div>
             <div
               class="progress-track"
               role="progressbar"
-              aria-label="Annual inventory check progress"
+              aria-label="ความคืบหน้าการตรวจนับสินทรัพย์ประจำปี"
               aria-valuemin="0"
               aria-valuemax="100"
               aria-valuenow="82"
@@ -147,25 +145,25 @@
               <span class="progress-fill" id="audit-progress-bar" style="width: 82%"></span>
             </div>
             <div class="progress-meta">
-              <span id="audit-checked">3,545 checked</span>
-              <span id="audit-remaining">779 remaining</span>
+              <span id="audit-checked">3,545 รายการตรวจแล้ว</span>
+              <span id="audit-remaining">779 รายการคงเหลือ</span>
             </div>
             <ol class="check-list" id="check-list"></ol>
             <button class="button button-primary button-wide" type="button" id="mark-check-button">
-              Mark next batch checked
+              ตรวจยืนยันชุดถัดไป
             </button>
-            <p class="panel-note">Demo interaction · updates this view only</p>
+            <p class="panel-note">การโต้ตอบตัวอย่าง · เปลี่ยนแปลงเฉพาะมุมมองนี้</p>
           </article>
         </section>
 
-        <section class="analysis-grid" aria-label="Lifecycle analysis">
+        <section class="analysis-grid" aria-label="การวิเคราะห์วงจรชีวิต">
           <article class="panel age-panel">
             <div class="panel-heading">
               <div>
-                <p class="panel-kicker">Lifecycle lens</p>
-                <h2>Asset age profile</h2>
+                <p class="panel-kicker">มุมมองวงจรชีวิต</p>
+                <h2>โปรไฟล์อายุสินทรัพย์</h2>
               </div>
-              <span class="panel-aside">Median age · 4.8 years</span>
+              <span class="panel-aside">อายุมัธยฐาน · 4.8 ปี</span>
             </div>
             <div class="age-chart" id="age-chart"></div>
           </article>
@@ -173,53 +171,53 @@
           <article class="panel location-panel">
             <div class="panel-heading">
               <div>
-                <p class="panel-kicker">Control point</p>
-                <h2>Location coverage</h2>
+                <p class="panel-kicker">จุดควบคุม</p>
+                <h2>ความครอบคลุมของตำแหน่ง</h2>
               </div>
-              <span class="panel-aside">Target · 98%</span>
+              <span class="panel-aside">เป้าหมาย · 98%</span>
             </div>
             <div class="location-score">
               <div class="score-ring" aria-hidden="true"><span>96.9%</span></div>
               <div>
-                <strong>4,190 assets matched</strong>
-                <p>134 records still need a room or building reference.</p>
+                <strong>จับคู่สินทรัพย์แล้ว 4,190 รายการ</strong>
+                <p>อีก 134 รายการยังต้องระบุห้องหรืออาคาร</p>
               </div>
             </div>
-            <div class="location-meter" aria-label="Location coverage 96.9 percent">
+            <div class="location-meter" aria-label="ความครอบคลุมของตำแหน่ง 96.9 เปอร์เซ็นต์">
               <span style="width: 96.9%"></span>
             </div>
-            <a class="text-link" href="#exceptions">Review unmatched locations <span aria-hidden="true">↗</span></a>
+            <a class="text-link" href="#exceptions">ตรวจสอบตำแหน่งที่ยังไม่จับคู่ <span aria-hidden="true">↗</span></a>
           </article>
         </section>
 
-        <section class="support-grid" aria-label="Dashboard guide and data readiness">
+        <section class="support-grid" aria-label="คู่มือแดชบอร์ดและความพร้อมของข้อมูล">
           <article class="panel visual-guide-panel" id="visual-guide" aria-labelledby="visual-guide-title">
             <div class="panel-heading">
               <div>
-                <p class="panel-kicker">Shared language</p>
-                <h2 id="visual-guide-title">Visual guide</h2>
+                <p class="panel-kicker">ความหมายร่วม</p>
+                <h2 id="visual-guide-title">คู่มือการแสดงผล</h2>
               </div>
-              <span class="panel-aside">Color + label</span>
+              <span class="panel-aside">สี + ป้ายกำกับ</span>
             </div>
             <p class="panel-description">
-              Status colors reinforce the written state; they never carry meaning on their own.
+              สีสถานะใช้เสริมข้อความกำกับ และไม่ควรใช้สีเพียงอย่างเดียวในการสื่อความหมาย
             </p>
             <ul class="guide-list">
               <li class="guide-item">
                 <span class="guide-swatch guide-swatch-success" aria-hidden="true"></span>
-                <span><strong>Ready / healthy</strong><small>Available for use or complete.</small></span>
+                <span><strong>พร้อม / ปกติ</strong><small>พร้อมใช้งานหรือดำเนินการเสร็จสมบูรณ์</small></span>
               </li>
               <li class="guide-item">
                 <span class="guide-swatch guide-swatch-info" aria-hidden="true"></span>
-                <span><strong>Information / active</strong><small>In progress or needs context.</small></span>
+                <span><strong>ข้อมูล / กำลังดำเนินการ</strong><small>อยู่ระหว่างดำเนินการหรือต้องการข้อมูลเพิ่มเติม</small></span>
               </li>
               <li class="guide-item">
                 <span class="guide-swatch guide-swatch-warning" aria-hidden="true"></span>
-                <span><strong>Warning / pending</strong><small>Requires attention or follow-up.</small></span>
+                <span><strong>คำเตือน / รอดำเนินการ</strong><small>ต้องติดตามหรือดำเนินการต่อ</small></span>
               </li>
               <li class="guide-item">
                 <span class="guide-swatch guide-swatch-danger" aria-hidden="true"></span>
-                <span><strong>Damaged / error</strong><small>Do not treat as ready until resolved.</small></span>
+                <span><strong>ชำรุด / ผิดพลาด</strong><small>ยังไม่ควรนับว่าพร้อมจนกว่าจะได้รับการแก้ไข</small></span>
               </li>
             </ul>
           </article>
@@ -227,79 +225,79 @@
           <article class="panel data-readiness-panel" aria-labelledby="data-readiness-title">
             <div class="panel-heading">
               <div>
-                <p class="panel-kicker">Next schema join</p>
-                <h2 id="data-readiness-title">Cost comparison</h2>
+                <p class="panel-kicker">การเชื่อมโยงโครงสร้างข้อมูลถัดไป</p>
+                <h2 id="data-readiness-title">เปรียบเทียบต้นทุน</h2>
               </div>
-              <span class="status-chip status-chip-warning">Not available</span>
+              <span class="status-chip status-chip-warning">ยังไม่มีข้อมูล</span>
             </div>
             <p class="panel-description">
-              Acquisition-versus-maintenance cost is intentionally not charted in this snapshot.
+              ยังไม่แสดงการเปรียบเทียบต้นทุนจัดซื้อกับต้นทุนบำรุงรักษาในภาพข้อมูลนี้
             </p>
             <ul class="field-list">
-              <li><code>acquisition_cost</code><span>Missing from the inventory fact.</span></li>
-              <li><code>total_repair_cost</code><span>Owned by the maintenance fact.</span></li>
-              <li><code>asset_key</code><span>Needed to link both sources safely.</span></li>
+              <li><code>acquisition_cost</code><span>ยังไม่มีในตารางข้อเท็จจริงสินทรัพย์</span></li>
+              <li><code>total_repair_cost</code><span>อยู่ในตารางข้อเท็จจริงการบำรุงรักษา</span></li>
+              <li><code>asset_key</code><span>จำเป็นสำหรับการเชื่อมโยงข้อมูลทั้งสองแหล่ง</span></li>
             </ul>
-            <p class="panel-note panel-note-left">No cost ratio is shown until both sides are present and linked.</p>
+            <p class="panel-note panel-note-left">ยังไม่แสดงอัตราส่วนต้นทุนจนกว่าจะมีข้อมูลทั้งสองด้านและจับคู่กันได้</p>
           </article>
         </section>
 
         <section class="panel exceptions-panel" id="exceptions" aria-labelledby="exceptions-title">
           <div class="panel-heading exceptions-heading">
             <div>
-              <p class="panel-kicker">Action queue</p>
-              <h2 id="exceptions-title">Below-threshold exceptions</h2>
-              <p class="panel-description">Prioritize records below the ฿5,000 threshold during the next physical check.</p>
+              <p class="panel-kicker">คิวดำเนินการ</p>
+              <h2 id="exceptions-title">รายการต่ำกว่าเกณฑ์ที่ต้องตรวจสอบ</h2>
+              <p class="panel-description">จัดลำดับรายการที่ต่ำกว่าเกณฑ์ ฿5,000 สำหรับการตรวจสอบภาคสนามครั้งถัดไป</p>
             </div>
             <div class="table-controls">
               <label class="input-label" for="search-input">
-                <span class="sr-only">Search exceptions</span>
-                <input id="search-input" type="search" placeholder="Search asset or category" />
+                <span class="sr-only">ค้นหารายการที่ต้องตรวจสอบ</span>
+                <input id="search-input" type="search" placeholder="ค้นหารหัสสินทรัพย์หรือหมวดหมู่" />
               </label>
               <label class="select-label" for="category-filter">
-                <span class="sr-only">Filter by category</span>
+                <span class="sr-only">กรองตามหมวดหมู่</span>
                 <select id="category-filter">
-                  <option value="all">All categories</option>
+                  <option value="all">ทุกหมวดหมู่</option>
                 </select>
               </label>
             </div>
           </div>
           <div class="table-wrap">
             <table>
-              <caption class="sr-only">Assets below the value threshold requiring review</caption>
+              <caption class="sr-only">สินทรัพย์ต่ำกว่าเกณฑ์มูลค่าที่ต้องตรวจสอบ</caption>
               <thead>
                 <tr>
-                  <th scope="col">Asset</th>
-                  <th scope="col">Category</th>
-                  <th scope="col">Age</th>
-                  <th scope="col">Location</th>
-                  <th scope="col">Readiness</th>
-                  <th scope="col"><span class="sr-only">Action</span></th>
+                  <th scope="col">สินทรัพย์</th>
+                  <th scope="col">หมวดหมู่</th>
+                  <th scope="col">อายุ</th>
+                  <th scope="col">ตำแหน่ง</th>
+                  <th scope="col">ความพร้อม</th>
+                  <th scope="col"><span class="sr-only">การดำเนินการ</span></th>
                 </tr>
               </thead>
               <tbody id="exceptions-body"></tbody>
             </table>
           </div>
           <div class="empty-state" id="empty-state" hidden>
-            <strong>No matching exceptions</strong>
-            <p>Try a different asset code or category.</p>
+            <strong>ไม่พบรายการที่ตรงกัน</strong>
+            <p>ลองใช้รหัสสินทรัพย์หรือหมวดหมู่อื่น</p>
           </div>
           <div class="table-footer">
-            <span id="results-count">Showing 0 records</span>
-            <span>Source field · <code>is_below_threshold_flag</code></span>
+            <span id="results-count">แสดง 0 จาก 0 รายการในมุมมอง</span>
+            <span>ฟิลด์แหล่งข้อมูล · <code>is_below_threshold_flag</code></span>
           </div>
         </section>
       </main>
 
       <footer class="app-footer">
-        <span>Member 1 · Asset Inventory &amp; Lifecycle</span>
-        <span>Schema surface · <code>fact_asset_inventory</code></span>
+        <span>สมาชิก 1 · สินทรัพย์และวงจรชีวิต</span>
+        <span>ฟิลด์โครงสร้างข้อมูล · <code>fact_asset_inventory</code></span>
       </footer>
     </div>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <noscript>
-      <div class="no-script-message">This dashboard needs JavaScript enabled to render charts and filters.</div>
+      <div class="no-script-message">แดชบอร์ดนี้ต้องเปิดใช้งาน JavaScript เพื่อแสดงกราฟและตัวกรอง</div>
     </noscript>
     <script src="app.js" defer></script>
   </body>

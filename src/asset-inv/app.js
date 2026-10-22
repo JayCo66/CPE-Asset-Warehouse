@@ -1,6 +1,6 @@
 const dashboardData = {
   moduleNav: [
-    { id: "inventory", label: "Asset inventory", marker: "AI", href: "#main-content" },
+    { id: "inventory", label: "คลังสินทรัพย์", marker: "AI", href: "#main-content" },
   ],
   metrics: {
     total: 4324,
@@ -10,30 +10,30 @@ const dashboardData = {
   },
   readiness: {
     current: [
-      { label: "Computing & peripherals", total: 1640, ready: 1297 },
-      { label: "Teaching & AV", total: 982, ready: 814 },
-      { label: "Networking", total: 712, ready: 589 },
-      { label: "Laboratory equipment", total: 546, ready: 426 },
-      { label: "Office equipment", total: 444, ready: 290 },
+      { label: "คอมพิวเตอร์และอุปกรณ์ต่อพ่วง", total: 1640, ready: 1297 },
+      { label: "การเรียนการสอนและโสตทัศนูปกรณ์", total: 982, ready: 814 },
+      { label: "ระบบเครือข่าย", total: 712, ready: 589 },
+      { label: "อุปกรณ์ห้องปฏิบัติการ", total: 546, ready: 426 },
+      { label: "อุปกรณ์สำนักงาน", total: 444, ready: 290 },
     ],
     prior: [
-      { label: "Computing & peripherals", total: 1640, ready: 1258 },
-      { label: "Teaching & AV", total: 982, ready: 785 },
-      { label: "Networking", total: 712, ready: 565 },
-      { label: "Laboratory equipment", total: 546, ready: 411 },
-      { label: "Office equipment", total: 444, ready: 272 },
+      { label: "คอมพิวเตอร์และอุปกรณ์ต่อพ่วง", total: 1640, ready: 1258 },
+      { label: "การเรียนการสอนและโสตทัศนูปกรณ์", total: 982, ready: 785 },
+      { label: "ระบบเครือข่าย", total: 712, ready: 565 },
+      { label: "อุปกรณ์ห้องปฏิบัติการ", total: 546, ready: 411 },
+      { label: "อุปกรณ์สำนักงาน", total: 444, ready: 272 },
     ],
   },
   ageBands: [
-    { label: "0–2 years", count: 1184, position: 10, signal: "Routine", tone: "success" },
-    { label: "3–5 years", count: 1576, position: 40, signal: "Monitor", tone: "info" },
-    { label: "6–8 years", count: 1022, position: 70, signal: "Review soon", tone: "warning" },
-    { label: "9+ years", count: 542, position: 92, signal: "Priority review", tone: "danger" },
+    { label: "0–2 ปี", count: 1184, position: 10, signal: "ตรวจตามรอบ", tone: "success" },
+    { label: "3–5 ปี", count: 1576, position: 40, signal: "ติดตาม", tone: "info" },
+    { label: "6–8 ปี", count: 1022, position: 70, signal: "ควรตรวจเร็ว ๆ นี้", tone: "warning" },
+    { label: "9 ปีขึ้นไป", count: 542, position: 92, signal: "เร่งตรวจสอบ", tone: "danger" },
   ],
   checks: [
-    { label: "Asset register", status: "Complete", tone: "success" },
-    { label: "Physical confirmation", status: "In progress", tone: "info" },
-    { label: "Location reconciliation", status: "Next", tone: "warning" },
+    { label: "ทะเบียนสินทรัพย์", status: "เสร็จสมบูรณ์", tone: "success" },
+    { label: "การยืนยันสินทรัพย์จริง", status: "กำลังดำเนินการ", tone: "info" },
+    { label: "การกระทบยอดตำแหน่ง", status: "ถัดไป", tone: "warning" },
   ],
   exceptions: [
     {
@@ -89,6 +89,32 @@ const auditState = {
   checked: 3545,
 };
 
+const categoryLabels = {
+  Computing: "คอมพิวเตอร์",
+  "Teaching & AV": "การเรียนการสอนและโสตทัศนูปกรณ์",
+  Networking: "ระบบเครือข่าย",
+  "Laboratory equipment": "อุปกรณ์ห้องปฏิบัติการ",
+  "Office equipment": "อุปกรณ์สำนักงาน",
+};
+
+const readinessLabels = {
+  "Needs review": "ต้องตรวจสอบ",
+  "Missing location": "ไม่พบตำแหน่ง",
+  "Damaged flag": "ติดธงชำรุด",
+};
+
+const locationLabels = {
+  "Building 9 · 8303": "อาคาร 9 · 8303",
+  Unmatched: "ไม่พบตำแหน่ง",
+  "Building 8 · 2F": "อาคาร 8 · ชั้น 2",
+  "Building 6 · Lab 2": "อาคาร 6 · ห้องปฏิบัติการ 2",
+  "Building 9 · Office 1": "อาคาร 9 · สำนักงาน 1",
+};
+
+const categoryLabel = (value) => categoryLabels[value] ?? value;
+const readinessLabel = (value) => readinessLabels[value] ?? value;
+const locationLabel = (value) => locationLabels[value] ?? value;
+
 const elements = {
   moduleLinks: document.querySelector("#module-links"),
   readinessChart: document.querySelector("#readiness-chart"),
@@ -143,9 +169,9 @@ function renderMetrics() {
   document.querySelector("#metric-ready").textContent = percent(readyPercent);
   document.querySelector("#metric-threshold").textContent = percent(thresholdPercent);
   document.querySelector("#metric-location").textContent = percent(locationPercent);
-  document.querySelector("#metric-ready-footnote").textContent = `${formatNumber(ready)} assets pass the readiness check`;
-  document.querySelector("#metric-threshold-footnote").textContent = `${formatNumber(belowThreshold)} assets under ฿5,000`;
-  document.querySelector("#metric-location-footnote").textContent = `${formatNumber(missingLocation)} assets need a location match`;
+  document.querySelector("#metric-ready-footnote").textContent = `${formatNumber(ready)} รายการผ่านการตรวจสอบความพร้อม`;
+  document.querySelector("#metric-threshold-footnote").textContent = `${formatNumber(belowThreshold)} รายการมีมูลค่าต่ำกว่า ฿5,000`;
+  document.querySelector("#metric-location-footnote").textContent = `${formatNumber(missingLocation)} รายการยังต้องจับคู่ตำแหน่ง`;
 }
 
 function renderReadiness(snapshot = "current") {
@@ -157,7 +183,7 @@ function renderReadiness(snapshot = "current") {
       const reviewPercent = 100 - readyPercent;
 
       return `
-        <div class="bar-row" role="img" aria-label="${escapeHtml(row.label)}: ${percent(readyPercent)} ready, ${percent(reviewPercent)} needs review">
+        <div class="bar-row" role="img" aria-label="${escapeHtml(row.label)}: พร้อม ${percent(readyPercent)}, ต้องตรวจสอบ ${percent(reviewPercent)}">
           <div class="bar-label-row">
             <span>${escapeHtml(row.label)}</span>
             <strong>${percent(readyPercent)}</strong>
@@ -176,7 +202,7 @@ function renderAgeChart() {
   const totalCount = dashboardData.ageBands.reduce((sum, band) => sum + band.count, 0);
   const maxCount = Math.max(...dashboardData.ageBands.map((band) => band.count));
 
-  const axisLabels = ["0 years", "3", "6", "9+"];
+  const axisLabels = ["0 ปี", "3", "6", "9+"];
   const points = dashboardData.ageBands
     .map((band) => {
       const share = (band.count / totalCount) * 100;
@@ -186,14 +212,14 @@ function renderAgeChart() {
         <span
           class="age-point age-point-${band.tone}"
           style="--age-position: ${band.position}%; --dot-size: ${dotSize}px"
-          title="${escapeHtml(band.label)}: ${formatNumber(band.count)} assets, ${percent(share)}"
+          title="${escapeHtml(band.label)}: ${formatNumber(band.count)} รายการ, ${percent(share)}"
         ></span>
       `;
     })
     .join("");
 
   elements.ageChart.innerHTML = `
-    <div class="age-plot-visual" role="img" aria-label="Asset age distribution. Dot position represents the age band midpoint and dot size represents the number of assets.">
+    <div class="age-plot-visual" role="img" aria-label="การกระจายอายุสินทรัพย์ ตำแหน่งจุดแสดงช่วงอายุ และขนาดจุดแสดงจำนวนสินทรัพย์">
       <div class="age-axis" aria-hidden="true">
         ${axisLabels.map((label) => `<span>${label}</span>`).join("")}
       </div>
@@ -204,7 +230,7 @@ function renderAgeChart() {
         ${points}
       </div>
     </div>
-    <div class="age-point-list" role="list" aria-label="Asset age band details">
+    <div class="age-point-list" role="list" aria-label="รายละเอียดช่วงอายุสินทรัพย์">
       ${dashboardData.ageBands
         .map((band) => {
           const share = (band.count / totalCount) * 100;
@@ -216,14 +242,14 @@ function renderAgeChart() {
                 <span>${escapeHtml(band.label)}</span>
               </div>
               <strong class="age-count">${formatNumber(band.count)}</strong>
-              <span class="age-share">${percent(share)} of inventory</span>
+              <span class="age-share">${percent(share)} ของสินทรัพย์ทั้งหมด</span>
               <span class="status-chip status-chip-${band.tone}">${escapeHtml(band.signal)}</span>
             </div>
           `;
         })
         .join("")}
     </div>
-    <p class="chart-note">Dot position follows the age band midpoint. Dot size shows record count; exact counts and review signals are listed below.</p>
+    <p class="chart-note">ตำแหน่งจุดอ้างอิงค่ากลางของช่วงอายุ ขนาดจุดแสดงจำนวนรายการ และรายละเอียดตัวเลขพร้อมสัญญาณการตรวจสอบอยู่ด้านล่าง</p>
   `;
 }
 
@@ -244,7 +270,7 @@ function renderCategoryFilter() {
   const categories = [...new Set(dashboardData.exceptions.map((item) => item.category))];
   elements.categoryFilter.insertAdjacentHTML(
     "beforeend",
-    categories.map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`).join(""),
+    categories.map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(categoryLabel(category))}</option>`).join(""),
   );
 }
 
@@ -252,7 +278,16 @@ function renderExceptions() {
   const search = elements.searchInput.value.trim().toLowerCase();
   const category = elements.categoryFilter.value;
   const filtered = dashboardData.exceptions.filter((item) => {
-    const matchesSearch = [item.code, item.name, item.category, item.location]
+    const matchesSearch = [
+      item.code,
+      item.name,
+      item.category,
+      categoryLabel(item.category),
+      item.location,
+      locationLabel(item.location),
+      item.readiness,
+      readinessLabel(item.readiness),
+    ]
       .join(" ")
       .toLowerCase()
       .includes(search);
@@ -270,18 +305,18 @@ function renderExceptions() {
               <span>${escapeHtml(item.name)}</span>
             </div>
           </td>
-          <td>${escapeHtml(item.category)}</td>
-          <td class="age-cell">${item.age} years</td>
-          <td>${escapeHtml(item.location)}</td>
-          <td><span class="status-chip status-chip-${item.tone}">${escapeHtml(item.readiness)}</span></td>
-          <td><button class="row-action" type="button" data-asset="${escapeHtml(item.code)}">Queue check</button></td>
+          <td>${escapeHtml(categoryLabel(item.category))}</td>
+          <td class="age-cell">${item.age} ปี</td>
+          <td>${escapeHtml(locationLabel(item.location))}</td>
+          <td><span class="status-chip status-chip-${item.tone}">${escapeHtml(readinessLabel(item.readiness))}</span></td>
+          <td><button class="row-action" type="button" data-asset="${escapeHtml(item.code)}" aria-label="เพิ่ม ${escapeHtml(item.code)} เข้าคิวตรวจสอบ">เพิ่มเข้าคิวตรวจสอบ</button></td>
         </tr>
       `,
     )
     .join("");
 
   elements.emptyState.hidden = filtered.length > 0;
-  elements.resultsCount.textContent = `Showing ${filtered.length} of ${dashboardData.exceptions.length} visible records`;
+  elements.resultsCount.textContent = `แสดง ${filtered.length} จาก ${dashboardData.exceptions.length} รายการในมุมมอง`;
 }
 
 function renderAuditState() {
@@ -292,12 +327,12 @@ function renderAuditState() {
   elements.auditProgress.textContent = `${auditState.progress}%`;
   elements.auditProgressBar.style.width = `${auditState.progress}%`;
   elements.auditProgressBar.setAttribute("aria-valuenow", String(auditState.progress));
-  elements.auditChecked.textContent = `${formatNumber(auditState.checked)} checked`;
-  elements.auditRemaining.textContent = `${formatNumber(remaining)} remaining`;
-  elements.auditStatus.textContent = complete ? "Complete" : "In progress";
+  elements.auditChecked.textContent = `${formatNumber(auditState.checked)} รายการตรวจแล้ว`;
+  elements.auditRemaining.textContent = `${formatNumber(remaining)} รายการคงเหลือ`;
+  elements.auditStatus.textContent = complete ? "เสร็จสมบูรณ์" : "กำลังดำเนินการ";
   elements.auditStatus.className = `status-chip ${complete ? "status-chip-success" : "status-chip-info"}`;
   elements.markCheckButton.disabled = complete;
-  elements.markCheckButton.textContent = complete ? "Annual check complete" : "Mark next batch checked";
+  elements.markCheckButton.textContent = complete ? "การตรวจนับประจำปีเสร็จสมบูรณ์" : "ตรวจยืนยันชุดถัดไป";
 }
 
 let toastTimer;
@@ -319,7 +354,7 @@ function exportView() {
   link.download = "asset-inventory-exceptions.csv";
   link.click();
   URL.revokeObjectURL(link.href);
-  showToast("Exception queue exported as CSV.");
+  showToast("ส่งออกรายการที่ต้องตรวจสอบเป็น CSV แล้ว");
 }
 
 function initInteractions() {
@@ -334,18 +369,18 @@ function initInteractions() {
       Math.round((dashboardData.metrics.total * auditState.progress) / 100),
     );
     renderAuditState();
-    showToast(auditState.progress === 100 ? "Annual inventory check complete." : "Next audit batch marked checked.");
+    showToast(auditState.progress === 100 ? "การตรวจนับสินทรัพย์ประจำปีเสร็จสมบูรณ์แล้ว" : "ทำเครื่องหมายตรวจยืนยันชุดถัดไปแล้ว");
   });
 
   elements.startCheckButton.addEventListener("click", () => {
     document.querySelector(".audit-panel").scrollIntoView({ behavior: "smooth", block: "center" });
-    showToast("Annual check rail is ready for the next batch.");
+    showToast("รอบตรวจนับประจำปีพร้อมสำหรับชุดถัดไปแล้ว");
   });
 
   elements.exportButton.addEventListener("click", exportView);
   elements.exceptionsBody.addEventListener("click", (event) => {
     const action = event.target.closest("[data-asset]");
-    if (action) showToast(`${action.dataset.asset} added to the next physical check.`);
+    if (action) showToast(`${action.dataset.asset} ถูกเพิ่มเข้าคิวตรวจสอบภาคสนามถัดไปแล้ว`);
   });
 }
 

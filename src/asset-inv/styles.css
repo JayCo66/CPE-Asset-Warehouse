@@ -24,7 +24,7 @@
   --radius-control: 10px;
   --shadow-panel: 0 18px 50px rgba(0, 0, 0, 0.18);
   color-scheme: dark;
-  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-family: "Noto Sans Thai", "Leelawadee UI", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
 }
