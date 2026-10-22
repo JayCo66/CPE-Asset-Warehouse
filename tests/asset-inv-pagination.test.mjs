@@ -5,6 +5,7 @@ import {
   ASSET_API_DEFAULT_PAGE_SIZE,
   ASSET_API_PAGE_SIZE_OPTIONS,
   clampPage,
+  getAssetApiPageButtons,
   getAssetApiTotalPages,
   normalizePageSize,
 } from "../src/asset-inv/pagination.mjs";
@@ -26,4 +27,10 @@ test("clamps a requested page to the available page range", () => {
   assert.equal(clampPage("12", 10), 10);
   assert.equal(clampPage("0", 10), 1);
   assert.equal(clampPage("not-a-page", 10), 1);
+});
+
+test("keeps first and final page buttons available for large collections", () => {
+  assert.deepEqual(getAssetApiPageButtons(1), [1]);
+  assert.deepEqual(getAssetApiPageButtons(2), [1, 2]);
+  assert.deepEqual(getAssetApiPageButtons(433), [1, 432, 433]);
 });

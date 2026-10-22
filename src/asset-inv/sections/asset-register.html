@@ -54,15 +54,6 @@
         <option value="all">ทุกประเภท</option>
       </select>
     </label>
-    <label class="select-label asset-page-size-label" for="asset-api-page-size">
-      แถวต่อหน้า
-      <select id="asset-api-page-size" aria-label="จำนวนแถวสินทรัพย์สดต่อหน้า">
-        <option value="10" selected>10 แถว</option>
-        <option value="25">25 แถว</option>
-        <option value="50">50 แถว</option>
-        <option value="100">100 แถว</option>
-      </select>
-    </label>
     <button class="button button-secondary" type="button" id="refresh-asset-api-button">
       รีเฟรชแหล่งข้อมูล
     </button>
@@ -97,31 +88,57 @@
     <p>ล้างคำค้นหรือเลือกสถานะหรือประเภทอื่น</p>
   </div>
   <div class="asset-pagination" aria-label="หน้าทะเบียนสินทรัพย์สด">
-    <button class="button button-secondary" type="button" id="asset-api-previous" disabled>
-      หน้าก่อนหน้า
-    </button>
-    <div class="asset-pagination-center">
-      <label class="pagination-page-control" for="asset-api-page-input">
-        <span>ไปที่หน้า</span>
-        <input
-          id="asset-api-page-input"
-          type="number"
-          min="1"
-          value="1"
-          inputmode="numeric"
-          aria-label="หมายเลขหน้าทะเบียนสินทรัพย์สด"
-          aria-describedby="asset-api-page-label"
-          disabled
-        />
-      </label>
-      <button class="button button-secondary pagination-page-jump" type="button" id="asset-api-page-jump" disabled>
-        ไป
-      </button>
-      <span id="asset-api-page-label" aria-live="polite">หน้า 1 จาก 1</span>
+    <div class="asset-pagination-size">
+      <span class="asset-pagination-label">แถวต่อหน้า</span>
+      <div class="pagination-button-group" id="asset-api-page-size-buttons" role="group" aria-label="จำนวนแถวสินทรัพย์สดต่อหน้า">
+        <button class="button button-primary pagination-size-button is-active" type="button" data-page-size="10" aria-pressed="true" disabled>
+          10
+        </button>
+        <button class="button button-secondary pagination-size-button" type="button" data-page-size="25" aria-pressed="false" disabled>
+          25
+        </button>
+        <button class="button button-secondary pagination-size-button" type="button" data-page-size="50" aria-pressed="false" disabled>
+          50
+        </button>
+        <button class="button button-secondary pagination-size-button" type="button" data-page-size="100" aria-pressed="false" disabled>
+          100
+        </button>
+      </div>
     </div>
-    <button class="button button-secondary" type="button" id="asset-api-next" disabled>
-      หน้าถัดไป
-    </button>
+    <div class="asset-page-navigation">
+      <button class="button button-secondary" type="button" id="asset-api-previous" disabled>
+        หน้าก่อนหน้า
+      </button>
+      <div class="asset-page-first" id="asset-api-first-page-button" role="group" aria-label="หน้าแรก">
+        <button class="button button-primary pagination-page-button is-active" type="button" data-page="1" aria-label="ไปหน้าที่ 1" aria-current="page" disabled>
+          1
+        </button>
+      </div>
+      <div class="asset-pagination-center">
+        <label class="pagination-page-control" for="asset-api-page-input">
+          <span>ไปที่หน้า</span>
+          <input
+            id="asset-api-page-input"
+            type="number"
+            min="1"
+            value="1"
+            inputmode="numeric"
+            aria-label="หมายเลขหน้าทะเบียนสินทรัพย์สด"
+            aria-describedby="asset-api-page-label"
+            disabled
+          />
+        </label>
+        <button class="button button-secondary pagination-page-jump" type="button" id="asset-api-page-jump" disabled>
+          ไป
+        </button>
+        <span id="asset-api-page-label" aria-live="polite">หน้า 1 จาก 1</span>
+      </div>
+      <div class="asset-page-final" id="asset-api-final-page-buttons" role="group" aria-label="หน้าท้าย">
+      </div>
+      <button class="button button-secondary" type="button" id="asset-api-next" disabled>
+        หน้าถัดไป
+      </button>
+    </div>
   </div>
   <div class="asset-api-status-mix" id="asset-api-status-mix" aria-live="polite"></div>
   <div class="table-footer">

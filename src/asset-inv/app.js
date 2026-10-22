@@ -1,6 +1,7 @@
 import {
   ASSET_API_DEFAULT_PAGE_SIZE,
   clampPage,
+  getAssetApiPageButtons,
   getAssetApiTotalPages as getTotalPages,
   normalizePageSize,
 } from "./pagination.mjs";
@@ -191,7 +192,7 @@ function cacheElements() {
     assetApiSearch: document.querySelector("#asset-api-search"),
     assetApiStatusFilter: document.querySelector("#asset-api-status-filter"),
     assetApiTypeFilter: document.querySelector("#asset-api-type-filter"),
-    assetApiPageSize: document.querySelector("#asset-api-page-size"),
+    assetApiPageSizeButtons: document.querySelector("#asset-api-page-size-buttons"),
     refreshAssetApiButton: document.querySelector("#refresh-asset-api-button"),
     assetApiLoading: document.querySelector("#asset-api-loading"),
     assetApiError: document.querySelector("#asset-api-error"),
@@ -201,6 +202,8 @@ function cacheElements() {
     assetApiEmpty: document.querySelector("#asset-api-empty"),
     assetApiPrevious: document.querySelector("#asset-api-previous"),
     assetApiNext: document.querySelector("#asset-api-next"),
+    assetApiFirstPageButton: document.querySelector("#asset-api-first-page-button"),
+    assetApiFinalPageButtons: document.querySelector("#asset-api-final-page-buttons"),
     assetApiPageInput: document.querySelector("#asset-api-page-input"),
     assetApiPageJump: document.querySelector("#asset-api-page-jump"),
     assetApiPageLabel: document.querySelector("#asset-api-page-label"),
@@ -495,16 +498,46 @@ function renderAssetApiPagination() {
   const isReady = assetApiState.status === "ready";
   const hasMultiplePages = totalPages > 1;
 
+  renderAssetApiPageSizeButtons();
+  renderAssetApiPageButtons();
   elements.assetApiPageInput.min = "1";
   elements.assetApiPageInput.max = String(totalPages);
   elements.assetApiPageInput.value = String(assetApiState.page);
   elements.assetApiPageInput.disabled = !isReady || !hasMultiplePages;
   elements.assetApiPageJump.disabled = !isReady || !hasMultiplePages;
-  elements.assetApiPageSize.value = String(assetApiState.pageSize);
-  elements.assetApiPageSize.disabled = !isReady;
   elements.assetApiPageLabel.textContent = `หน้า ${formatNumber(assetApiState.page)} จาก ${formatNumber(totalPages)}`;
   elements.assetApiPrevious.disabled = !isReady || assetApiState.page <= 1;
   elements.assetApiNext.disabled = !isReady || assetApiState.page >= totalPages;
+}
+
+function renderAssetApiPageSizeButtons() {
+  const isReady = assetApiState.status === "ready";
+
+  elements.assetApiPageSizeButtons.querySelectorAll("[data-page-size]").forEach((button) => {
+    const isActive = Number(button.dataset.pageSize) === assetApiState.pageSize;
+    button.classList.toggle("button-primary", isActive);
+    button.classList.toggle("button-secondary", !isActive);
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+    button.disabled = !isReady;
+  });
+}
+
+function renderAssetApiPageButtons() {
+  const totalPages = getAssetApiTotalPages();
+  const isReady = assetApiState.status === "ready";
+  const [firstPage, ...finalPages] = getAssetApiPageButtons(totalPages);
+  const renderButton = (page) => {
+    const isActive = page === assetApiState.page;
+    const buttonVariant = isActive ? "button-primary" : "button-secondary";
+    const disabledAttribute = isReady ? "" : " disabled";
+    const currentAttribute = isActive ? ' aria-current="page"' : "";
+
+    return `<button class="button ${buttonVariant} pagination-page-button${isActive ? " is-active" : ""}" type="button" data-page="${page}" aria-label="ไปหน้าที่ ${formatNumber(page)}"${currentAttribute}${disabledAttribute}>${formatNumber(page)}</button>`;
+  };
+
+  elements.assetApiFirstPageButton.innerHTML = firstPage ? renderButton(firstPage) : "";
+  elements.assetApiFinalPageButtons.innerHTML = finalPages.map(renderButton).join("");
 }
 
 function renderAssetApiTable() {
@@ -685,6 +718,20 @@ function renderBackToTop() {
   elements.backToTop.hidden = window.scrollY < 480;
 }
 
+function handleAssetApiPageButtonClick(event) {
+  const button = event.target.closest("[data-page]");
+  if (!button || button.disabled) return;
+
+  loadAssetRegister(button.dataset.page);
+}
+
+function handleAssetApiPageSizeButtonClick(event) {
+  const button = event.target.closest("[data-page-size]");
+  if (!button || button.disabled) return;
+
+  loadAssetRegister(1, button.dataset.pageSize);
+}
+
 function jumpToAssetApiPage() {
   const page = clampPage(elements.assetApiPageInput.value, getAssetApiTotalPages());
   elements.assetApiPageInput.value = String(page);
@@ -733,10 +780,12 @@ function initInteractions() {
   elements.assetApiSearch.addEventListener("input", renderAssetApiTable);
   elements.assetApiStatusFilter.addEventListener("change", renderAssetApiTable);
   elements.assetApiTypeFilter.addEventListener("change", renderAssetApiTable);
-  elements.assetApiPageSize.addEventListener("change", (event) => loadAssetRegister(1, event.target.value));
+  elements.assetApiPageSizeButtons.addEventListener("click", handleAssetApiPageSizeButtonClick);
   elements.refreshAssetApiButton.addEventListener("click", loadAssetRegister);
   elements.assetApiPrevious.addEventListener("click", () => loadAssetRegister(assetApiState.page - 1));
   elements.assetApiNext.addEventListener("click", () => loadAssetRegister(assetApiState.page + 1));
+  elements.assetApiFirstPageButton.addEventListener("click", handleAssetApiPageButtonClick);
+  elements.assetApiFinalPageButtons.addEventListener("click", handleAssetApiPageButtonClick);
   elements.assetApiPageJump.addEventListener("click", jumpToAssetApiPage);
   elements.assetApiPageInput.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {

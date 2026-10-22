@@ -18,3 +18,11 @@ export function clampPage(value, totalPages) {
   const normalizedPage = Number.isFinite(page) ? page : 1;
   return Math.min(Math.max(normalizedPage, 1), normalizedTotalPages);
 }
+
+export function getAssetApiPageButtons(totalPages) {
+  const normalizedTotalPages = Math.max(1, Number(totalPages) || 1);
+
+  return [...new Set([1, normalizedTotalPages - 1, normalizedTotalPages])]
+    .filter((page) => page >= 1)
+    .sort((pageA, pageB) => pageA - pageB);
+}
