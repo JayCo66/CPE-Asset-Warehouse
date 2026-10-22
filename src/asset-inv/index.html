@@ -192,6 +192,58 @@
           </article>
         </section>
 
+        <section class="support-grid" aria-label="Dashboard guide and data readiness">
+          <article class="panel visual-guide-panel" id="visual-guide" aria-labelledby="visual-guide-title">
+            <div class="panel-heading">
+              <div>
+                <p class="panel-kicker">Shared language</p>
+                <h2 id="visual-guide-title">Visual guide</h2>
+              </div>
+              <span class="panel-aside">Color + label</span>
+            </div>
+            <p class="panel-description">
+              Status colors reinforce the written state; they never carry meaning on their own.
+            </p>
+            <ul class="guide-list">
+              <li class="guide-item">
+                <span class="guide-swatch guide-swatch-success" aria-hidden="true"></span>
+                <span><strong>Ready / healthy</strong><small>Available for use or complete.</small></span>
+              </li>
+              <li class="guide-item">
+                <span class="guide-swatch guide-swatch-info" aria-hidden="true"></span>
+                <span><strong>Information / active</strong><small>In progress or needs context.</small></span>
+              </li>
+              <li class="guide-item">
+                <span class="guide-swatch guide-swatch-warning" aria-hidden="true"></span>
+                <span><strong>Warning / pending</strong><small>Requires attention or follow-up.</small></span>
+              </li>
+              <li class="guide-item">
+                <span class="guide-swatch guide-swatch-danger" aria-hidden="true"></span>
+                <span><strong>Damaged / error</strong><small>Do not treat as ready until resolved.</small></span>
+              </li>
+            </ul>
+          </article>
+
+          <article class="panel data-readiness-panel" aria-labelledby="data-readiness-title">
+            <div class="panel-heading">
+              <div>
+                <p class="panel-kicker">Next schema join</p>
+                <h2 id="data-readiness-title">Cost comparison</h2>
+              </div>
+              <span class="status-chip status-chip-warning">Not available</span>
+            </div>
+            <p class="panel-description">
+              Acquisition-versus-maintenance cost is intentionally not charted in this snapshot.
+            </p>
+            <ul class="field-list">
+              <li><code>acquisition_cost</code><span>Missing from the inventory fact.</span></li>
+              <li><code>total_repair_cost</code><span>Owned by the maintenance fact.</span></li>
+              <li><code>asset_key</code><span>Needed to link both sources safely.</span></li>
+            </ul>
+            <p class="panel-note panel-note-left">No cost ratio is shown until both sides are present and linked.</p>
+          </article>
+        </section>
+
         <section class="panel exceptions-panel" id="exceptions" aria-labelledby="exceptions-title">
           <div class="panel-heading exceptions-heading">
             <div>

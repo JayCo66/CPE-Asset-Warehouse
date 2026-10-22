@@ -25,10 +25,10 @@ const dashboardData = {
     ],
   },
   ageBands: [
-    { label: "0–2 years", count: 1184 },
-    { label: "3–5 years", count: 1576 },
-    { label: "6–8 years", count: 1022 },
-    { label: "9+ years", count: 542 },
+    { label: "0–2 years", count: 1184, position: 10, signal: "Routine", tone: "success" },
+    { label: "3–5 years", count: 1576, position: 40, signal: "Monitor", tone: "info" },
+    { label: "6–8 years", count: 1022, position: 70, signal: "Review soon", tone: "warning" },
+    { label: "9+ years", count: 542, position: 92, signal: "Priority review", tone: "danger" },
   ],
   checks: [
     { label: "Asset register", status: "Complete", tone: "success" },
@@ -173,21 +173,58 @@ function renderReadiness(snapshot = "current") {
 }
 
 function renderAgeChart() {
+  const totalCount = dashboardData.ageBands.reduce((sum, band) => sum + band.count, 0);
   const maxCount = Math.max(...dashboardData.ageBands.map((band) => band.count));
 
-  elements.ageChart.innerHTML = dashboardData.ageBands
-    .map(
-      (band) => `
-        <div class="age-column">
-          <div class="age-bar-wrap">
-            <span class="age-bar" style="height: ${(band.count / maxCount) * 100}%" title="${formatNumber(band.count)} assets"></span>
-          </div>
-          <strong class="age-count">${formatNumber(band.count)}</strong>
-          <span class="age-label">${escapeHtml(band.label)}</span>
-        </div>
-      `,
-    )
+  const axisLabels = ["0 years", "3", "6", "9+"];
+  const points = dashboardData.ageBands
+    .map((band) => {
+      const share = (band.count / totalCount) * 100;
+      const dotSize = Math.round(30 + (band.count / maxCount) * 28);
+
+      return `
+        <span
+          class="age-point age-point-${band.tone}"
+          style="--age-position: ${band.position}%; --dot-size: ${dotSize}px"
+          title="${escapeHtml(band.label)}: ${formatNumber(band.count)} assets, ${percent(share)}"
+        ></span>
+      `;
+    })
     .join("");
+
+  elements.ageChart.innerHTML = `
+    <div class="age-plot-visual" role="img" aria-label="Asset age distribution. Dot position represents the age band midpoint and dot size represents the number of assets.">
+      <div class="age-axis" aria-hidden="true">
+        ${axisLabels.map((label) => `<span>${label}</span>`).join("")}
+      </div>
+      <div class="age-track" aria-hidden="true">
+        <span class="age-gridline age-gridline-start"></span>
+        <span class="age-gridline age-gridline-mid"></span>
+        <span class="age-gridline age-gridline-end"></span>
+        ${points}
+      </div>
+    </div>
+    <div class="age-point-list" role="list" aria-label="Asset age band details">
+      ${dashboardData.ageBands
+        .map((band) => {
+          const share = (band.count / totalCount) * 100;
+
+          return `
+            <div class="age-point-detail" role="listitem">
+              <div class="age-detail-label">
+                <span class="age-detail-swatch age-detail-swatch-${band.tone}" aria-hidden="true"></span>
+                <span>${escapeHtml(band.label)}</span>
+              </div>
+              <strong class="age-count">${formatNumber(band.count)}</strong>
+              <span class="age-share">${percent(share)} of inventory</span>
+              <span class="status-chip status-chip-${band.tone}">${escapeHtml(band.signal)}</span>
+            </div>
+          `;
+        })
+        .join("")}
+    </div>
+    <p class="chart-note">Dot position follows the age band midpoint. Dot size shows record count; exact counts and review signals are listed below.</p>
+  `;
 }
 
 function renderChecks() {
