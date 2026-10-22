@@ -22,8 +22,8 @@ export function clampPage(value, totalPages) {
 export function getAssetApiPageButtons(totalPages) {
   const normalizedTotalPages = Math.max(1, Number(totalPages) || 1);
 
-  return [...new Set([1, normalizedTotalPages - 1, normalizedTotalPages])]
-    .filter((page) => page >= 1)
+  return [...new Set([1, 2, normalizedTotalPages - 1, normalizedTotalPages])]
+    .filter((page) => page >= 1 && page <= normalizedTotalPages)
     .sort((pageA, pageB) => pageA - pageB);
 }
 

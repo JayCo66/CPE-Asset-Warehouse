@@ -33,7 +33,8 @@ test("clamps a requested page to the available page range", () => {
 test("keeps first and final page buttons available for large collections", () => {
   assert.deepEqual(getAssetApiPageButtons(1), [1]);
   assert.deepEqual(getAssetApiPageButtons(2), [1, 2]);
-  assert.deepEqual(getAssetApiPageButtons(433), [1, 432, 433]);
+  assert.deepEqual(getAssetApiPageButtons(3), [1, 2, 3]);
+  assert.deepEqual(getAssetApiPageButtons(433), [1, 2, 432, 433]);
 });
 
 test("calculates single and double page navigation targets", () => {

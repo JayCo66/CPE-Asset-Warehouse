@@ -544,7 +544,9 @@ function renderAssetApiPageSizeButtons() {
 function renderAssetApiPageButtons() {
   const totalPages = getAssetApiTotalPages();
   const isReady = assetApiState.status === "ready";
-  const [firstPage, ...finalPages] = getAssetApiPageButtons(totalPages);
+  const pageButtons = getAssetApiPageButtons(totalPages);
+  const firstPages = pageButtons.slice(0, Math.min(2, pageButtons.length));
+  const finalPages = pageButtons.length > 2 ? pageButtons.slice(-2) : [];
   const renderButton = (page) => {
     const isActive = page === assetApiState.page;
     const buttonVariant = isActive ? "button-primary" : "button-secondary";
@@ -554,7 +556,7 @@ function renderAssetApiPageButtons() {
     return `<button class="button ${buttonVariant} pagination-page-button${isActive ? " is-active" : ""}" type="button" data-page="${page}" aria-label="ไปหน้าที่ ${formatNumber(page)}"${currentAttribute}${disabledAttribute}>${formatNumber(page)}</button>`;
   };
 
-  elements.assetApiFirstPageButton.innerHTML = firstPage ? renderButton(firstPage) : "";
+  elements.assetApiFirstPageButton.innerHTML = firstPages.map(renderButton).join("");
   elements.assetApiFinalPageButtons.innerHTML = finalPages.map(renderButton).join("");
 }
 
