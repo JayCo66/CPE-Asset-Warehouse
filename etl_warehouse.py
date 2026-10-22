@@ -608,21 +608,21 @@ def style_sheet(ws, widths, wrap_cols=(), date_cols=(), autofilter=False):
 # =====================================================================
 # แหล่งที่ 2: API ระบบครุภัณฑ์ (CPEAssets)
 # =====================================================================
-API_BASE = "https://cpe.eng.kps.ku.ac.th/CPEAssets/assets_api/"
+API_BASE = "http://localhost/assets_api/"
 # endpoint -> "api" (เรียก API จริง) | "mock" (อ่าน mock_api/<endpoint>.json)
 # เมื่อระบบจริงเปิด endpoint ไหนแล้ว ให้เปลี่ยนเป็น "api" ได้เลย รูปแบบ JSON เหมือนกัน
 SOURCES = {
     "assets": "api",
-    "asset_types": "mock",
-    "asset_categories": "mock",
-    "departments": "mock",
-    "users": "mock",
-    "locations": "mock",
-    "maintenance_type": "mock",
-    "maintenance_asset": "mock",
-    "maintenance_general": "mock",
-    "borrow": "mock",
-    "borrow_request_items": "mock",
+    "asset_types": "api",
+    "asset_categories": "api",
+    "departments": "api",
+    "users": "api",
+    "locations": "api",
+    "maintenance_type": "api",
+    "maintenance_asset": "api",
+    "maintenance_general": "api",
+    "borrow": "api",
+    "borrow_request_items": "api",
 }
 
 # ชื่อสังกัดในฟอร์ม Excel -> ชื่อใน departments ของระบบครุภัณฑ์ (ที่เหลือชื่อตรงกันอยู่แล้ว)
