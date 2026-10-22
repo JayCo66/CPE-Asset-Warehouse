@@ -91,7 +91,7 @@ const auditState = {
 };
 
 const ASSET_API_BASE_URL = window.ASSET_API_BASE_URL || "https://cpe.eng.kps.ku.ac.th/CPEAssets/assets_api";
-const ASSET_API_PAGE_SIZE = 100;
+const ASSET_API_PAGE_SIZE = 10;
 
 const categoryLabels = {
   Computing: "คอมพิวเตอร์",
@@ -369,7 +369,7 @@ function renderAssetApiSummary() {
   elements.assetApiLoaded.textContent = assetApiState.status === "ready" ? formatNumber(rows.length) : "—";
   elements.assetApiPages.textContent =
     assetApiState.status === "ready"
-      ? `หน้า ${formatNumber(assetApiState.page)} จาก ${formatNumber(totalPages)}`
+      ? `หน้า ${formatNumber(assetApiState.page)} จาก ${formatNumber(totalPages)} · ${formatNumber(ASSET_API_PAGE_SIZE)} แถวต่อหน้า`
       : "กำลังรอข้อมูล";
   elements.assetApiTypeCount.textContent = assetApiState.status === "ready" ? formatNumber(types.size) : "—";
   elements.assetApiLatest.textContent = assetApiState.status === "ready" ? formatApiDate(latestUpdate) : "—";
