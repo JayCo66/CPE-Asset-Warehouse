@@ -76,15 +76,15 @@ There is no university-API fallback in the dashboard.
 
 ## Local setup
 
-Requirements: PHP with `pdo_mysql`, MySQL, and the `cpeasset_warehouse` database
+Requirements: PHP with `pdo_mysql`, MySQL, and the `cpe_warehouse` database
 loaded from the warehouse ETL output.
 
 Configure the connection with `WAREHOUSE_DB_HOST`, `WAREHOUSE_DB_PORT`,
-`WAREHOUSE_DB_USER`, and `WAREHOUSE_DB_PASS`. If not set, the connection uses
+`WAREHOUSE_DB_USER`, and `WAREHOUSE_DB_PASS`. The connection uses
 the existing `DB_HOST`, `DB_PORT`, `DB_USER`, and `DB_PASS` variables, then local
-development defaults (`localhost:3306`, user `root`, empty password). The
-database name is fixed to `cpeasset_warehouse`. In a deployed environment, use
-a dedicated MySQL user with read-only access to the warehouse tables.
+development defaults (`localhost:3306`, user `root`, empty password). In a
+deployed environment, use a dedicated MySQL user with read-only access to the
+warehouse tables.
 
 Start PHP's built-in server from the repository root:
 
