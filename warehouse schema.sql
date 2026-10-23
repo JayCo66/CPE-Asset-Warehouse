@@ -184,3 +184,54 @@ ALTER TABLE `fact_asset_inventory` ADD FOREIGN KEY (`department_key`) REFERENCES
 ALTER TABLE `fact_asset_inventory` ADD FOREIGN KEY (`type_key`) REFERENCES `dim_asset_type` (`type_key`);
 ALTER TABLE `fact_asset_inventory` ADD FOREIGN KEY (`category_key`) REFERENCES `dim_asset_category` (`category_key`);
 ALTER TABLE `fact_asset_inventory` ADD FOREIGN KEY (`location_key`) REFERENCES `dim_location` (`location_key`);
+
+-- ==========================================
+-- VIEWS (มุมมองวิเคราะห์ข้อมูล)
+-- ==========================================
+
+-- View สำหรับแดชบอร์ดวิเคราะห์การยืม-คืน & ตรวจจับความผิดปกติ (Anomaly & Risk Radar)
+CREATE OR REPLACE VIEW `view_borrow_risk_radar` AS
+SELECT 
+    f.`borrow_fact_id`,
+    f.`borrow_request_id`,
+    f.`borrow_date_key`,
+    f.`return_date_key`,
+    f.`actual_return_date_key`,
+    f.`borrow_duration_days`,
+    f.`overdue_days`,
+    f.`is_overdue_flag`,
+    f.`is_replaced_flag`,
+    f.`item_status`,
+    f.`return_condition`,
+    u.`user_key` AS `borrower_user_key`,
+    u.`fullname` AS `borrower_name`,
+    u.`role_status` AS `borrower_role`,
+    appr.`fullname` AS `approver_name`,
+    d.`department_key`,
+    d.`department_name`,
+    a.`asset_key`,
+    a.`asset_id`,
+    a.`asset_code`,
+    a.`asset_name`,
+    a.`brand`,
+    typ.`type_name`,
+    cat.`category_name`,
+    COUNT(*) OVER (PARTITION BY f.`borrower_user_key`, f.`asset_key`) AS `repeat_asset_times`,
+    COUNT(*) OVER (PARTITION BY f.`borrow_request_id`) AS `items_in_request`,
+    COUNT(*) OVER (PARTITION BY f.`borrower_user_key`) AS `user_total_borrows`,
+    SUM(f.`is_overdue_flag`) OVER (PARTITION BY f.`borrower_user_key`) AS `user_overdue_count`,
+    ROUND(SUM(f.`is_overdue_flag`) OVER (PARTITION BY f.`borrower_user_key`) * 100.0 / NULLIF(COUNT(*) OVER (PARTITION BY f.`borrower_user_key`), 0), 1) AS `user_overdue_rate_pct`,
+    SUM(CASE WHEN f.`return_condition` = 'ชำรุด' THEN 1 ELSE 0 END) OVER (PARTITION BY f.`borrower_user_key`) AS `user_damage_count`,
+    CASE WHEN COUNT(*) OVER (PARTITION BY f.`borrower_user_key`, f.`asset_key`) >= 2 THEN 1 ELSE 0 END AS `is_repeat_asset_flag`,
+    CASE WHEN COUNT(*) OVER (PARTITION BY f.`borrow_request_id`) >= 3 THEN 1 ELSE 0 END AS `is_mass_borrow_flag`,
+    CASE WHEN (SUM(f.`is_overdue_flag`) OVER (PARTITION BY f.`borrower_user_key`) * 100.0 / NULLIF(COUNT(*) OVER (PARTITION BY f.`borrower_user_key`), 0)) >= 50.0 
+              AND COUNT(*) OVER (PARTITION BY f.`borrower_user_key`) >= 3 THEN 1 ELSE 0 END AS `is_chronic_overdue_flag`,
+    CASE WHEN f.`borrow_duration_days` >= 30 THEN 1 ELSE 0 END AS `is_excessive_duration_flag`
+FROM `fact_borrow_transaction` f
+LEFT JOIN `dim_user` u ON f.`borrower_user_key` = u.`user_key`
+LEFT JOIN `dim_user` appr ON f.`approver_user_key` = appr.`user_key`
+LEFT JOIN `dim_department` d ON f.`department_key` = d.`department_key`
+LEFT JOIN `dim_asset` a ON f.`asset_key` = a.`asset_key`
+LEFT JOIN `dim_asset_type` typ ON a.`type_key` = typ.`type_key`
+LEFT JOIN `dim_asset_category` cat ON a.`category_key` = cat.`category_key`;
+
