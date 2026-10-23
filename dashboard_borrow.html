@@ -1507,7 +1507,13 @@
         pills.push({ label: `สถานะ: ${drillState.status}`, clear: () => { drillState.status = 'ALL'; document.getElementById('statusFilter').value = 'ALL'; applyFilters(); } });
       }
       if (drillState.kpiMode !== 'ALL') {
-        pills.push({ label: `หมวดหมู่ KPI: ${drillState.kpiMode}`, clear: () => { drillState.kpiMode = 'ALL'; highlightKpiCard('ALL'); applyFilters(); } });
+        const kpiLabels = {
+          'OVERDUE': 'คืนล่าช้า',
+          'NORMAL': 'คืนปกติ',
+          'DAMAGED': 'ชำรุดตอนคืน',
+          'REPLACED': 'เปลี่ยนเครื่อง'
+        };
+        pills.push({ label: `KPI: ${kpiLabels[drillState.kpiMode] || drillState.kpiMode}`, clear: () => { drillState.kpiMode = 'ALL'; highlightKpiCard('ALL'); applyFilters(); } });
       }
       if (drillState.search) {
         pills.push({ label: `ค้นหา: "${drillState.search}"`, clear: () => { drillState.search = ''; document.getElementById('searchInput').value = ''; applyFilters(); } });
@@ -1568,12 +1574,23 @@
     // 4. Update KPIs
     // =========================================================================
     function updateKPIs() {
-      const total = filteredData.length;
-      const uniqueRequests = new Set(filteredData.map(r => r.request_id)).size;
-      const overdueCount = filteredData.filter(r => r.is_overdue === 1).length;
-      const damagedCount = filteredData.filter(r => r.return_condition === 'ชำรุด').length;
-      const normalCount = filteredData.filter(r => r.return_condition === 'ปกติ').length;
-      const replacedCount = filteredData.filter(r => r.is_replaced === 1).length;
+      // คำนวณตัวเลข KPI อิงตามหัวข้อความเสี่ยงที่เลือก (riskMode) โดยไม่เปลี่ยนตามการคลิกเจาะจงกล่อง KPI ย่อย
+      const kpiData = allData.filter(item => {
+        if (drillState.riskMode === 'ANY_FLAG') return item.risk_level !== 'NORMAL';
+        if (drillState.riskMode === 'REPEAT_ASSET') return item.anomalies && item.anomalies.some(a => a.type === 'REPEAT_ASSET');
+        if (drillState.riskMode === 'MASS_BORROW') return item.anomalies && item.anomalies.some(a => a.type === 'MASS_BORROW');
+        if (drillState.riskMode === 'CHRONIC_OVERDUE') return item.anomalies && item.anomalies.some(a => a.type === 'CHRONIC_OVERDUE');
+        if (drillState.riskMode === 'EXCESSIVE_DURATION') return item.anomalies && item.anomalies.some(a => a.type === 'EXCESSIVE_DURATION');
+        if (drillState.riskMode === 'MACHINE_REPLACED') return item.is_replaced === 1;
+        return true;
+      });
+
+      const total = kpiData.length;
+      const uniqueRequests = new Set(kpiData.map(r => r.request_id)).size;
+      const overdueCount = kpiData.filter(r => r.is_overdue === 1).length;
+      const damagedCount = kpiData.filter(r => r.return_condition === 'ชำรุด').length;
+      const normalCount = kpiData.filter(r => r.return_condition === 'ปกติ').length;
+      const replacedCount = kpiData.filter(r => r.is_replaced === 1).length;
       const returnedTotal = normalCount + damagedCount;
 
       const overdueRate = total > 0 ? ((overdueCount / total) * 100).toFixed(1) : '0.0';
@@ -1598,12 +1615,22 @@
       else if (mode === 'REPLACED') document.getElementById('kpiCardReplaced').classList.add('active-kpi');
     }
 
+    function toggleKpiMode(mode) {
+      if (drillState.kpiMode === mode) {
+        drillState.kpiMode = 'ALL';
+      } else {
+        drillState.kpiMode = mode;
+      }
+      highlightKpiCard(drillState.kpiMode);
+      applyFilters();
+    }
+
     // KPI Card Click Triggers
     document.getElementById('kpiCardAll').addEventListener('click', () => { drillState.kpiMode = 'ALL'; highlightKpiCard('ALL'); applyFilters(); });
-    document.getElementById('kpiCardOverdue').addEventListener('click', () => { drillState.kpiMode = 'OVERDUE'; highlightKpiCard('OVERDUE'); applyFilters(); });
-    document.getElementById('kpiCardNormal').addEventListener('click', () => { drillState.kpiMode = 'NORMAL'; highlightKpiCard('NORMAL'); applyFilters(); });
-    document.getElementById('kpiCardDamaged').addEventListener('click', () => { drillState.kpiMode = 'DAMAGED'; highlightKpiCard('DAMAGED'); applyFilters(); });
-    document.getElementById('kpiCardReplaced').addEventListener('click', () => { drillState.kpiMode = 'REPLACED'; highlightKpiCard('REPLACED'); applyFilters(); });
+    document.getElementById('kpiCardOverdue').addEventListener('click', () => toggleKpiMode('OVERDUE'));
+    document.getElementById('kpiCardNormal').addEventListener('click', () => toggleKpiMode('NORMAL'));
+    document.getElementById('kpiCardDamaged').addEventListener('click', () => toggleKpiMode('DAMAGED'));
+    document.getElementById('kpiCardReplaced').addEventListener('click', () => toggleKpiMode('REPLACED'));
 
     // =========================================================================
     // 5. Render Operational Table with Behavior Signals
