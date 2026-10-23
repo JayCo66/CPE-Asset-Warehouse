@@ -1,8 +1,8 @@
 <?php
 // ==============================================================================
 // Endpoint: dw_borrow.php
-// ดึงข้อมูลวิเคราะห์เชิงลึกจากตาราง fact_borrow_transaction ใน Data Warehouse (cpe_warehouse)
-// เชื่อมโยง Dimensions สำหรับ Dashboard แบบ Drill-Down และ Drill-Through
+// ดึงข้อมูลวิเคราะห์เชิงลึกจาก view_borrow_risk_radar ใน Data Warehouse (cpe_warehouse)
+// พร้อมคำนวณ Anomaly & Risk Detection Flags สำหรับ Dashboard Drill-Through
 // ==============================================================================
 
 require_once __DIR__ . '/db.php';
@@ -10,40 +10,43 @@ require_once __DIR__ . '/db.php';
 try {
     $sql = "
         SELECT 
-            f.`borrow_fact_id`,
-            f.`borrow_request_id`,
-            f.`borrow_date_key`,
-            f.`return_date_key`,
-            f.`actual_return_date_key`,
-            f.`borrow_duration_days`,
-            f.`overdue_days`,
-            f.`is_overdue_flag`,
-            f.`is_replaced_flag`,
-            f.`item_status`,
-            f.`return_condition`,
-            u.`user_key` AS borrower_user_key,
-            u.`fullname` AS borrower_name,
-            u.`role_status` AS borrower_role,
-            appr.`fullname` AS approver_name,
-            d.`department_key`,
-            d.`department_name`,
-            a.`asset_key`,
-            a.`asset_id`,
-            a.`asset_code`,
-            a.`asset_name`,
-            a.`brand`,
-            typ.`type_name`,
-            cat.`category_name`,
-            b.`reason`
-        FROM `cpe_warehouse`.`fact_borrow_transaction` f
-        LEFT JOIN `cpe_warehouse`.`dim_user` u ON f.`borrower_user_key` = u.`user_key`
-        LEFT JOIN `cpe_warehouse`.`dim_user` appr ON f.`approver_user_key` = appr.`user_key`
-        LEFT JOIN `cpe_warehouse`.`dim_department` d ON f.`department_key` = d.`department_key`
-        LEFT JOIN `cpe_warehouse`.`dim_asset` a ON f.`asset_key` = a.`asset_key`
-        LEFT JOIN `cpe_warehouse`.`dim_asset_type` typ ON a.`type_key` = typ.`type_key`
-        LEFT JOIN `cpe_warehouse`.`dim_asset_category` cat ON a.`category_key` = cat.`category_key`
-        LEFT JOIN `cpeasset`.`borrow` b ON f.`borrow_request_id` = b.`id`
-        ORDER BY f.`borrow_fact_id` ASC
+            `borrow_fact_id`,
+            `borrow_request_id`,
+            `borrow_date_key`,
+            `return_date_key`,
+            `actual_return_date_key`,
+            `borrow_duration_days`,
+            `overdue_days`,
+            `is_overdue_flag`,
+            `is_replaced_flag`,
+            `item_status`,
+            `return_condition`,
+            `borrower_user_key`,
+            `borrower_name`,
+            `borrower_role`,
+            `approver_name`,
+            `department_key`,
+            `department_name`,
+            `asset_key`,
+            `asset_id`,
+            `asset_code`,
+            `asset_name`,
+            `brand`,
+            `type_name`,
+            `category_name`,
+            `reason`,
+            `repeat_asset_times`,
+            `items_in_request`,
+            `user_total_borrows`,
+            `user_overdue_count`,
+            `user_overdue_rate_pct`,
+            `user_damage_count`,
+            `is_repeat_asset_flag`,
+            `is_mass_borrow_flag`,
+            `is_chronic_overdue_flag`,
+            `is_excessive_duration_flag`
+        FROM `cpe_warehouse`.`view_borrow_risk_radar`
+        ORDER BY `borrow_fact_id` ASC
     ";
 
     $stmt = $pdo->query($sql);
@@ -59,6 +62,80 @@ try {
     }
 
     $data = array_map(function($r) {
+        $anomalies = [];
+        
+        // 1. Repeat asset
+        if ((int)$r['is_repeat_asset_flag'] === 1) {
+            $anomalies[] = [
+                'type' => 'REPEAT_ASSET',
+                'severity' => 'MEDIUM',
+                'title' => 'ผูกขาดอุปกรณ์ชิ้นเดิมซ้ำ',
+                'detail' => 'ผู้ยืมรายนี้เคยยืมอุปกรณ์ชิ้นเดิมนี้ซ้ำแล้ว ' . $r['repeat_asset_times'] . ' ครั้ง'
+            ];
+        }
+
+        // 2. Mass borrowing
+        if ((int)$r['is_mass_borrow_flag'] === 1) {
+            $anomalies[] = [
+                'type' => 'MASS_BORROW',
+                'severity' => 'MEDIUM',
+                'title' => 'ยืมอุปกรณ์จำนวนมาก (Mass Borrow)',
+                'detail' => 'คำขอนี้เบิกอุปกรณ์พร้อมกันถึง ' . $r['items_in_request'] . ' ชิ้นในคราวเดียว'
+            ];
+        }
+
+        // 3. Chronic overdue
+        if ((int)$r['is_chronic_overdue_flag'] === 1) {
+            $anomalies[] = [
+                'type' => 'CHRONIC_OVERDUE',
+                'severity' => 'HIGH',
+                'title' => 'ผู้ยืมมีประวัติคืนล่าช้าเรื้อรัง',
+                'detail' => 'มีอัตราส่งคืนล่าช้าสูงถึง ' . $r['user_overdue_rate_pct'] . '% (เกินกำหนด ' . $r['user_overdue_count'] . ' จาก ' . $r['user_total_borrows'] . ' ครั้ง)'
+            ];
+        }
+
+        // 4. Excessive duration
+        if ((int)$r['is_excessive_duration_flag'] === 1) {
+            $anomalies[] = [
+                'type' => 'EXCESSIVE_DURATION',
+                'severity' => 'MEDIUM',
+                'title' => 'ถือครองยาวนานผิดปกติ',
+                'detail' => 'ระยะเวลาใช้งาน ' . $r['borrow_duration_days'] . ' วัน (เกินเกณฑ์ 30 วัน)'
+            ];
+        }
+
+        // 5. Replaced machine
+        if ((int)$r['is_replaced_flag'] === 1) {
+            $anomalies[] = [
+                'type' => 'MACHINE_REPLACED',
+                'severity' => 'LOW',
+                'title' => 'มีการเปลี่ยนเครื่องทดแทน',
+                'detail' => 'เครื่องเดิมมีปัญหาก่อนจ่ายของ เจ้าหน้าที่จึงเปลี่ยนเครื่องสำรองให้'
+            ];
+        }
+
+        // 6. Damaged condition
+        if ($r['return_condition'] === 'ชำรุด') {
+            $anomalies[] = [
+                'type' => 'DAMAGED_RETURN',
+                'severity' => 'HIGH',
+                'title' => 'ส่งคืนในสภาพชำรุดเสียหาย',
+                'detail' => 'ครุภัณฑ์ได้รับความเสียหายหลังการใช้งาน ต้องส่งซ่อมบำรุง'
+            ];
+        }
+
+        // Determine overall risk level
+        $severities = array_column($anomalies, 'severity');
+        if (in_array('HIGH', $severities) || count($anomalies) >= 2) {
+            $risk_level = 'HIGH';
+        } elseif (in_array('MEDIUM', $severities)) {
+            $risk_level = 'MEDIUM';
+        } elseif (count($anomalies) > 0) {
+            $risk_level = 'LOW';
+        } else {
+            $risk_level = 'NORMAL';
+        }
+
         return [
             'fact_id'            => (int)$r['borrow_fact_id'],
             'request_id'         => (int)$r['borrow_request_id'],
@@ -72,6 +149,19 @@ try {
             'item_status'        => $r['item_status'] ?: 'อนุมัติ',
             'return_condition'   => $r['return_condition'] ?: 'รอตรวจคืน',
             'reason'             => $r['reason'] ?: 'ใช้ในกิจกรรมการเรียนการสอน/วิชาการ',
+            
+            // Risk & Anomaly Details
+            'risk_level'         => $risk_level,
+            'anomalies'          => $anomalies,
+            'anomaly_metrics'    => [
+                'repeat_asset_times'      => (int)$r['repeat_asset_times'],
+                'items_in_request'        => (int)$r['items_in_request'],
+                'user_total_borrows'      => (int)$r['user_total_borrows'],
+                'user_overdue_count'      => (int)$r['user_overdue_count'],
+                'user_overdue_rate_pct'   => (float)$r['user_overdue_rate_pct'],
+                'user_damage_count'       => (int)$r['user_damage_count']
+            ],
+
             'user' => [
                 'key'  => $r['borrower_user_key'] !== null ? (int)$r['borrower_user_key'] : null,
                 'name' => $r['borrower_name'] ?: 'ไม่ระบุ',
@@ -94,7 +184,7 @@ try {
         ];
     }, $rows);
 
-    sendJsonResponse(true, "เรียกดูข้อมูลคลังข้อเท็จจริงการยืม-คืนสำเร็จ", count($data), $data);
+    sendJsonResponse(true, "เรียกดูข้อมูลคลังข้อเท็จจริงการยืม-คืนพร้อมเรดาร์ความเสี่ยงสำเร็จ", count($data), $data);
 
 } catch (Exception $e) {
     sendJsonResponse(false, "เกิดข้อผิดพลาดในการดึงข้อมูล Data Warehouse: " . $e->getMessage(), 0, [], 500);
