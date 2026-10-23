@@ -11,8 +11,12 @@
 
 ```bash
 pip install -r requirements.txt
-python etl_warehouse.py "ใบแจ้งซ่อม.xlsx" -o output
+python etl_warehouse.py
 ```
+
+หรือรันทั้งระบบ (ฐานข้อมูลต้นทาง + API + ETL + warehouse + เว็บ) ด้วย Docker ดู[ส่วนที่ 3](#3-รันทั้งระบบบนเครื่อง-docker)
+
+ค่า default อ่านใบแจ้งซ่อมจากไฟล์ `.xlsx` ในโฟลเดอร์ `data/` และดึงครุภัณฑ์จาก assets API จริง ถ้าเรียก API ไม่ได้จะใช้ `data/assets_real.json` แทนอัตโนมัติ ถ้าจะใช้ไฟล์ใบแจ้งซ่อมอื่นใส่ path ต่อท้าย เช่น `python etl_warehouse.py "ใบแจ้งซ่อม.xlsx" -o output`
 
 แล้วรัน `output/warehouse_load.sql` บน MySQL 8 ที่สร้างตารางจาก `warehouse schema.sql` ไว้แล้ว ไฟล์นี้ TRUNCATE ทุกตารางก่อน INSERT จึงรันซ้ำได้
 
@@ -24,6 +28,7 @@ python etl_warehouse.py "ใบแจ้งซ่อม.xlsx" -o output
 | `--api-base URL` | URL ของ API (default `https://cpe.eng.kps.ku.ac.th/CPEAssets/assets_api/`) |
 | `--mock-dir DIR` | โฟลเดอร์ mock JSON (default `mock_api/` ข้างสคริปต์) |
 | `--offline` | ไม่เรียก API จริง ใช้ข้อมูลที่ดึงไว้ใน `<out>/raw/` |
+| `--all-api` | ดึงทุก endpoint จาก API (ไม่ใช้ mock) ใช้คู่กับ `--api-base` เช่นตอนรันใน Docker |
 | `--as-of YYYY-MM-DD` | วันที่อ้างอิงสำหรับคำนวณวันเกินกำหนดของรายการยืมที่ยังไม่คืน (default วันนี้) |
 | `--snapshot-date YYYY-MM-DD` | วันที่ของ snapshot ครุภัณฑ์รอบนี้ (default วันที่ดึง assets API) |
 | `--keep-invalid-place` | เก็บแถวที่สถานที่ใช้ไม่ได้ไว้ โดยเว้นสถานที่ว่าง แทนการลบแถว |
@@ -101,11 +106,11 @@ sheet อื่น เช่น `การตอบแบบฟอร์ม 2` �
 
 ### สถานะแต่ละ endpoint
 
-ตั้งค่าที่ `SOURCES` ใน `etl_warehouse.py`: `"api"` คือเรียก API จริง, `"mock"` คืออ่าน `mock_api/<endpoint>.json`
+ตั้งค่าที่ `SOURCES` ใน `etl_warehouse.py`: `"api"` คือเรียก API จริง, `"mock"` คืออ่าน `mock_api/<endpoint>.json`, `"file:<path>"` คืออ่านไฟล์ข้อมูลจริงที่ export ไว้ใน repo (JSON เป็น list หรือ `{data: [...]}`)
 
 | endpoint | ตอนนี้ | ไปที่ warehouse |
 |---|---|---|
-| `assets` | **API จริง** | `dim_asset`, `fact_asset_inventory` |
+| `assets` | **API จริง** ถ้าเรียกไม่ได้ใช้ `data/assets_real.json` แทน (`FALLBACK_FILES`) | `dim_asset`, `fact_asset_inventory` |
 | `asset_types` | mock (ค่าจริงจาก assets) | `dim_asset_type` |
 | `asset_categories` | mock | `dim_asset_category` |
 | `departments` | mock | `dim_department` |
@@ -119,7 +124,9 @@ sheet อื่น เช่น `การตอบแบบฟอร์ม 2` �
 
 เมื่อระบบจริงทำ endpoint ไหนเสร็จ ให้เปลี่ยนค่าใน `SOURCES` เป็น `"api"` ไม่ต้องแก้ส่วนอื่น ถ้า API ทำตามข้อกำหนดด้านล่าง
 
-โค้ด PHP ของ `borrow`, `borrow_request_items`, `maintenance_asset`, `maintenance_general`, `maintenance_type` อยู่ใน `assets_api/` แล้ว เปลี่ยนเป็น `"api"` ได้เมื่อขึ้น server
+โค้ด PHP ของทุก endpoint อยู่ใน `assets_api/` แล้ว เปลี่ยนเป็น `"api"` ได้เมื่อขึ้น server
+
+ถ้าเรียก API ไม่ได้ ETL จะแจ้ง `[warn]` ตอนรัน และเขียนไว้ในหัวไฟล์ `warehouse_load.sql` ว่าใช้ไฟล์แทน กรณีนี้วันที่ของ snapshot ใน `fact_asset_inventory` คือวันที่ไฟล์ถูกแก้ล่าสุด ถ้าไฟล์ export ไว้นานแล้ว ให้ใส่ `--snapshot-date` เป็นวันที่ export จริง
 
 ### ข้อกำหนดของ API
 
@@ -364,6 +371,98 @@ warehouse โหลดแบบ full refresh ทุกครั้ง ประ�
   python mock_api/generate_mock.py output/raw/assets.json mock_api
   ```
 - รายละเอียด field ครบทุกตัวอยู่ใน [mock_api/API_SPEC.md](mock_api/API_SPEC.md)
+
+---
+
+## 3. รันทั้งระบบบนเครื่อง (Docker)
+
+`docker-compose.yml` เปิดระบบครบทั้งสาย ข้อมูลไหลจริงทุกขั้น ไม่ได้อ่านไฟล์ mock ตรงๆ:
+
+```
+source-db ──► source-api ──► etl ──► warehouse-db ──► warehouse-api ──► frontend
+(ระบบครุภัณฑ์)  (assets_api/*.php)  (etl_warehouse.py)          (web/public/api)   (Nginx)
+```
+
+| service | ทำอะไร | port บนเครื่อง |
+|---|---|---|
+| `source-db` | MySQL ของระบบครุภัณฑ์ สร้างตารางจาก `DB warehouse project schema.sql` + `docker/source-db/02-extend.sql` | 3308 |
+| `source-seed` | เติมข้อมูลครั้งแรก: `asset` จาก `data/assets_real.json` (จริง) ตารางอื่นจาก `mock_api/` (จำลอง) แล้วจบ | – |
+| `source-api` | PHP ของทีมใน `assets_api/` | 8089 |
+| `etl` | ดึง**ทุก endpoint** จาก `source-api` (`--all-api`) → `output/warehouse_load.sql` → โหลดเข้า warehouse แล้วจบ | – |
+| `warehouse-db` | MySQL ของ warehouse สร้างตารางจาก `warehouse schema.sql` | 3307 |
+| `warehouse-api` | backend ของ dashboard (`web/public/api/*.php`) อ่าน warehouse อย่างเดียว | ผ่าน frontend |
+| `frontend` | Nginx ส่งหน้าเว็บ `web/public` และส่งต่อ `/api/` ไปที่ `warehouse-api` | **8088** |
+
+### เริ่มใช้งาน
+
+ต้องมี Docker Desktop อย่างเดียว ไม่ต้องติดตั้ง Python บนเครื่อง
+
+```bash
+docker compose up -d --build
+```
+
+เปิด <http://localhost:8088> (dashboard) และดู API ของระบบครุภัณฑ์ได้ที่ <http://localhost:8089/assets.php?limit=5&page=1>
+
+| ต้องการ | คำสั่ง |
+|---|---|
+| รัน ETL รอบใหม่ (snapshot ครุภัณฑ์รอบใหม่ + โหลด warehouse) | `docker compose run --rm etl` |
+| ดูผลของ ETL | `docker compose logs etl` |
+| จำลองการใช้งาน 1 วันในระบบต้นทาง (ครุภัณฑ์ใหม่ ระบุสถานที่ แจ้งซ่อม ยืม-คืน) แล้วรัน `etl` เพื่อดูข้อมูลไหลถึงหน้าเว็บ | `docker compose run --rm source-seed python docker/etl/simulate_activity.py` |
+| ล้างข้อมูลระบบต้นทางแล้วเติมใหม่ | `docker compose run --rm source-seed python docker/etl/seed_source.py --force` |
+| หยุด | `docker compose down` |
+| ลบฐานข้อมูลทั้งหมดแล้วเริ่มใหม่ (เช่น schema เปลี่ยน) | `docker compose down -v` แล้ว `docker compose up -d --build` |
+
+- `docker compose up` ทุกครั้งจะรัน ETL ใหม่ ส่วน `source-seed` เติมข้อมูลเฉพาะครั้งแรก (ตาราง `asset` ว่าง)
+- ผลลัพธ์ ETL และ `output/history/` (snapshot ครุภัณฑ์) อยู่บนเครื่อง ไม่หายเมื่อลบ container
+- `docker/source-db/02-extend.sql` เพิ่มคอลัมน์ที่ `departments.php` / `users.php` ต้องใช้แต่ DB schema ยังไม่มี (`departments.shortname`, `is_deleted`, `deleted_at`; `users.role_status`, `department_id`) ระบบจริงต้องเพิ่มคอลัมน์เหล่านี้ด้วย
+
+| ค่า | default | เปลี่ยนได้ด้วย env |
+|---|---|---|
+| port หน้าเว็บ / API ต้นทาง | 8088 / 8089 | `WEB_PORT`, `SOURCE_API_PORT` |
+| ผู้ใช้ warehouse (backend ใช้) | `dashboard` / `dashboard` | `DB_USER`, `DB_PASSWORD` |
+| root ของ warehouse / ระบบต้นทาง | `root` / `root` | `DB_ROOT_PASSWORD`, `SOURCE_DB_ROOT_PASSWORD` |
+
+รหัสผ่าน default ใช้สำหรับเครื่องตัวเองเท่านั้น ห้ามใช้บน server จริง
+
+RAM ที่วัดได้ตอนรันครบ: `warehouse-db` ~340 MB, `source-db` ~200 MB, `source-api` ~18 MB, `warehouse-api` ~15 MB, `frontend` ~5 MB รวมประมาณ 580 MB (`etl` ใช้ ~115 MB เฉพาะตอนรันแล้วจบ)
+
+### โครงสร้างหน้าเว็บ
+
+```
+web/
+├── config/modules.json        รายการโมดูล ลำดับ ชื่อ path มุมมองย่อย แหล่งข้อมูล (จริง/จำลอง) และเกณฑ์ (settings)
+└── public/
+    ├── index.html             application shell: header, เมนูลอย, หัวโมดูล, เมนูย่อย
+    ├── api/                   backend: อ่านอย่างเดียวจาก warehouse (JSON)
+    │   ├── modules.php        ส่ง config/modules.json ให้หน้าเว็บสร้างเมนู
+    │   ├── annual.php         รายงานประจำปี: ตัวเลขทุกโมดูลรายปีงบ + รายละเอียดปีที่เลือก (?fy=2569) เทียบปีก่อน
+    │   ├── inventory.php      fact_asset_inventory: ได้รับเข้าตามปีงบ อายุ หมวด ประวัติ snapshot
+    │   ├── facility.php       fact_general_maintenance: รายเดือน ฤดูกาล ประเภทงาน อาคาร
+    │   ├── repair.php         fact_asset_maintenance (?view=overview | worth) ค่าซ่อมสะสมเทียบราคาซื้อ
+    │   └── borrow.php         fact_borrow_transaction: รายเดือน รายไตรมาส หมวด
+    └── assets/
+        ├── app.css            token สีจาก docs/design-guide.md
+        ├── app.js             router (hash) + เมนูลอยที่สร้างจาก modules.json
+        ├── views.js           หน้าจอของแต่ละโมดูล ลงทะเบียนตามชื่อ component
+        ├── charts.js          กราฟแท่ง/เส้น (d3)
+        └── format.js          จัดรูปตัวเลข วันที่ ปีงบ
+docker/
+├── php/Dockerfile             php:8.3-apache + pdo_mysql (source-api, warehouse-api)
+├── etl/                       Dockerfile, run.sh (ETL + โหลด), seed_source.py, load_warehouse.py
+├── source-db/02-extend.sql    คอลัมน์เพิ่มของระบบต้นทาง
+└── frontend/nginx.conf
+```
+
+- **เกณฑ์ปรับได้** ใน `settings` ของ `modules.json`: เกณฑ์ปิดงานแจ้งซ่อม (`sla_facility_workdays`, default 3 วันทำการ), เกณฑ์ซ่อมครุภัณฑ์ (`sla_repair_workdays`, 15), เกณฑ์ความคุ้มค่าการซ่อม (ค่าซ่อมสะสม ≥ `repair_cost_ratio_dispose` 50% ของราคาซื้อ = ไม่คุ้มซ่อม ควรเสนอจำหน่าย, ≥ `repair_cost_ratio_watch` 30% = เฝ้าระวัง) และ **วันหยุดราชการ (`holidays`) ที่ต้องเติมเองทุกปี** ไม่อย่างนั้นวันทำการจะไม่หักวันหยุดนักขัตฤกษ์
+- **ราคาซื้อเป็นข้อมูลจำลอง**: ระบบครุภัณฑ์ยังไม่มี `purchase_price` หน้า "คุ้มซ่อมไหม" ใช้ `mock_purchase_price()` ใน `api/db.php` ที่สุ่มราคาแบบคงที่จากรหัสครุภัณฑ์ ตามช่วงราคาของหมวด และไม่เกิน 5,000 บาทสำหรับครุภัณฑ์ต่ำกว่าเกณฑ์ เมื่อมีราคาจริงให้แทนฟังก์ชันนี้
+- **หน้าจอเน้นตัวเลขสำคัญ**: แต่ละหน้ามีตัวเลขหลัก 3–5 ตัวเป็นตัวใหญ่ ตามด้วยกราฟที่มีแค่หัวข้อ ไม่มีคำอธิบายรอง (คำอธิบายโมดูลอยู่ใน tooltip ของป้ายแหล่งข้อมูล)
+- **มุมมองแบบรายงานย้อนหลัง ไม่ใช่สถานะปัจจุบัน**: โมดูลแรก "รายงานประจำปี" เลือกปีงบได้ เทียบปีก่อน ปุ่ม "คัดลอกสรุป" ให้ข้อความเป็นข้อ ๆ ไปวางในบันทึกข้อความ และหน้า "ย้อนหลังทุกปีงบ" เป็นตารางทุกปีตั้งแต่เริ่มมีข้อมูล (คัดลอกวางใน Excel/Word ได้) ปีงบที่ยังไม่จบแสดงในตารางแต่ไม่ใช้เทียบ ทุกหน้าพิมพ์หรือบันทึกเป็น PDF ได้ (หน้าพิมพ์เป็นพื้นขาว มีวันเวลาที่พิมพ์)
+- **เมนูไม่ได้เขียนตายตัว**: เมนูหลักและเมนูย่อยสร้างจาก `config/modules.json` เพิ่ม ลบ เรียงใหม่ หรือซ่อนโมดูล (`"visible": false`) ได้โดยไม่แก้โค้ดเมนู ตาม `docs/frontend-guide.md`
+- **เพิ่มโมดูลใหม่**: เพิ่ม entry ใน `modules.json` → เขียน `api/<ชื่อ>.php` → เพิ่มหน้าจอใน `views.js` ด้วยชื่อ `component` ที่ตั้งไว้
+- **URL**: แต่ละหน้ามีลิงก์ของตัวเอง เช่น `#/annual/summary?fy=2568` ปุ่มย้อนกลับ/ไปข้างหน้าของ browser ใช้ได้
+- **ปีงบที่เทียบกัน**: ใช้ปีงบที่ครบแล้วล่าสุดเทียบกับปีก่อนหน้า คิดจากวันที่ปัจจุบัน (ต.ค. 2569 เป็นต้นไป = ปีงบ 2569 เทียบ 2568)
+- **แหล่งข้อมูล**: หัวโมดูลบอกว่าเป็น ข้อมูลจริง / จริง + จำลอง / ข้อมูลจำลอง ตาม `data_source` ใน `modules.json` เมื่อระบบต้นทางมีข้อมูลจริงของโมดูลนั้นแล้วให้แก้ค่านี้
+- d3 และฟอนต์ IBM Plex Sans Thai โหลดจาก CDN จึงต้องต่ออินเทอร์เน็ต
 
 ---
 
