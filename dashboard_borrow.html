@@ -455,27 +455,37 @@
       color: var(--cpe-text-dim);
     }
 
-    /* Charts Layout Grid */
-    .charts-grid {
+    /* Multi-Dimensional Analytics Grid */
+    .charts-multi-grid {
       display: grid;
-      grid-template-columns: 2fr 1fr;
+      grid-template-columns: 1.6fr 1fr;
       gap: 16px;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
     }
-    @media (max-width: 992px) {
-      .charts-grid { grid-template-columns: 1fr; }
+    @media (max-width: 1024px) {
+      .charts-multi-grid { grid-template-columns: 1fr; }
     }
     .chart-panel {
       background: var(--cpe-surface);
       border: 1px solid var(--cpe-border);
       border-radius: var(--radius-md);
       padding: 16px 20px;
+      position: relative;
+    }
+    .chart-panel-full {
+      background: var(--cpe-surface);
+      border: 1px solid var(--cpe-border);
+      border-radius: var(--radius-md);
+      padding: 18px 20px;
+      margin-bottom: 24px;
     }
     .panel-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 14px;
+      flex-wrap: wrap;
+      gap: 8px;
     }
     .panel-title {
       font-size: 14px;
@@ -483,16 +493,90 @@
       color: var(--cpe-text);
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
     }
     .panel-hint {
       font-size: 12px;
       color: var(--cpe-text-dim);
+      margin-top: 2px;
+      display: block;
+    }
+    .dim-switcher {
+      display: inline-flex;
+      gap: 4px;
+      background: var(--cpe-surface-subtle);
+      padding: 3px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--cpe-border);
+    }
+    .dim-btn {
+      background: transparent;
+      border: none;
+      color: var(--cpe-text-dim);
+      padding: 3px 10px;
+      border-radius: var(--radius-pill);
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-family: inherit;
+    }
+    .dim-btn:hover {
+      color: var(--cpe-text);
+    }
+    .dim-btn.active {
+      background: var(--cpe-brand-blue);
+      color: #FFFFFF;
+      font-weight: 600;
     }
     .chart-container {
       position: relative;
-      height: 260px;
+      height: 290px;
       width: 100%;
+    }
+    .chart-container-lg {
+      position: relative;
+      height: 330px;
+      width: 100%;
+    }
+    .outlier-chips-bar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 14px;
+      padding: 8px 12px;
+      background: var(--cpe-surface-subtle);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--cpe-border);
+      font-size: 12px;
+    }
+    .outlier-chips-title {
+      color: var(--cpe-text);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .outlier-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--cpe-surface);
+      border: 1px solid var(--cpe-border);
+      padding: 3px 10px;
+      border-radius: var(--radius-pill);
+      cursor: pointer;
+      color: var(--cpe-text-muted);
+      transition: all 0.15s ease;
+    }
+    .outlier-chip:hover {
+      border-color: var(--cpe-brand-blue);
+      color: var(--cpe-text);
+      transform: translateY(-1px);
+    }
+    .outlier-chip strong {
+      color: var(--cpe-danger);
     }
 
     /* Operational Data Table */
@@ -905,44 +989,67 @@
       </div>
     </div>
 
-    <!-- Charts Row 1 -->
-    <div class="charts-grid">
+    <!-- Multi-Dimensional Analytics Instruments (Row 1) -->
+    <div class="charts-multi-grid">
+      <!-- 1. Multi-Dim Time & Return Health Combo Chart (4 Dimensions) -->
       <div class="chart-panel">
         <div class="panel-header">
-          <div class="panel-title">📈 แนวโน้มการยืมรายเดือน (คลิกที่แท่งเพื่อ Drill-Down)</div>
-          <span class="panel-hint">พ.ศ. 2567 - 2569</span>
+          <div>
+            <div class="panel-title">
+              <span>📈 แนวโน้มการยืม & สภาพการส่งคืนข้ามเวลา (Multi-Dimensional Time & Status Matrix)</span>
+            </div>
+            <span class="panel-hint">แกนซ้าย: ปริมาณชิ้นซ้อนตามสภาพคืน (ตรงเวลา/ล่าช้า/ชำรุด) | แกนขวา: เส้นแนวโน้ม % ส่งคืนล่าช้า (Overdue Rate)</span>
+          </div>
         </div>
         <div class="chart-container">
           <canvas id="monthlyTrendChart"></canvas>
         </div>
       </div>
+
+      <!-- 2. Department Cross-Dimensional Analysis (3 Dimensions with Switcher) -->
       <div class="chart-panel">
         <div class="panel-header">
-          <div class="panel-title">👥 สัดส่วนผู้ยืมตามสถานภาพ (คลิกเพื่อ Drill-Down)</div>
+          <div>
+            <div class="panel-title">
+              <span>🏢 วิเคราะห์ข้ามมิติระดับภาควิชา (Department Cross-Analysis)</span>
+            </div>
+            <span class="panel-hint" id="deptSubDimHint">แสดงสัดส่วนผู้ยืมตามบทบาทในแต่ละภาควิชา</span>
+          </div>
+          <!-- Dimension Switcher -->
+          <div class="dim-switcher" id="deptDimSwitcher" role="radiogroup" aria-label="เลือกมิติวิเคราะห์">
+            <button class="dim-btn active" data-dim="role">👤 บทบาท</button>
+            <button class="dim-btn" data-dim="category">📦 ครุภัณฑ์</button>
+            <button class="dim-btn" data-dim="risk">🚨 ความเสี่ยง</button>
+          </div>
         </div>
         <div class="chart-container">
-          <canvas id="roleChart"></canvas>
+          <canvas id="deptCrossChart"></canvas>
         </div>
       </div>
     </div>
 
-    <!-- Charts Row 2 -->
-    <div class="charts-grid">
-      <div class="chart-panel">
-        <div class="panel-header">
-          <div class="panel-title">🏢 ยอดการยืมแยกตามภาควิชา (คลิกเพื่อ Drill-Down)</div>
+    <!-- Multi-Dimensional Analytics Instruments (Row 2: 5 Dimensions Correlation Radar) -->
+    <div class="chart-panel-full">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">
+            <span>🎯 เรดาร์พฤติกรรม & ตรวจจับค่าผิดปกติ (Behavior Correlation & Outlier Bubble Matrix)</span>
+          </div>
+          <span class="panel-hint">แกน X: ระยะเวลายืม (วัน) | แกน Y: วันเกินกำหนด (วัน) | ขนาดฟอง: ปริมาณชิ้นในคำขอ | สีฟอง: ระดับความเสี่ยง</span>
         </div>
-        <div class="chart-container">
-          <canvas id="deptChart"></canvas>
+        <span style="font-size:12px; color:var(--cpe-brand-blue); font-weight:500;">💡 คลิกที่จุดฟอง เพื่อเปิดดูข้อมูลเชิงลึกราย Record ทันที</span>
+      </div>
+
+      <!-- Quick Outlier Insights Bar -->
+      <div class="outlier-chips-bar" id="outlierChipsBar">
+        <span class="outlier-chips-title">🚨 Outliers เด่นที่ตรวจพบ:</span>
+        <div id="outlierChipsList" style="display:flex; gap:8px; flex-wrap:wrap;">
+          <!-- Injected via JS -->
         </div>
       </div>
-      <div class="chart-panel">
-        <div class="panel-header">
-          <div class="panel-title">🔍 สภาพครุภัณฑ์ตอนตรวจคืน (คลิกเพื่อ Drill-Down)</div>
-        </div>
-        <div class="chart-container">
-          <canvas id="conditionChart"></canvas>
-        </div>
+
+      <div class="chart-container-lg">
+        <canvas id="outlierBubbleChart"></canvas>
       </div>
     </div>
 
@@ -1205,21 +1312,30 @@
         monthlyChartInst.options.scales.x.ticks.color = textColor;
         monthlyChartInst.options.scales.y.grid.color = gridColor;
         monthlyChartInst.options.scales.y.ticks.color = textColor;
+        if (monthlyChartInst.options.scales.y1) {
+          monthlyChartInst.options.scales.y1.ticks.color = textColor;
+          if (monthlyChartInst.options.scales.y1.title) monthlyChartInst.options.scales.y1.title.color = textColor;
+        }
+        if (monthlyChartInst.options.scales.y.title) monthlyChartInst.options.scales.y.title.color = textColor;
+        if (monthlyChartInst.options.plugins.legend) monthlyChartInst.options.plugins.legend.labels.color = textColor;
         monthlyChartInst.update();
       }
-      if (deptChartInst) {
-        deptChartInst.options.scales.x.grid.color = gridColor;
-        deptChartInst.options.scales.x.ticks.color = textColor;
-        deptChartInst.options.scales.y.ticks.color = textColor;
-        deptChartInst.update();
+      if (deptCrossChartInst) {
+        deptCrossChartInst.options.scales.x.grid.color = gridColor;
+        deptCrossChartInst.options.scales.x.ticks.color = textColor;
+        deptCrossChartInst.options.scales.y.ticks.color = textColor;
+        if (deptCrossChartInst.options.plugins.legend) deptCrossChartInst.options.plugins.legend.labels.color = textColor;
+        deptCrossChartInst.update();
       }
-      if (roleChartInst) {
-        roleChartInst.options.plugins.legend.labels.color = textColor;
-        roleChartInst.update();
-      }
-      if (conditionChartInst) {
-        conditionChartInst.options.plugins.legend.labels.color = textColor;
-        conditionChartInst.update();
+      if (bubbleChartInst) {
+        bubbleChartInst.options.scales.x.grid.color = gridColor;
+        bubbleChartInst.options.scales.x.ticks.color = textColor;
+        if (bubbleChartInst.options.scales.x.title) bubbleChartInst.options.scales.x.title.color = textColor;
+        bubbleChartInst.options.scales.y.grid.color = gridColor;
+        bubbleChartInst.options.scales.y.ticks.color = textColor;
+        if (bubbleChartInst.options.scales.y.title) bubbleChartInst.options.scales.y.title.color = textColor;
+        if (bubbleChartInst.options.plugins.legend) bubbleChartInst.options.plugins.legend.labels.color = textColor;
+        bubbleChartInst.update();
       }
     }
 
@@ -1265,8 +1381,9 @@
       riskMode: 'ALL'
     };
 
-    // Chart instances
-    let monthlyChartInst, roleChartInst, deptChartInst, conditionChartInst;
+    // Multi-Dimensional Chart instances
+    let monthlyChartInst, deptCrossChartInst, bubbleChartInst;
+    let deptSubDim = 'role'; // 'role' | 'category' | 'risk'
 
     function populateFilterOptions() {
       const deptSelect = document.getElementById('deptFilter');
@@ -1572,7 +1689,7 @@
     }
 
     // =========================================================================
-    // 6. Interactive Charts with Click-to-Drill-Down
+    // 6. Multi-Dimensional Interactive Analytics Instruments
     // =========================================================================
     function initCharts() {
       const isLight = document.documentElement.getAttribute('data-theme') === 'light';
@@ -1582,18 +1699,95 @@
       Chart.defaults.color = textColor;
       Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Sarabun", sans-serif';
 
-      // 1. Monthly Trend
+      // -----------------------------------------------------------------------
+      // Chart 1: Multi-Dimensional Time & Status Matrix (Stacked Bar + Line)
+      // Dims: Time (X) × Status Volumes (Y left) × Overdue Rate % (Y right)
+      // -----------------------------------------------------------------------
       const monthlyCtx = document.getElementById('monthlyTrendChart').getContext('2d');
       monthlyChartInst = new Chart(monthlyCtx, {
-        type: 'bar',
-        data: { labels: [], datasets: [{ label: 'จำนวนครั้งที่ยืม', data: [], backgroundColor: '#0466C8', borderRadius: 4 }] },
+        data: {
+          labels: [],
+          datasets: [
+            {
+              type: 'bar',
+              label: 'คืนตรงเวลา (On-Time)',
+              data: [],
+              backgroundColor: '#009688',
+              stack: 'borrow_status',
+              borderRadius: 3
+            },
+            {
+              type: 'bar',
+              label: 'ส่งคืนล่าช้า (Overdue)',
+              data: [],
+              backgroundColor: '#FFC107',
+              stack: 'borrow_status',
+              borderRadius: 3
+            },
+            {
+              type: 'bar',
+              label: 'ส่งคืนชำรุด (Damaged)',
+              data: [],
+              backgroundColor: '#E43F0B',
+              stack: 'borrow_status',
+              borderRadius: 3
+            },
+            {
+              type: 'line',
+              label: '% อัตราส่งคืนล่าช้า',
+              data: [],
+              borderColor: '#0466C8',
+              backgroundColor: '#0466C8',
+              yAxisID: 'y1',
+              tension: 0.3,
+              pointRadius: 4,
+              pointHoverRadius: 6,
+              borderWidth: 2.5
+            }
+          ]
+        },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
+          plugins: {
+            legend: {
+              position: 'top',
+              labels: { color: textColor, boxWidth: 12, padding: 12, font: { size: 11 } }
+            },
+            tooltip: {
+              callbacks: {
+                footer: (items) => {
+                  let total = 0;
+                  items.forEach(it => {
+                    if (it.dataset.type === 'bar') total += it.parsed.y;
+                  });
+                  return `รวมในเดือนนี้: ${total} ชิ้น`;
+                }
+              }
+            }
+          },
           scales: {
-            x: { grid: { color: gridColor }, ticks: { color: textColor, maxRotation: 45, minRotation: 45, font: { size: 11 } } },
-            y: { grid: { color: gridColor }, ticks: { color: textColor }, beginAtZero: true }
+            x: {
+              stacked: true,
+              grid: { color: gridColor },
+              ticks: { color: textColor, maxRotation: 45, minRotation: 45, font: { size: 11 } }
+            },
+            y: {
+              stacked: true,
+              grid: { color: gridColor },
+              ticks: { color: textColor },
+              beginAtZero: true,
+              title: { display: true, text: 'จำนวนชิ้นที่ยืม', color: textColor, font: { size: 10 } }
+            },
+            y1: {
+              type: 'linear',
+              position: 'right',
+              min: 0,
+              max: 100,
+              grid: { drawOnChartArea: false },
+              ticks: { color: textColor, callback: v => v + '%' },
+              title: { display: true, text: 'อัตราส่งคืนล่าช้า (%)', color: textColor, font: { size: 10 } }
+            }
           },
           onClick: (evt, elements) => {
             if (elements.length > 0) {
@@ -1606,120 +1800,377 @@
         }
       });
 
-      // 2. Role Status Donut
-      const roleCtx = document.getElementById('roleChart').getContext('2d');
-      roleChartInst = new Chart(roleCtx, {
-        type: 'doughnut',
-        data: { labels: [], datasets: [{ data: [], backgroundColor: ['#0466C8', '#009688', '#FFC107'] }] },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { position: 'bottom', labels: { color: textColor, boxWidth: 12, padding: 14 } } },
-          onClick: (evt, elements) => {
-            if (elements.length > 0) {
-              const idx = elements[0].index;
-              const selectedRole = roleChartInst.data.labels[idx];
-              drillState.role = selectedRole;
-              document.getElementById('roleFilter').value = selectedRole;
-              applyFilters();
-            }
-          }
-        }
-      });
-
-      // 3. Dept Horizontal Bar
-      const deptCtx = document.getElementById('deptChart').getContext('2d');
-      deptChartInst = new Chart(deptCtx, {
+      // -----------------------------------------------------------------------
+      // Chart 2: Department Cross-Dimensional Analysis (Stacked Horizontal Bar)
+      // Dims: Department (Y) × Volume (X) × Dynamic Sub-Dim (Role / Category / Risk)
+      // -----------------------------------------------------------------------
+      const deptCtx = document.getElementById('deptCrossChart').getContext('2d');
+      deptCrossChartInst = new Chart(deptCtx, {
         type: 'bar',
-        data: { labels: [], datasets: [{ label: 'จำนวนชิ้นที่ยืม', data: [], backgroundColor: '#106BDA', borderRadius: 4 }] },
+        data: { labels: [], datasets: [] },
         options: {
           indexAxis: 'y',
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
+          plugins: {
+            legend: {
+              position: 'top',
+              labels: { color: textColor, boxWidth: 12, padding: 10, font: { size: 11 } }
+            },
+            tooltip: {
+              callbacks: {
+                footer: (items) => {
+                  let total = 0;
+                  items.forEach(it => { total += it.parsed.x; });
+                  return `รวมของภาควิชานี้: ${total} ชิ้น`;
+                }
+              }
+            }
+          },
           scales: {
-            x: { grid: { color: gridColor }, ticks: { color: textColor }, beginAtZero: true },
-            y: { grid: { display: false }, ticks: { color: textColor, font: { size: 11 } } }
+            x: {
+              stacked: true,
+              grid: { color: gridColor },
+              ticks: { color: textColor },
+              beginAtZero: true,
+              title: { display: true, text: 'จำนวนชิ้นที่ยืม (ชิ้น)', color: textColor, font: { size: 10 } }
+            },
+            y: {
+              stacked: true,
+              grid: { display: false },
+              ticks: { color: textColor, font: { size: 11 } }
+            }
           },
           onClick: (evt, elements) => {
             if (elements.length > 0) {
-              const idx = elements[0].index;
-              const selectedDept = deptChartInst.data.labels[idx];
-              drillState.dept = selectedDept;
-              document.getElementById('deptFilter').value = selectedDept;
+              const el = elements[0];
+              const dept = deptCrossChartInst.data.labels[el.index];
+              const datasetLabel = deptCrossChartInst.data.datasets[el.datasetIndex].label;
+              drillState.dept = dept;
+              document.getElementById('deptFilter').value = dept;
+
+              if (deptSubDim === 'role') {
+                drillState.role = datasetLabel;
+                document.getElementById('roleFilter').value = datasetLabel;
+              } else if (deptSubDim === 'risk') {
+                if (datasetLabel.includes('เสี่ยงสูง')) drillState.riskMode = 'ANY_FLAG';
+                else if (datasetLabel.includes('เฝ้าระวัง')) drillState.riskMode = 'CHRONIC_OVERDUE';
+              }
               applyFilters();
             }
           }
         }
       });
 
-      // 4. Return Condition Donut
-      const conditionCtx = document.getElementById('conditionChart').getContext('2d');
-      conditionChartInst = new Chart(conditionCtx, {
-        type: 'doughnut',
-        data: { labels: [], datasets: [{ data: [], backgroundColor: ['#009688', '#E43F0B', '#60676C'] }] },
+      // Dimension Switcher Event Listeners
+      document.querySelectorAll('#deptDimSwitcher .dim-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('#deptDimSwitcher .dim-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          deptSubDim = btn.dataset.dim;
+          
+          const hints = {
+            'role': 'แสดงสัดส่วนผู้ยืมตามบทบาทในแต่ละภาควิชา (อาจารย์/เจ้าหน้าที่/นิสิต)',
+            'category': 'แสดงสัดส่วนประเภทครุภัณฑ์ที่ถูกยืมในแต่ละภาควิชา',
+            'risk': 'แสดงการกระจายความเสี่ยง (ปกติ/เฝ้าระวัง/เสี่ยงสูง) ในแต่ละภาควิชา'
+          };
+          const hintEl = document.getElementById('deptSubDimHint');
+          if (hintEl) hintEl.textContent = hints[deptSubDim] || '';
+          
+          updateDeptCrossChart();
+        });
+      });
+
+      // -----------------------------------------------------------------------
+      // Chart 3: Behavior Correlation & Outlier Bubble Matrix (5 Dimensions)
+      // Dims: Duration (X) × Overdue (Y) × Items (Radius) × Risk Level (Color) × Drill-Through
+      // -----------------------------------------------------------------------
+      const bubbleCtx = document.getElementById('outlierBubbleChart').getContext('2d');
+      bubbleChartInst = new Chart(bubbleCtx, {
+        type: 'bubble',
+        data: {
+          datasets: [
+            {
+              label: 'ปกติ (Normal)',
+              data: [],
+              backgroundColor: 'rgba(0, 150, 136, 0.7)',
+              borderColor: '#009688',
+              borderWidth: 1
+            },
+            {
+              label: 'เฝ้าระวัง / คืนช้า (Watchlist / Overdue)',
+              data: [],
+              backgroundColor: 'rgba(255, 193, 7, 0.75)',
+              borderColor: '#FFC107',
+              borderWidth: 1
+            },
+            {
+              label: 'เสี่ยงสูง / ชำรุด / ยืมซ้ำ (High Risk)',
+              data: [],
+              backgroundColor: 'rgba(228, 63, 11, 0.85)',
+              borderColor: '#E43F0B',
+              borderWidth: 1.5
+            }
+          ]
+        },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { position: 'bottom', labels: { color: textColor, boxWidth: 12, padding: 14 } } },
+          plugins: {
+            legend: {
+              position: 'top',
+              labels: { color: textColor, boxWidth: 12, padding: 12, font: { size: 11 } }
+            },
+            tooltip: {
+              callbacks: {
+                label: (context) => {
+                  const raw = context.raw;
+                  return [
+                    `📄 Fact #${raw.fact_id} (คำขอ REQ #${raw.request_id})`,
+                    `👤 ผู้ยืม: ${raw.userName} (${raw.userRole})`,
+                    `🏢 สังกัด: ${raw.deptName}`,
+                    `📦 ครุภัณฑ์: ${raw.assetName}`,
+                    `⏳ ระยะเวลายืม: ${raw.x} วัน`,
+                    `⏰ เกินกำหนดส่งคืน: ${raw.y} วัน`,
+                    `📊 จำนวนในคำขอ: ${raw.items} ชิ้น (ฟองขนาด ${Math.round(raw.r)}px)`,
+                    raw.anomalyNote ? `🚨 สัญญาณเตือน: ${raw.anomalyNote}` : `สภาพตอนคืน: ${raw.condition}`
+                  ];
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: gridColor },
+              ticks: { color: textColor },
+              title: {
+                display: true,
+                text: 'ระยะเวลาการยืม (วัน / Duration Days)',
+                color: textColor,
+                font: { size: 11, weight: '500' }
+              }
+            },
+            y: {
+              grid: { color: gridColor },
+              ticks: { color: textColor },
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'จำนวนวันที่เกินกำหนดส่งคืน (วัน / Overdue Days)',
+                color: textColor,
+                font: { size: 11, weight: '500' }
+              }
+            }
+          },
           onClick: (evt, elements) => {
             if (elements.length > 0) {
-              const idx = elements[0].index;
-              const selectedCond = conditionChartInst.data.labels[idx];
-              if (selectedCond === 'ปกติ') drillState.status = 'NORMAL';
-              else if (selectedCond === 'ชำรุด') drillState.status = 'DAMAGED';
-              applyFilters();
+              const el = elements[0];
+              const raw = bubbleChartInst.data.datasets[el.datasetIndex].data[el.index];
+              if (raw && raw.fact_id) {
+                openInspector(raw.fact_id, 'tabRequest');
+              }
             }
           }
         }
       });
     }
 
+    // =========================================================================
+    // Chart Update Helpers
+    // =========================================================================
     function updateCharts() {
-      // Monthly aggregate
+      updateMonthlyTrendChart();
+      updateDeptCrossChart();
+      updateBubbleMatrixChart();
+    }
+
+    function updateMonthlyTrendChart() {
       const monthMap = {};
       filteredData.forEach(r => {
         if (r.borrow_date) {
           const m = r.borrow_date.substring(0, 7);
-          monthMap[m] = (monthMap[m] || 0) + 1;
+          if (!monthMap[m]) {
+            monthMap[m] = { good: 0, overdue: 0, damaged: 0, active: 0 };
+          }
+          if (r.return_condition === 'ชำรุด') {
+            monthMap[m].damaged++;
+          } else if (r.is_overdue === 1) {
+            monthMap[m].overdue++;
+          } else if (r.actual_return_date) {
+            monthMap[m].good++;
+          } else {
+            monthMap[m].active++;
+          }
         }
       });
+
       const sortedMonths = Object.keys(monthMap).sort();
       monthlyChartInst.data.labels = sortedMonths;
-      monthlyChartInst.data.datasets[0].data = sortedMonths.map(m => monthMap[m]);
-      monthlyChartInst.update();
 
-      // Role aggregate
-      const roleMap = {};
-      filteredData.forEach(r => {
-        const role = r.user.role || 'ไม่ระบุ';
-        roleMap[role] = (roleMap[role] || 0) + 1;
+      // Dataset 0: คืนตรงเวลา
+      monthlyChartInst.data.datasets[0].data = sortedMonths.map(m => monthMap[m].good + monthMap[m].active);
+      // Dataset 1: คืนล่าช้า
+      monthlyChartInst.data.datasets[1].data = sortedMonths.map(m => monthMap[m].overdue);
+      // Dataset 2: ส่งคืนชำรุด
+      monthlyChartInst.data.datasets[2].data = sortedMonths.map(m => monthMap[m].damaged);
+      // Dataset 3: Line % อัตราส่งคืนล่าช้า
+      monthlyChartInst.data.datasets[3].data = sortedMonths.map(m => {
+        const total = monthMap[m].good + monthMap[m].active + monthMap[m].overdue + monthMap[m].damaged;
+        return total > 0 ? parseFloat(((monthMap[m].overdue / total) * 100).toFixed(1)) : 0;
       });
-      roleChartInst.data.labels = Object.keys(roleMap);
-      roleChartInst.data.datasets[0].data = Object.values(roleMap);
-      roleChartInst.update();
 
-      // Dept aggregate
-      const deptMap = {};
+      monthlyChartInst.update();
+    }
+
+    function updateDeptCrossChart() {
+      // 1. Get Department Totals to sort departments
+      const deptTotals = {};
       filteredData.forEach(r => {
         const d = r.dept_name || 'ไม่ระบุ';
-        deptMap[d] = (deptMap[d] || 0) + 1;
+        deptTotals[d] = (deptTotals[d] || 0) + 1;
       });
-      const sortedDepts = Object.entries(deptMap).sort((a,b) => b[1] - a[1]);
-      deptChartInst.data.labels = sortedDepts.map(x => x[0]);
-      deptChartInst.data.datasets[0].data = sortedDepts.map(x => x[1]);
-      deptChartInst.update();
+      const sortedDepts = Object.entries(deptTotals).sort((a,b) => b[1] - a[1]).map(x => x[0]);
+      deptCrossChartInst.data.labels = sortedDepts;
 
-      // Condition aggregate
-      const condMap = { 'ปกติ': 0, 'ชำรุด': 0, 'ยังไม่คืน/รอตรวจ': 0 };
-      filteredData.forEach(r => {
-        if (r.return_condition === 'ปกติ') condMap['ปกติ']++;
-        else if (r.return_condition === 'ชำรุด') condMap['ชำรุด']++;
-        else condMap['ยังไม่คืน/รอตรวจ']++;
+      let subCategories = [];
+      let palette = [];
+      let classifyFunc = null;
+
+      if (deptSubDim === 'role') {
+        subCategories = ['นิสิต', 'เจ้าหน้าที่', 'อาจารย์', 'ไม่ระบุ'];
+        palette = ['#0466C8', '#009688', '#FFC107', '#8C8881'];
+        classifyFunc = (r) => r.user?.role || 'ไม่ระบุ';
+      } else if (deptSubDim === 'category') {
+        subCategories = ['ครุภัณฑ์คอมพิวเตอร์', 'ครุภัณฑ์โสตทัศนูปกรณ์', 'วิทยาศาสตร์/ห้องปฏิบัติการ', 'ครุภัณฑ์สำนักงาน', 'อื่นๆ'];
+        palette = ['#0466C8', '#106BDA', '#009688', '#7C3AED', '#8C8881'];
+        classifyFunc = (r) => {
+          const cat = r.asset?.category_name || '';
+          if (cat.includes('คอมพิวเตอร์')) return 'ครุภัณฑ์คอมพิวเตอร์';
+          if (cat.includes('โสต')) return 'ครุภัณฑ์โสตทัศนูปกรณ์';
+          if (cat.includes('วิทยาศาสตร์') || cat.includes('แพทย์') || cat.includes('การเกษตร')) return 'วิทยาศาสตร์/ห้องปฏิบัติการ';
+          if (cat.includes('สำนักงาน')) return 'ครุภัณฑ์สำนักงาน';
+          return 'อื่นๆ';
+        };
+      } else if (deptSubDim === 'risk') {
+        subCategories = ['ปกติ (Normal)', 'เฝ้าระวัง (Watchlist)', 'เสี่ยงสูง (High Risk)'];
+        palette = ['#009688', '#FFC107', '#E43F0B'];
+        classifyFunc = (r) => {
+          if (r.risk_level === 'HIGH' || r.return_condition === 'ชำรุด') return 'เสี่ยงสูง (High Risk)';
+          if (r.risk_level === 'MEDIUM' || r.is_overdue === 1) return 'เฝ้าระวัง (Watchlist)';
+          return 'ปกติ (Normal)';
+        };
+      }
+
+      // Matrix: matrix[dept][subCategory]
+      const matrix = {};
+      sortedDepts.forEach(d => {
+        matrix[d] = {};
+        subCategories.forEach(sub => matrix[d][sub] = 0);
       });
-      conditionChartInst.data.labels = Object.keys(condMap);
-      conditionChartInst.data.datasets[0].data = Object.values(condMap);
-      conditionChartInst.update();
+
+      filteredData.forEach(r => {
+        const d = r.dept_name || 'ไม่ระบุ';
+        const sub = classifyFunc(r);
+        if (matrix[d]) {
+          if (matrix[d][sub] !== undefined) {
+            matrix[d][sub]++;
+          } else {
+            matrix[d]['อื่นๆ'] = (matrix[d]['อื่นๆ'] || 0) + 1;
+          }
+        }
+      });
+
+      deptCrossChartInst.data.datasets = subCategories.map((sub, idx) => ({
+        label: sub,
+        data: sortedDepts.map(d => matrix[d][sub] || 0),
+        backgroundColor: palette[idx % palette.length],
+        borderRadius: 2
+      }));
+
+      deptCrossChartInst.update();
+    }
+
+    function updateBubbleMatrixChart() {
+      const normalPts = [];
+      const watchlistPts = [];
+      const highRiskPts = [];
+
+      filteredData.forEach(r => {
+        const itemsCount = r.anomaly_metrics?.items_in_request || 1;
+        const pt = {
+          x: r.duration_days !== null ? r.duration_days : 0,
+          y: r.overdue_days || 0,
+          r: Math.min(18, Math.max(5, 4 + (itemsCount * 2.5))),
+          fact_id: r.fact_id,
+          request_id: r.request_id,
+          userName: r.user?.name || 'ไม่ระบุ',
+          userRole: r.user?.role || 'ไม่ระบุ',
+          deptName: r.dept_name || 'ไม่ระบุ',
+          assetName: r.asset?.name || 'ไม่ระบุ',
+          items: itemsCount,
+          condition: r.return_condition || 'รอตรวจคืน',
+          anomalyNote: r.anomalies?.map(a => a.title).join(', ') || ''
+        };
+
+        if (r.risk_level === 'HIGH' || r.return_condition === 'ชำรุด') {
+          highRiskPts.push(pt);
+        } else if (r.risk_level === 'MEDIUM' || r.is_overdue === 1) {
+          watchlistPts.push(pt);
+        } else {
+          normalPts.push(pt);
+        }
+      });
+
+      bubbleChartInst.data.datasets[0].data = normalPts;
+      bubbleChartInst.data.datasets[1].data = watchlistPts;
+      bubbleChartInst.data.datasets[2].data = highRiskPts;
+      bubbleChartInst.update();
+
+      // Render Top Outliers Chips
+      const chipsContainer = document.getElementById('outlierChipsList');
+      if (chipsContainer) {
+        // Find top 3 notable outliers
+        const sortedByOverdue = [...filteredData].sort((a,b) => (b.overdue_days||0) - (a.overdue_days||0));
+        const sortedByDuration = [...filteredData].sort((a,b) => (b.duration_days||0) - (a.duration_days||0));
+        const sortedByItems = [...filteredData].sort((a,b) => (b.anomaly_metrics?.items_in_request||0) - (a.anomaly_metrics?.items_in_request||0));
+
+        const chips = [];
+        if (sortedByOverdue[0] && (sortedByOverdue[0].overdue_days > 0)) {
+          const it = sortedByOverdue[0];
+          chips.push({
+            title: `⏰ คืนช้าสุด: ${it.user.name} (#${it.fact_id})`,
+            badge: `เกิน ${it.overdue_days} วัน`,
+            id: it.fact_id
+          });
+        }
+        if (sortedByDuration[0] && (sortedByDuration[0].duration_days > 25)) {
+          const it = sortedByDuration[0];
+          chips.push({
+            title: `⏳ ถือครองนานสุด: ${it.user.name} (#${it.fact_id})`,
+            badge: `ยืม ${it.duration_days} วัน`,
+            id: it.fact_id
+          });
+        }
+        if (sortedByItems[0] && (sortedByItems[0].anomaly_metrics?.items_in_request >= 3)) {
+          const it = sortedByItems[0];
+          chips.push({
+            title: `📦 กวาดเครื่องมากสุด: ${it.user.name} (#${it.fact_id})`,
+            badge: `${it.anomaly_metrics.items_in_request} ชิ้น`,
+            id: it.fact_id
+          });
+        }
+
+        if (chips.length > 0) {
+          chipsContainer.innerHTML = chips.map(c => `
+            <div class="outlier-chip" onclick="openInspector(${c.id}, 'tabRequest');">
+              <span>${c.title}</span>
+              <strong>${c.badge}</strong>
+            </div>
+          `).join('');
+        } else {
+          chipsContainer.innerHTML = `<span style="color:var(--cpe-text-dim);">ไม่พบ Outlier ที่เกินเกณฑ์ในชุดข้อมูลที่กรอง</span>`;
+        }
+      }
     }
 
     // =========================================================================
