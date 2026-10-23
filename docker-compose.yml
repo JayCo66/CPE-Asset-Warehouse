@@ -80,7 +80,7 @@ services:
     environment:
       SOURCE_API: http://source-api/
       WH_HOST: warehouse-db
-      WH_NAME: warehouse
+      WH_NAME: cpe_warehouse
       WH_USER: root
       WH_PASS: ${DB_ROOT_PASSWORD:-root}
     volumes:
@@ -101,7 +101,7 @@ services:
     command: *mysql-command
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
-      MYSQL_DATABASE: warehouse
+      MYSQL_DATABASE: cpe_warehouse      # ชื่อเดียวกับที่ทีมใช้ใน XAMPP (dw_borrow.php)
       MYSQL_USER: ${DB_USER:-dashboard}
       MYSQL_PASSWORD: ${DB_PASSWORD:-dashboard}
     volumes:
@@ -120,7 +120,7 @@ services:
     <<: *php-image
     environment:
       DB_HOST: warehouse-db
-      DB_NAME: warehouse
+      DB_NAME: cpe_warehouse
       DB_USER: ${DB_USER:-dashboard}
       DB_PASS: ${DB_PASSWORD:-dashboard}
     volumes:
@@ -136,7 +136,7 @@ services:
     <<: *php-image
     environment:
       WAREHOUSE_DB_HOST: warehouse-db
-      WAREHOUSE_DB_NAME: warehouse
+      WAREHOUSE_DB_NAME: cpe_warehouse
       WAREHOUSE_DB_USER: ${DB_USER:-dashboard}
       WAREHOUSE_DB_PASS: ${DB_PASSWORD:-dashboard}
       DB_HOST: source-db
