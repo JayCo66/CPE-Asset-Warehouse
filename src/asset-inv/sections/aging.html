@@ -1,0 +1,28 @@
+<section class="dashboard-page" data-dashboard-page="aging" aria-labelledby="aging-title" hidden>
+  <header class="page-heading executive-page-heading">
+    <div>
+      <h1 id="aging-title">อายุและการวางแผนทดแทน</h1>
+      <p class="page-intro">ใช้ข้อมูลอายุเพื่อจัดลำดับการทบทวน โดยอายุสูงเพียงอย่างเดียวไม่ได้ยืนยันว่าอุปกรณ์ล้าสมัย</p>
+    </div>
+    <label class="age-threshold-control" for="age-threshold-input">
+      เกณฑ์วิเคราะห์อายุ (ปี)
+      <input id="age-threshold-input" type="number" min="1" max="50" step="1" value="10" inputmode="numeric" />
+    </label>
+  </header>
+  <p class="threshold-guidance">ค่าเริ่มต้นมากกว่า 10 ปีปรับได้สำหรับการวิเคราะห์ ไม่ใช่มาตรฐานบัญชีหรือข้อกำหนดการเปลี่ยนทดแทน</p>
+  <section class="dashboard-panel-grid aging-primary-grid" aria-label="การกระจายอายุและสถานะ">
+    <article class="panel"><div class="panel-heading"><h2>การกระจายตามช่วงอายุ</h2></div><div id="aging-distribution" class="dashboard-chart"></div></article>
+    <article class="panel"><div class="panel-heading"><h2>อายุ × ความพร้อมใช้งาน</h2></div><div id="aging-availability" class="dashboard-table-wrap"></div></article>
+    <article class="panel"><div class="panel-heading"><h2>อายุ × สภาพชำรุด</h2></div><div id="aging-damage" class="dashboard-table-wrap"></div></article>
+  </section>
+  <section class="dashboard-panel-grid aging-ranking-grid" aria-label="แรงกดดันในการทบทวนสินทรัพย์">
+    <article class="panel"><div class="panel-heading"><h2>หน่วยงาน</h2></div><div id="aging-departments" class="dashboard-chart"></div></article>
+    <article class="panel"><div class="panel-heading"><h2>หมวดหมู่</h2></div><div id="aging-categories" class="dashboard-chart"></div></article>
+    <article class="panel"><div class="panel-heading"><h2>ประเภท</h2></div><div id="aging-types" class="dashboard-chart"></div></article>
+  </section>
+  <article class="panel"><div class="panel-heading"><h2>จำนวนตามหน่วยงาน × ช่วงอายุ</h2></div><div id="aging-by-department" class="dashboard-table-wrap"></div></article>
+  <section class="dashboard-panel-grid portfolio-matrix-grid aging-dimension-tables" aria-label="อายุสินทรัพย์ตามหมวดหมู่และประเภท">
+    <article class="panel"><div class="panel-heading"><h2>หมวดหมู่ × ช่วงอายุ</h2></div><div id="aging-by-category" class="dashboard-table-wrap"></div></article>
+    <article class="panel"><div class="panel-heading"><h2>ประเภท × ช่วงอายุ</h2></div><div id="aging-by-type" class="dashboard-table-wrap"></div></article>
+  </section>
+</section>

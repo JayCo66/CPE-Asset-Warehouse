@@ -77,3 +77,9 @@ test("keeps the mobile back-to-top control compact and clear of safe areas", () 
   assert.match(mobileRules, /\.back-to-top\s*\{[^}]*right:.*env\(safe-area-inset-right\)[^}]*bottom:.*env\(safe-area-inset-bottom\)/su);
   assert.match(mobileRules, /\.back-to-top\s*\{[^}]*width:\s*44px;[^}]*min-height:\s*44px;/su);
 });
+
+test("constrains dashboard grid tracks so wide scorecards scroll inside their panel", () => {
+  assert.match(styles, /\.dashboard,\s*\.dashboard-sections\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);[^}]*min-width:\s*0;/su);
+  assert.match(styles, /\.dashboard-page\s*\{[^}]*min-width:\s*0;/su);
+  assert.match(styles, /\.dashboard-table-wrap\s*\{[^}]*max-width:\s*100%;[^}]*overflow-x:\s*auto/su);
+});

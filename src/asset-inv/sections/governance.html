@@ -1,0 +1,33 @@
+<section class="dashboard-page" data-dashboard-page="governance" aria-labelledby="governance-title" hidden>
+  <header class="page-heading executive-page-heading">
+    <div>
+      <h1 id="governance-title">คุณภาพข้อมูลและประเด็นที่ต้องดูแล</h1>
+      <p class="page-intro">ตรวจข้อมูลทะเบียนและรายการที่ควรติดตาม โดยใช้เงื่อนไขที่อ่านและตรวจสอบได้</p>
+    </div>
+  </header>
+
+  <section class="dashboard-panel-grid overview-secondary-grid" aria-label="คุณภาพข้อมูลสินทรัพย์">
+    <article class="panel">
+      <div class="panel-heading"><h2>ช่องข้อมูลที่ขาด</h2></div>
+      <p class="panel-description">รหัส ชื่อ และหน่วยงานเป็นข้อมูลสำคัญ ส่วนยี่ห้อ รุ่น และรายละเอียดอื่นเป็นข้อมูลประกอบ</p>
+      <div id="governance-quality-fields" class="dashboard-table-wrap"></div>
+    </article>
+    <article class="panel">
+      <div class="panel-heading"><h2>ความครบถ้วนตามหน่วยงาน</h2></div>
+      <p class="panel-description">อัตราขาดข้อมูลสำคัญรวมรหัสสินทรัพย์ ชื่อสินทรัพย์ และหน่วยงาน</p>
+      <div id="governance-quality-departments" class="dashboard-table-wrap"></div>
+    </article>
+  </section>
+
+  <section class="panel exception-panel" aria-labelledby="governance-exceptions-title">
+    <div class="panel-heading">
+      <div>
+        <h2 id="governance-exceptions-title">รายการสินทรัพย์ที่ควรตรวจสอบ</h2>
+        <p class="panel-description" id="governance-exception-summary">กำลังสรุปรายการตามตัวกรองปัจจุบัน</p>
+      </div>
+      <a href="#/inventory/explorer">เปิดทะเบียนสินทรัพย์</a>
+    </div>
+    <p class="priority-guidance">ลำดับสูงใช้กับข้อมูลสำคัญที่ขาด หรือรายการชำรุดและไม่พร้อมใช้งานร่วมกัน ส่วนลำดับอื่นแสดงเงื่อนไขที่ควรตรวจสอบโดยตรง</p>
+    <div id="governance-exceptions" class="dashboard-table-wrap"></div>
+  </section>
+</section>

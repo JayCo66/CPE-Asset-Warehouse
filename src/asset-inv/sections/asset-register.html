@@ -1,9 +1,16 @@
+<section class="dashboard-page asset-explorer-page" data-dashboard-page="explorer" aria-labelledby="asset-explorer-title" hidden>
+<header class="page-heading executive-page-heading">
+  <div>
+    <h1 id="asset-explorer-title">สำรวจทะเบียนสินทรัพย์</h1>
+    <p class="page-intro">ค้นหารายการและตรวจสอบรายละเอียดในชุดข้อมูลและตัวกรองที่เลือก</p>
+  </div>
+</header>
 <section class="panel asset-register-panel" id="asset-register" aria-labelledby="asset-register-title">
   <div class="panel-heading asset-register-heading">
     <div>
       <h2 id="asset-register-title">ทะเบียนสินทรัพย์จากคลังข้อมูล</h2>
       <p class="panel-description">
-        ค้นหาและตรวจสอบข้อมูลจากชุดข้อมูลล่าสุดใน <code>fact_asset_inventory</code>
+        ค้นหาทั้งชุดข้อมูลที่เลือกใน <code>fact_asset_inventory</code>
       </p>
     </div>
     <div class="asset-source-status">
@@ -14,9 +21,9 @@
 
   <div class="asset-summary" aria-label="สรุปข้อมูลจากคลังสินทรัพย์">
     <div class="asset-summary-item">
-      <span class="asset-summary-label">สินทรัพย์ในชุดข้อมูลล่าสุด</span>
+      <span class="asset-summary-label">แถวในชุดข้อมูลที่เลือก</span>
       <strong class="asset-summary-value" id="asset-api-total">—</strong>
-      <span class="asset-summary-detail">จำนวนแถวในชุดข้อมูลล่าสุด</span>
+      <span class="asset-summary-detail">จำนวนแถวสำหรับการแบ่งหน้า</span>
     </div>
     <div class="asset-summary-item">
       <span class="asset-summary-label">แถวในหน้าที่เปิด</span>
@@ -29,7 +36,7 @@
       <span class="asset-summary-detail">ประเภทที่ไม่ซ้ำกันในหน้าปัจจุบัน</span>
     </div>
     <div class="asset-summary-item">
-      <span class="asset-summary-label">วันที่ชุดข้อมูลล่าสุด</span>
+      <span class="asset-summary-label">วันที่ชุดข้อมูลที่เลือก</span>
       <strong class="asset-summary-value" id="asset-api-latest">—</strong>
       <span class="asset-summary-detail">วันที่บันทึกข้อมูลในคลัง</span>
     </div>
@@ -37,20 +44,8 @@
 
   <div class="asset-register-toolbar table-controls">
     <label class="input-label" for="asset-api-search">
-      ค้นหาทั้งคลัง
-      <input id="asset-api-search" type="search" maxlength="200" placeholder="รหัส ชื่อ ประเภท ยี่ห้อ หน่วยงาน หรือสถานที่" />
-    </label>
-    <label class="select-label" for="asset-api-status-filter">
-      สถานะ
-      <select id="asset-api-status-filter">
-        <option value="all">ทุกสถานะ</option>
-      </select>
-    </label>
-    <label class="select-label" for="asset-api-type-filter">
-      ประเภท
-      <select id="asset-api-type-filter">
-        <option value="all">ทุกประเภท</option>
-      </select>
+      ค้นหาทั้งชุดข้อมูล
+      <input id="asset-api-search" type="search" maxlength="200" placeholder="รหัส ชื่อ ยี่ห้อ รุ่น หน่วยงาน หมวดหมู่ ประเภท อาคาร ห้อง แหล่งเงิน หรือสถานะ" />
     </label>
     <button class="button button-secondary" type="button" id="refresh-asset-api-button">
       รีเฟรชแหล่งข้อมูล
@@ -160,4 +155,5 @@
     <span id="asset-api-results-count" aria-live="polite" aria-atomic="true">กำลังรอข้อมูลจากคลังข้อมูล</span>
     <span>แหล่งข้อมูล · <code>assets_api/fact_asset_inventory.php</code></span>
   </div>
+</section>
 </section>

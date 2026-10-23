@@ -1,9 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 const styles = readFileSync(new URL("../src/asset-inv/styles.css", import.meta.url), "utf8");
 const html = readFileSync(new URL("../src/asset-inv/index.html", import.meta.url), "utf8");
+const app = readFileSync(new URL("../src/asset-inv/app.js", import.meta.url), "utf8");
+const localNavigation = readFileSync(new URL("../src/asset-inv/sections/executive-navigation.html", import.meta.url), "utf8");
 
 function getRuleBlocks(selector) {
   const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -47,4 +49,16 @@ test("does not show an inactive workspace menu beside the working module navigat
   assert.doesNotMatch(html, /aria-label="เปิดเมนูพื้นที่ทำงาน"/);
   assert.match(html, /<nav\b[^>]*class="module-nav"/);
   assert.match(html, /id="module-links"/);
+});
+
+test("loads existing executive page fragments and exposes every executive view in local navigation", () => {
+  const fragmentPaths = [...app.matchAll(/"(sections\/[\w-]+\.html)"/gu)].map((match) => match[1]);
+  assert.ok(fragmentPaths.length > 0, "dashboard fragment list should not be empty");
+  for (const fragment of fragmentPaths) {
+    assert.ok(existsSync(new URL(`../src/asset-inv/${fragment}`, import.meta.url)), `${fragment} should exist`);
+  }
+
+  const links = [...localNavigation.matchAll(/data-dashboard-link="([\w-]+)"/gu)].map((match) => match[1]);
+  assert.deepEqual(links, ["overview", "portfolio", "departments", "locations", "aging", "acquisition", "governance"]);
+  assert.doesNotMatch(localNavigation, /data-dashboard-link="explorer"/u, "the asset explorer remains a drill-down view");
 });
