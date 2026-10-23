@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ระบบคลังข้อมูล CPE Assets — แดชบอร์ดการยืม-คืนครุภัณฑ์ & ตรวจจับความผิดปกติ</title>
+  <title>CPE Assets — การยืม-คืนครุภัณฑ์</title>
   <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script>
@@ -851,10 +851,10 @@
   <header class="app-header">
     <div class="brand">
       <span class="brand-badge">CPE</span>
-      <span class="brand-title">คลังข้อมูลครุภัณฑ์และการซ่อมบำรุง (Data Warehouse)</span>
+      <span class="brand-title">CPE Assets Data Warehouse</span>
     </div>
     <div class="app-meta">
-      <span>ตารางข้อเท็จจริง: <code>fact_borrow_transaction</code></span>
+      <code>fact_borrow_transaction</code>
       <span id="apiStatusBadge" class="badge-status status-active">🔄 กำลังเชื่อมต่อ API...</span>
       <button id="themeToggleBtn" class="theme-toggle-btn" aria-label="สลับโหมดมืด/สว่าง (Dark / Light Mode)" title="สลับโหมดมืด/สว่าง">
         <span class="theme-toggle-icon">🌙</span>
@@ -875,18 +875,16 @@
     <!-- Active Module Context Header -->
     <div class="context-header">
       <div class="context-title">
-        <h1>📦 สถิติและรายการยืม-คืนครุภัณฑ์ (Borrowing Analytics)</h1>
-        <p>วิเคราะห์ความต้องการใช้งาน พฤติกรรมส่งคืน และเรดาร์ตรวจจับรายการน่าสงสัย/ผิดปกติ</p>
+        <h1>การยืม-คืนครุภัณฑ์</h1>
       </div>
     </div>
 
-    <!-- 🚨 Anomaly & Risk Radar Panel (NEW) -->
+    <!-- Anomaly & Risk Radar Panel -->
     <div class="radar-panel">
       <div class="radar-header">
         <div class="radar-title">
-          <span>🚨 เรดาร์ตรวจจับพฤติกรรมผิดปกติ & ความเสี่ยง (Anomaly & Risk Radar)</span>
+          <span>เรดาร์ความเสี่ยง</span>
         </div>
-        <span class="radar-hint">คลิกปุ่มด้านล่างเพื่อกรองดูรายการเฉพาะกลุ่มที่มีพฤติกรรมน่าสงสัยทันที</span>
       </div>
       <div class="radar-buttons">
         <button class="radar-btn active" data-risk="ALL">
@@ -894,27 +892,27 @@
           <span class="radar-badge" id="radarCountAll">0</span>
         </button>
         <button class="radar-btn" data-risk="ANY_FLAG">
-          <span>🔥 รายการมีสัญญาณเตือน</span>
+          <span>มีสัญญาณเตือน</span>
           <span class="radar-badge" id="radarCountFlagged" style="color:var(--cpe-danger);">0</span>
         </button>
         <button class="radar-btn" data-risk="REPEAT_ASSET">
-          <span>🔄 ผูกขาดเครื่องเดิมซ้ำ</span>
+          <span>ยืมซ้ำเครื่องเดิม</span>
           <span class="radar-badge" id="radarCountRepeat">0</span>
         </button>
         <button class="radar-btn" data-risk="MASS_BORROW">
-          <span>📦 กวาด/ยืมหลายชิ้นพร้อมกัน (≥3 ชิ้น)</span>
+          <span>ยืมหลายชิ้น (≥3)</span>
           <span class="radar-badge" id="radarCountMass">0</span>
         </button>
         <button class="radar-btn" data-risk="CHRONIC_OVERDUE">
-          <span>⏰ ผู้ยืมประวัติล่าช้าเรื้อรัง (≥50%)</span>
+          <span>ประวัติคืนช้า (≥50%)</span>
           <span class="radar-badge" id="radarCountChronic">0</span>
         </button>
         <button class="radar-btn" data-risk="EXCESSIVE_DURATION">
-          <span>⏳ ถือครองยาวนาน (>30 วัน)</span>
+          <span>ยืมนาน (>30 วัน)</span>
           <span class="radar-badge" id="radarCountDuration">0</span>
         </button>
         <button class="radar-btn" data-risk="MACHINE_REPLACED">
-          <span>🔄 มีการเปลี่ยนเครื่องทดแทน</span>
+          <span>เปลี่ยนเครื่อง</span>
           <span class="radar-badge" id="radarCountReplaced">0</span>
         </button>
       </div>
@@ -922,21 +920,21 @@
 
     <!-- Active Filter Indicators Bar -->
     <div class="active-filters-bar" id="activeFiltersBar">
-      <span style="color:var(--cpe-text-dim); font-size:12px;">🔍 ตัวกรองปัจจุบัน:</span>
+      <span style="color:var(--cpe-text-dim); font-size:12px;">ตัวกรอง:</span>
       <div id="filterPillsContainer" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
-      <button class="btn-reset-filters" id="btnResetFilters">ล้างตัวกรองทั้งหมด</button>
+      <button class="btn-reset-filters" id="btnResetFilters">ล้างทั้งหมด</button>
     </div>
 
     <!-- Toolbar Filters -->
     <div class="toolbar">
       <div class="filter-group">
         <label class="filter-label" for="searchInput">ค้นหา:</label>
-        <input type="text" id="searchInput" class="form-control search-input" placeholder="พิมพ์ชื่อผู้ยืม, รหัสครุภัณฑ์, อุปกรณ์, หรือคำขอ...">
+        <input type="text" id="searchInput" class="form-control search-input" placeholder="ค้นหาผู้ยืม, ครุภัณฑ์, คำขอ...">
       </div>
       <div class="filter-group">
-        <label class="filter-label" for="deptFilter">ภาควิชา/สังกัด:</label>
+        <label class="filter-label" for="deptFilter">ภาควิชา:</label>
         <select id="deptFilter" class="form-control">
-          <option value="ALL">ทั้งหมดทุกภาควิชา</option>
+          <option value="ALL">ทุกภาควิชา</option>
         </select>
       </div>
       <div class="filter-group">
@@ -949,43 +947,43 @@
         </select>
       </div>
       <div class="filter-group">
-        <label class="filter-label" for="statusFilter">สถานะส่งคืน:</label>
+        <label class="filter-label" for="statusFilter">สถานะ:</label>
         <select id="statusFilter" class="form-control">
           <option value="ALL">ทั้งหมด</option>
-          <option value="NORMAL">คืนตรงเวลา (ปกติ)</option>
-          <option value="OVERDUE">คืนล่าช้า (Overdue)</option>
-          <option value="DAMAGED">ชำรุดตอนคืน</option>
-          <option value="REPLACED">เปลี่ยนเครื่องทดแทน</option>
+          <option value="NORMAL">คืนตรงเวลา</option>
+          <option value="OVERDUE">คืนล่าช้า</option>
+          <option value="DAMAGED">ชำรุด</option>
+          <option value="REPLACED">เปลี่ยนเครื่อง</option>
         </select>
       </div>
     </div>
 
     <!-- KPI Cards Grid (Clickable to Drill-down) -->
     <div class="kpi-grid">
-      <div class="kpi-card" id="kpiCardAll" title="คลิกเพื่อแสดงทุกรายการ">
-        <div class="kpi-title">รายการยืมทั้งหมด <span>📋</span></div>
+      <div class="kpi-card" id="kpiCardAll" title="แสดงทุกรายการ">
+        <div class="kpi-title">รายการยืมทั้งหมด</div>
         <div class="kpi-value" id="kpiTotalBorrows">0</div>
-        <div class="kpi-sub" id="kpiTotalRequests">0 ใบคำขอ</div>
+        <div class="kpi-sub" id="kpiTotalRequests">0 คำขอ</div>
       </div>
-      <div class="kpi-card" id="kpiCardOverdue" title="คลิกเพื่อกรองเฉพาะรายการคืนล่าช้า">
-        <div class="kpi-title">คืนล่าช้า (Overdue) <span>⏰</span></div>
+      <div class="kpi-card" id="kpiCardOverdue" title="กรองเฉพาะคืนล่าช้า">
+        <div class="kpi-title">คืนล่าช้า</div>
         <div class="kpi-value" id="kpiOverdueRate" style="color: var(--cpe-warning)">0%</div>
-        <div class="kpi-sub" id="kpiOverdueCount">0 รายการเกินกำหนด</div>
+        <div class="kpi-sub" id="kpiOverdueCount">0 รายการ</div>
       </div>
-      <div class="kpi-card" id="kpiCardNormal" title="คลิกเพื่อกรองเฉพาะรายการคืนปกติ">
-        <div class="kpi-title">คืนสภาพสมบูรณ์ <span>✅</span></div>
+      <div class="kpi-card" id="kpiCardNormal" title="กรองเฉพาะคืนปกติ">
+        <div class="kpi-title">คืนปกติ</div>
         <div class="kpi-value" id="kpiNormalRate" style="color: var(--cpe-success)">0%</div>
-        <div class="kpi-sub" id="kpiNormalCount">0 ชิ้นสภาพปกติ</div>
+        <div class="kpi-sub" id="kpiNormalCount">0 รายการ</div>
       </div>
-      <div class="kpi-card" id="kpiCardDamaged" title="คลิกเพื่อกรองเฉพาะรายการที่ชำรุด">
-        <div class="kpi-title">ชำรุดตอนส่งคืน <span>⚠️</span></div>
+      <div class="kpi-card" id="kpiCardDamaged" title="กรองเฉพาะที่ชำรุด">
+        <div class="kpi-title">ชำรุดตอนคืน</div>
         <div class="kpi-value" id="kpiDamagedCount" style="color: var(--cpe-danger)">0</div>
-        <div class="kpi-sub">ต้องส่งซ่อมบำรุงต่อ</div>
+        <div class="kpi-sub">ต้องส่งซ่อม</div>
       </div>
-      <div class="kpi-card" id="kpiCardReplaced" title="คลิกเพื่อกรองเฉพาะรายการเปลี่ยนเครื่อง">
-        <div class="kpi-title">เปลี่ยนเครื่องทดแทน <span>🔄</span></div>
+      <div class="kpi-card" id="kpiCardReplaced" title="กรองเฉพาะเปลี่ยนเครื่อง">
+        <div class="kpi-title">เปลี่ยนเครื่อง</div>
         <div class="kpi-value" id="kpiReplacedCount" style="color: var(--cpe-info)">0</div>
-        <div class="kpi-sub">เครื่องเดิมไม่พร้อมใช้งาน</div>
+        <div class="kpi-sub">เครื่องทดแทน</div>
       </div>
     </div>
 
@@ -996,9 +994,9 @@
         <div class="panel-header">
           <div>
             <div class="panel-title">
-              <span>📈 แนวโน้มการยืม & สภาพการส่งคืนข้ามเวลา (Multi-Dimensional Time & Status Matrix)</span>
+              <span>แนวโน้มการยืมและสภาพการคืนรายเดือน</span>
             </div>
-            <span class="panel-hint">แกนซ้าย: ปริมาณชิ้นซ้อนตามสภาพคืน (ตรงเวลา/ล่าช้า/ชำรุด) | แกนขวา: เส้นแนวโน้ม % ส่งคืนล่าช้า (Overdue Rate)</span>
+            <span class="panel-hint">ปริมาณชิ้นตามสภาพคืน และ % คืนล่าช้า</span>
           </div>
         </div>
         <div class="chart-container">
@@ -1011,15 +1009,15 @@
         <div class="panel-header">
           <div>
             <div class="panel-title">
-              <span>🏢 วิเคราะห์ข้ามมิติระดับภาควิชา (Department Cross-Analysis)</span>
+              <span>การยืมแยกตามภาควิชา</span>
             </div>
-            <span class="panel-hint" id="deptSubDimHint">แสดงสัดส่วนผู้ยืมตามบทบาทในแต่ละภาควิชา</span>
+            <span class="panel-hint" id="deptSubDimHint">แยกตามบทบาท</span>
           </div>
           <!-- Dimension Switcher -->
           <div class="dim-switcher" id="deptDimSwitcher" role="radiogroup" aria-label="เลือกมิติวิเคราะห์">
-            <button class="dim-btn active" data-dim="role">👤 บทบาท</button>
-            <button class="dim-btn" data-dim="category">📦 ครุภัณฑ์</button>
-            <button class="dim-btn" data-dim="risk">🚨 ความเสี่ยง</button>
+            <button class="dim-btn active" data-dim="role">บทบาท</button>
+            <button class="dim-btn" data-dim="category">หมวดครุภัณฑ์</button>
+            <button class="dim-btn" data-dim="risk">ระดับความเสี่ยง</button>
           </div>
         </div>
         <div class="chart-container">
@@ -1028,21 +1026,20 @@
       </div>
     </div>
 
-    <!-- Multi-Dimensional Analytics Instruments (Row 2: 5 Dimensions Correlation Radar) -->
+    <!-- Outlier Bubble Matrix -->
     <div class="chart-panel-full">
       <div class="panel-header">
         <div>
           <div class="panel-title">
-            <span>🎯 เรดาร์พฤติกรรม & ตรวจจับค่าผิดปกติ (Behavior Correlation & Outlier Bubble Matrix)</span>
+            <span>การกระจายพฤติกรรมและค่าผิดปกติ (Outliers)</span>
           </div>
-          <span class="panel-hint">แกน X: ระยะเวลายืม (วัน) | แกน Y: วันเกินกำหนด (วัน) | ขนาดฟอง: ปริมาณชิ้นในคำขอ | สีฟอง: ระดับความเสี่ยง</span>
+          <span class="panel-hint">ระยะเวลายืมเทียบวันเกินกำหนด (ขนาดฟอง = จำนวนชิ้น, สี = ความเสี่ยง)</span>
         </div>
-        <span style="font-size:12px; color:var(--cpe-brand-blue); font-weight:500;">💡 คลิกที่จุดฟอง เพื่อเปิดดูข้อมูลเชิงลึกราย Record ทันที</span>
       </div>
 
       <!-- Quick Outlier Insights Bar -->
       <div class="outlier-chips-bar" id="outlierChipsBar">
-        <span class="outlier-chips-title">🚨 Outliers เด่นที่ตรวจพบ:</span>
+        <span class="outlier-chips-title">Outliers เด่น:</span>
         <div id="outlierChipsList" style="display:flex; gap:8px; flex-wrap:wrap;">
           <!-- Injected via JS -->
         </div>
@@ -1053,26 +1050,26 @@
       </div>
     </div>
 
-    <!-- Operational Data Table with Anomaly Indicators -->
+    <!-- Operational Data Table -->
     <div class="table-panel">
-      <div class="panel-header" style="padding: 16px 20px; border-bottom: 1px solid var(--cpe-border); margin-bottom: 0;">
-        <div class="panel-title">📋 รายการข้อเท็จจริงการยืม-คืน (fact_borrow_transaction)</div>
-        <span id="recordCount" style="font-size: 13px; color: var(--cpe-text-dim)">แสดง 0 จาก 0 รายการ</span>
+      <div class="panel-header" style="padding: 14px 18px; border-bottom: 1px solid var(--cpe-border); margin-bottom: 0;">
+        <div class="panel-title">รายการยืม-คืน</div>
+        <span id="recordCount" style="font-size: 13px; color: var(--cpe-text-dim)">0 รายการ</span>
       </div>
       <div class="table-responsive">
         <table>
           <thead>
             <tr>
-              <th>Fact ID</th>
-              <th>คำขอ #</th>
+              <th>ID</th>
+              <th>คำขอ</th>
               <th>วันที่ยืม</th>
               <th>กำหนดคืน</th>
-              <th>ผู้ยืม (คลิกดูประวัติ)</th>
+              <th>ผู้ยืม</th>
               <th>ภาควิชา</th>
-              <th>ครุภัณฑ์ที่ยืม</th>
-              <th>สถานะส่งคืน</th>
-              <th>สัญญาณเตือน / พฤติกรรม</th>
-              <th style="text-align:center;">เจาะลึก</th>
+              <th>ครุภัณฑ์</th>
+              <th>สถานะ</th>
+              <th>สัญญาณตรวจจับ</th>
+              <th style="text-align:center;">ข้อมูล</th>
             </tr>
           </thead>
           <tbody id="tableBody">
@@ -1096,17 +1093,17 @@
     <div class="modal-window">
       <div class="modal-header">
         <div class="modal-title">
-          <span>🔍 เจาะลึกข้อมูลรายการ:</span>
+          <span>ข้อมูลรายการ:</span>
           <span id="modalHeaderFactId" style="color:var(--cpe-brand-blue);">#0</span>
         </div>
-        <button class="btn-close-modal" id="btnCloseModal" title="ปิดหน้าต่าง (Esc)">&times;</button>
+        <button class="btn-close-modal" id="btnCloseModal" title="ปิด (Esc)">&times;</button>
       </div>
 
       <!-- Navigation Tabs -->
       <div class="modal-tabs">
-        <button class="modal-tab-btn active" data-tab="tabRequest">📋 ข้อมูลใบคำขอยืม & ผลการตรวจจับ</button>
-        <button class="modal-tab-btn" data-tab="tabUser">👤 เจาะลึกประวัติผู้ยืมรายนี้</button>
-        <button class="modal-tab-btn" data-tab="tabAsset">📦 เจาะลึกครุภัณฑ์ชิ้นนี้</button>
+        <button class="modal-tab-btn active" data-tab="tabRequest">ข้อมูลคำขอ</button>
+        <button class="modal-tab-btn" data-tab="tabUser">ประวัติผู้ยืม</button>
+        <button class="modal-tab-btn" data-tab="tabAsset">ประวัติครุภัณฑ์</button>
       </div>
 
       <div class="modal-body">
@@ -1128,40 +1125,40 @@
 
           <div class="detail-grid">
             <div class="detail-item">
-              <div class="label">รหัสคำขอเดิม (borrow_request_id)</div>
+              <div class="label">รหัสคำขอ</div>
               <div class="value" id="mReqId">-</div>
             </div>
             <div class="detail-item">
-              <div class="label">สถานะการส่งคืน</div>
+              <div class="label">สถานะการคืน</div>
               <div class="value" id="mStatusBadge">-</div>
             </div>
             <div class="detail-item">
-              <div class="label">วันที่เริ่มยืม</div>
+              <div class="label">วันที่ยืม</div>
               <div class="value" id="mBorrowDate">-</div>
             </div>
             <div class="detail-item">
-              <div class="label">กำหนดส่งคืนตามใบยืม</div>
+              <div class="label">กำหนดคืน</div>
               <div class="value" id="mDueDate">-</div>
             </div>
             <div class="detail-item">
-              <div class="label">วันที่ส่งคืนจริง</div>
+              <div class="label">วันที่คืนจริง</div>
               <div class="value" id="mActualDate">-</div>
             </div>
             <div class="detail-item">
-              <div class="label">ระยะเวลายืมใช้งานจริง</div>
+              <div class="label">ระยะเวลายืม</div>
               <div class="value" id="mDuration">-</div>
             </div>
             <div class="detail-item">
-              <div class="label">สภาพครุภัณฑ์ตอนตรวจคืน</div>
+              <div class="label">สภาพตอนคืน</div>
               <div class="value" id="mCondition">-</div>
             </div>
             <div class="detail-item">
-              <div class="label">อาจารย์/ผู้อนุมัติคำขอ</div>
+              <div class="label">ผู้อนุมัติ</div>
               <div class="value" id="mApprover">-</div>
             </div>
           </div>
           <div class="detail-item" style="margin-bottom: 12px;">
-            <div class="label">วัตถุประสงค์ในการยืมใช้งาน (Reason)</div>
+            <div class="label">วัตถุประสงค์การยืม</div>
             <div class="value" id="mReason" style="color: var(--cpe-text); font-weight: normal;">-</div>
           </div>
         </div>
@@ -1170,7 +1167,7 @@
         <div class="tab-content" id="tabUser">
           <div class="detail-grid">
             <div class="detail-item">
-              <div class="label">ชื่อ-นามสกุล ผู้ยืม</div>
+              <div class="label">ชื่อผู้ยืม</div>
               <div class="value" id="mUserName">-</div>
             </div>
             <div class="detail-item">
@@ -1178,17 +1175,17 @@
               <div class="value" id="mUserRole">-</div>
             </div>
             <div class="detail-item">
-              <div class="label">ภาควิชา/สังกัด</div>
+              <div class="label">ภาควิชา</div>
               <div class="value" id="mUserDept">-</div>
             </div>
             <div class="detail-item">
-              <div class="label">สถิติความรับผิดชอบสะสม</div>
+              <div class="label">สถิติการยืมสะสม</div>
               <div class="value" id="mUserStatSummary">-</div>
             </div>
           </div>
 
           <div class="subtable-container">
-            <div class="subtable-header">📚 ประวัติการยืมทั้งหมดของบุคคลนี้ในระบบ</div>
+            <div class="subtable-header">ประวัติการยืมของผู้ยืมรายนี้</div>
             <div style="max-height: 220px; overflow-y: auto;">
               <table>
                 <thead>
@@ -1212,7 +1209,7 @@
         <div class="tab-content" id="tabAsset">
           <div class="detail-grid">
             <div class="detail-item">
-              <div class="label">รหัสครุภัณฑ์ (Asset Code)</div>
+              <div class="label">รหัสครุภัณฑ์</div>
               <div class="value" id="mAssetCode" style="font-family: monospace;">-</div>
             </div>
             <div class="detail-item">
@@ -1220,25 +1217,25 @@
               <div class="value" id="mAssetName">-</div>
             </div>
             <div class="detail-item">
-              <div class="label">ประเภทครุภัณฑ์</div>
+              <div class="label">ประเภท</div>
               <div class="value" id="mAssetType">-</div>
             </div>
             <div class="detail-item">
-              <div class="label">หมวดหมู่ครุภัณฑ์</div>
+              <div class="label">หมวดหมู่</div>
               <div class="value" id="mAssetCat">-</div>
             </div>
             <div class="detail-item">
-              <div class="label">ยี่ห้อ (Brand)</div>
+              <div class="label">ยี่ห้อ</div>
               <div class="value" id="mAssetBrand">-</div>
             </div>
             <div class="detail-item">
-              <div class="label">ความถี่การถูกยืมในระบบ</div>
+              <div class="label">สถิติการถูกยืม</div>
               <div class="value" id="mAssetStatSummary">-</div>
             </div>
           </div>
 
           <div class="subtable-container">
-            <div class="subtable-header">🔄 ประวัติการถูกยืมทั้งหมดของครุภัณฑ์ชิ้นนี้</div>
+            <div class="subtable-header">ประวัติการถูกยืมของครุภัณฑ์ชิ้นนี้</div>
             <div style="max-height: 220px; overflow-y: auto;">
               <table>
                 <thead>
@@ -1387,7 +1384,7 @@
 
     function populateFilterOptions() {
       const deptSelect = document.getElementById('deptFilter');
-      deptSelect.innerHTML = '<option value="ALL">ทั้งหมดทุกภาควิชา</option>';
+      deptSelect.innerHTML = '<option value="ALL">ทุกภาควิชา</option>';
       const uniqueDepts = Array.from(new Set(allData.map(d => d.dept_name))).sort();
       uniqueDepts.forEach(dept => {
         const opt = document.createElement('option');
@@ -1586,11 +1583,11 @@
       const normalRate = returnedTotal > 0 ? ((normalCount / returnedTotal) * 100).toFixed(1) : '0.0';
 
       document.getElementById('kpiTotalBorrows').textContent = total.toLocaleString();
-      document.getElementById('kpiTotalRequests').textContent = `${uniqueRequests.toLocaleString()} ใบคำขอ`;
+      document.getElementById('kpiTotalRequests').textContent = `${uniqueRequests.toLocaleString()} คำขอ`;
       document.getElementById('kpiOverdueRate').textContent = `${overdueRate}%`;
-      document.getElementById('kpiOverdueCount').textContent = `${overdueCount} ชิ้นเกินกำหนด`;
+      document.getElementById('kpiOverdueCount').textContent = `${overdueCount} รายการ`;
       document.getElementById('kpiNormalRate').textContent = `${normalRate}%`;
-      document.getElementById('kpiNormalCount').textContent = `${normalCount} ชิ้นสภาพสมบูรณ์`;
+      document.getElementById('kpiNormalCount').textContent = `${normalCount} รายการ`;
       document.getElementById('kpiDamagedCount').textContent = damagedCount;
       document.getElementById('kpiReplacedCount').textContent = replacedCount;
     }
@@ -1620,7 +1617,7 @@
       const pageData = filteredData.slice(start, start + pageSize);
       const totalPages = Math.ceil(filteredData.length / pageSize) || 1;
 
-      document.getElementById('recordCount').textContent = `แสดง ${filteredData.length.toLocaleString()} รายการ`;
+      document.getElementById('recordCount').textContent = `${filteredData.length.toLocaleString()} รายการ`;
       document.getElementById('pageInfo').textContent = `หน้า ${currentPage} จาก ${totalPages}`;
       document.getElementById('prevBtn').disabled = (currentPage <= 1);
       document.getElementById('nextBtn').disabled = (currentPage >= totalPages);
@@ -1635,20 +1632,20 @@
         if (r.is_overdue === 1) {
           statusBadge = `<span class="badge-status status-overdue">เกิน ${r.overdue_days} วัน</span>`;
         } else if (r.actual_return_date) {
-          statusBadge = `<span class="badge-status status-ready">คืนตรงเวลา</span>`;
+          statusBadge = `<span class="badge-status status-ready">ตรงเวลา</span>`;
         } else {
-          statusBadge = `<span class="badge-status status-active">อยู่ระหว่างยืม</span>`;
+          statusBadge = `<span class="badge-status status-active">กำลังยืม</span>`;
         }
 
         // Generate Anomaly / Risk Signal Badges for Row
         let riskBadges = '';
         if (r.anomalies && r.anomalies.length > 0) {
           riskBadges = r.anomalies.slice(0, 2).map(a => {
-            if (a.type === 'REPEAT_ASSET') return `<span class="badge-status status-damaged" title="${a.detail}">🔄 ซ้ำ ${r.anomaly_metrics.repeat_asset_times}x</span>`;
-            if (a.type === 'MASS_BORROW') return `<span class="badge-status status-active" title="${a.detail}">📦 กวาด ${r.anomaly_metrics.items_in_request} ชิ้น</span>`;
-            if (a.type === 'CHRONIC_OVERDUE') return `<span class="badge-status status-overdue" title="${a.detail}">⏰ ช้า ${r.anomaly_metrics.user_overdue_rate_pct}%</span>`;
-            if (a.type === 'EXCESSIVE_DURATION') return `<span class="badge-status status-purple" title="${a.detail}">⏳ ${r.duration_days} วัน</span>`;
-            if (a.type === 'MACHINE_REPLACED') return `<span class="badge-status status-active" title="${a.detail}">🔄 เปลี่ยนเครื่อง</span>`;
+            if (a.type === 'REPEAT_ASSET') return `<span class="badge-status status-damaged" title="${a.detail}">ซ้ำ ${r.anomaly_metrics.repeat_asset_times}x</span>`;
+            if (a.type === 'MASS_BORROW') return `<span class="badge-status status-active" title="${a.detail}">≥3 ชิ้น (${r.anomaly_metrics.items_in_request})</span>`;
+            if (a.type === 'CHRONIC_OVERDUE') return `<span class="badge-status status-overdue" title="${a.detail}">ช้า ${r.anomaly_metrics.user_overdue_rate_pct}%</span>`;
+            if (a.type === 'EXCESSIVE_DURATION') return `<span class="badge-status status-purple" title="${a.detail}">${r.duration_days} วัน</span>`;
+            if (a.type === 'MACHINE_REPLACED') return `<span class="badge-status status-active" title="${a.detail}">เปลี่ยนเครื่อง</span>`;
             return `<span class="badge-status status-damaged">${a.title}</span>`;
           }).join(' ');
         } else {
@@ -1673,7 +1670,7 @@
             <td>${statusBadge}</td>
             <td>${riskBadges}</td>
             <td style="text-align:center;">
-              <button class="btn-inspect" onclick="openInspector(${r.fact_id}, 'tabRequest'); event.stopPropagation();">🔍 เจาะลึก</button>
+              <button class="btn-inspect" onclick="openInspector(${r.fact_id}, 'tabRequest'); event.stopPropagation();">ดูข้อมูล</button>
             </td>
           </tr>
         `;
@@ -1710,7 +1707,7 @@
           datasets: [
             {
               type: 'bar',
-              label: 'คืนตรงเวลา (On-Time)',
+              label: 'ตรงเวลา',
               data: [],
               backgroundColor: '#009688',
               stack: 'borrow_status',
@@ -1718,7 +1715,7 @@
             },
             {
               type: 'bar',
-              label: 'ส่งคืนล่าช้า (Overdue)',
+              label: 'คืนล่าช้า',
               data: [],
               backgroundColor: '#FFC107',
               stack: 'borrow_status',
@@ -1726,7 +1723,7 @@
             },
             {
               type: 'bar',
-              label: 'ส่งคืนชำรุด (Damaged)',
+              label: 'ชำรุด',
               data: [],
               backgroundColor: '#E43F0B',
               stack: 'borrow_status',
@@ -1734,7 +1731,7 @@
             },
             {
               type: 'line',
-              label: '% อัตราส่งคืนล่าช้า',
+              label: '% คืนล่าช้า',
               data: [],
               borderColor: '#0466C8',
               backgroundColor: '#0466C8',
@@ -1777,7 +1774,7 @@
               grid: { color: gridColor },
               ticks: { color: textColor },
               beginAtZero: true,
-              title: { display: true, text: 'จำนวนชิ้นที่ยืม', color: textColor, font: { size: 10 } }
+              title: { display: true, text: 'จำนวน (ชิ้น)', color: textColor, font: { size: 10 } }
             },
             y1: {
               type: 'linear',
@@ -1786,7 +1783,7 @@
               max: 100,
               grid: { drawOnChartArea: false },
               ticks: { color: textColor, callback: v => v + '%' },
-              title: { display: true, text: 'อัตราส่งคืนล่าช้า (%)', color: textColor, font: { size: 10 } }
+              title: { display: true, text: '% ล่าช้า', color: textColor, font: { size: 10 } }
             }
           },
           onClick: (evt, elements) => {
@@ -1833,7 +1830,7 @@
               grid: { color: gridColor },
               ticks: { color: textColor },
               beginAtZero: true,
-              title: { display: true, text: 'จำนวนชิ้นที่ยืม (ชิ้น)', color: textColor, font: { size: 10 } }
+              title: { display: true, text: 'จำนวน (ชิ้น)', color: textColor, font: { size: 10 } }
             },
             y: {
               stacked: true,
@@ -1870,9 +1867,9 @@
           deptSubDim = btn.dataset.dim;
           
           const hints = {
-            'role': 'แสดงสัดส่วนผู้ยืมตามบทบาทในแต่ละภาควิชา (อาจารย์/เจ้าหน้าที่/นิสิต)',
-            'category': 'แสดงสัดส่วนประเภทครุภัณฑ์ที่ถูกยืมในแต่ละภาควิชา',
-            'risk': 'แสดงการกระจายความเสี่ยง (ปกติ/เฝ้าระวัง/เสี่ยงสูง) ในแต่ละภาควิชา'
+            'role': 'แยกตามบทบาท',
+            'category': 'แยกตามหมวดครุภัณฑ์',
+            'risk': 'แยกตามระดับความเสี่ยง'
           };
           const hintEl = document.getElementById('deptSubDimHint');
           if (hintEl) hintEl.textContent = hints[deptSubDim] || '';
@@ -1891,21 +1888,21 @@
         data: {
           datasets: [
             {
-              label: 'ปกติ (Normal)',
+              label: 'ปกติ',
               data: [],
               backgroundColor: 'rgba(0, 150, 136, 0.7)',
               borderColor: '#009688',
               borderWidth: 1
             },
             {
-              label: 'เฝ้าระวัง / คืนช้า (Watchlist / Overdue)',
+              label: 'เฝ้าระวัง',
               data: [],
               backgroundColor: 'rgba(255, 193, 7, 0.75)',
               borderColor: '#FFC107',
               borderWidth: 1
             },
             {
-              label: 'เสี่ยงสูง / ชำรุด / ยืมซ้ำ (High Risk)',
+              label: 'เสี่ยงสูง',
               data: [],
               backgroundColor: 'rgba(228, 63, 11, 0.85)',
               borderColor: '#E43F0B',
@@ -1932,7 +1929,7 @@
                     `📦 ครุภัณฑ์: ${raw.assetName}`,
                     `⏳ ระยะเวลายืม: ${raw.x} วัน`,
                     `⏰ เกินกำหนดส่งคืน: ${raw.y} วัน`,
-                    `📊 จำนวนในคำขอ: ${raw.items} ชิ้น (ฟองขนาด ${Math.round(raw.r)}px)`,
+                    `📊 จำนวนในคำขอ: ${raw.items} ชิ้น`,
                     raw.anomalyNote ? `🚨 สัญญาณเตือน: ${raw.anomalyNote}` : `สภาพตอนคืน: ${raw.condition}`
                   ];
                 }
@@ -1945,7 +1942,7 @@
               ticks: { color: textColor },
               title: {
                 display: true,
-                text: 'ระยะเวลาการยืม (วัน / Duration Days)',
+                text: 'ระยะเวลายืม (วัน)',
                 color: textColor,
                 font: { size: 11, weight: '500' }
               }
@@ -1956,7 +1953,7 @@
               beginAtZero: true,
               title: {
                 display: true,
-                text: 'จำนวนวันที่เกินกำหนดส่งคืน (วัน / Overdue Days)',
+                text: 'เกินกำหนด (วัน)',
                 color: textColor,
                 font: { size: 11, weight: '500' }
               }
@@ -2052,12 +2049,12 @@
           return 'อื่นๆ';
         };
       } else if (deptSubDim === 'risk') {
-        subCategories = ['ปกติ (Normal)', 'เฝ้าระวัง (Watchlist)', 'เสี่ยงสูง (High Risk)'];
+        subCategories = ['ปกติ', 'เฝ้าระวัง', 'เสี่ยงสูง'];
         palette = ['#009688', '#FFC107', '#E43F0B'];
         classifyFunc = (r) => {
-          if (r.risk_level === 'HIGH' || r.return_condition === 'ชำรุด') return 'เสี่ยงสูง (High Risk)';
-          if (r.risk_level === 'MEDIUM' || r.is_overdue === 1) return 'เฝ้าระวัง (Watchlist)';
-          return 'ปกติ (Normal)';
+          if (r.risk_level === 'HIGH' || r.return_condition === 'ชำรุด') return 'เสี่ยงสูง';
+          if (r.risk_level === 'MEDIUM' || r.is_overdue === 1) return 'เฝ้าระวัง';
+          return 'ปกติ';
         };
       }
 
@@ -2138,7 +2135,7 @@
         if (sortedByOverdue[0] && (sortedByOverdue[0].overdue_days > 0)) {
           const it = sortedByOverdue[0];
           chips.push({
-            title: `⏰ คืนช้าสุด: ${it.user.name} (#${it.fact_id})`,
+            title: `คืนช้าสุด: ${it.user.name}`,
             badge: `เกิน ${it.overdue_days} วัน`,
             id: it.fact_id
           });
@@ -2146,7 +2143,7 @@
         if (sortedByDuration[0] && (sortedByDuration[0].duration_days > 25)) {
           const it = sortedByDuration[0];
           chips.push({
-            title: `⏳ ถือครองนานสุด: ${it.user.name} (#${it.fact_id})`,
+            title: `ยืมนานสุด: ${it.user.name}`,
             badge: `ยืม ${it.duration_days} วัน`,
             id: it.fact_id
           });
@@ -2154,7 +2151,7 @@
         if (sortedByItems[0] && (sortedByItems[0].anomaly_metrics?.items_in_request >= 3)) {
           const it = sortedByItems[0];
           chips.push({
-            title: `📦 กวาดเครื่องมากสุด: ${it.user.name} (#${it.fact_id})`,
+            title: `ยืมมากสุด: ${it.user.name}`,
             badge: `${it.anomaly_metrics.items_in_request} ชิ้น`,
             id: it.fact_id
           });
@@ -2168,7 +2165,7 @@
             </div>
           `).join('');
         } else {
-          chipsContainer.innerHTML = `<span style="color:var(--cpe-text-dim);">ไม่พบ Outlier ที่เกินเกณฑ์ในชุดข้อมูลที่กรอง</span>`;
+          chipsContainer.innerHTML = `<span style="color:var(--cpe-text-dim);">ไม่พบ Outlier เกินเกณฑ์</span>`;
         }
       }
     }
@@ -2193,20 +2190,20 @@
 
       if (record.risk_level === 'HIGH') {
         riskBox.classList.add('risk-box-high');
-        riskTitle.innerHTML = '🚨 การประเมินความเสี่ยง: ระดับสูง (High Risk Detected)';
-        riskDesc.innerHTML = 'ระบบตรวจพบพฤติกรรมที่มีความเสี่ยงสูงต่อการสูญหาย ชำรุด หรือผิดวินัยการใช้งาน:';
+        riskTitle.innerHTML = '🚨 ความเสี่ยงสูง';
+        riskDesc.innerHTML = 'พบพฤติกรรมเสี่ยงสูงต่อการสูญหาย ชำรุด หรือผิดวินัย:';
       } else if (record.risk_level === 'MEDIUM') {
         riskBox.classList.add('risk-box-medium');
-        riskTitle.innerHTML = '⚠️ การประเมินความเสี่ยง: ระดับเฝ้าระวัง (Watchlist / Anomaly Detected)';
-        riskDesc.innerHTML = 'พบพฤติกรรมการยืมที่มีลักษณะผิดปกติจากค่าเฉลี่ยทั่วไป:';
+        riskTitle.innerHTML = '⚠️ เฝ้าระวัง';
+        riskDesc.innerHTML = 'พบพฤติกรรมผิดปกติจากเกณฑ์เฉลี่ย:';
       } else if (record.risk_level === 'LOW') {
         riskBox.classList.add('risk-box-low');
-        riskTitle.innerHTML = 'ℹ️ การประเมินความเสี่ยง: มีข้อสังเกต (Operational Note)';
-        riskDesc.innerHTML = 'มีหมายเหตุทางปฏิบัติการที่ควรรับทราบ:';
+        riskTitle.innerHTML = 'ℹ️ มีข้อสังเกต';
+        riskDesc.innerHTML = 'ข้อสังเกตเพิ่มเติม:';
       } else {
         riskBox.classList.add('risk-box-normal');
-        riskTitle.innerHTML = '🛡️ การประเมินความเสี่ยง: ปกติ (No Anomaly)';
-        riskDesc.innerHTML = 'ไม่พบพฤติกรรมน่าสงสัยหรือผิดปกติในรายการนี้ เป็นการยืม-คืนตามรอบปกติ';
+        riskTitle.innerHTML = '🛡️ ปกติ';
+        riskDesc.innerHTML = 'การใช้งานปกติ ไม่พบพฤติกรรมผิดปกติ';
       }
 
       if (record.anomalies && record.anomalies.length > 0) {
@@ -2230,11 +2227,11 @@
       document.getElementById('mReason').textContent = record.reason || '-';
 
       if (record.is_overdue === 1) {
-        document.getElementById('mStatusBadge').innerHTML = `<span class="badge-status status-overdue">เกินกำหนดส่งคืน ${record.overdue_days} วัน</span>`;
+        document.getElementById('mStatusBadge').innerHTML = `<span class="badge-status status-overdue">เกินกำหนด ${record.overdue_days} วัน</span>`;
       } else if (record.actual_return_date) {
-        document.getElementById('mStatusBadge').innerHTML = `<span class="badge-status status-ready">ส่งคืนตรงเวลา</span>`;
+        document.getElementById('mStatusBadge').innerHTML = `<span class="badge-status status-ready">ตรงเวลา</span>`;
       } else {
-        document.getElementById('mStatusBadge').innerHTML = `<span class="badge-status status-active">อยู่ระหว่างใช้งาน</span>`;
+        document.getElementById('mStatusBadge').innerHTML = `<span class="badge-status status-active">กำลังยืม</span>`;
       }
 
       // Tab 2: User profile & history
@@ -2375,7 +2372,7 @@
         
         if (statusEl) {
           statusEl.className = 'badge-status status-ready';
-          statusEl.innerHTML = '🟢 เชื่อมต่อสด: PHP API (localhost)';
+          statusEl.innerHTML = '🟢 API พร้อมใช้งาน';
         }
 
         populateFilterOptions();
@@ -2387,7 +2384,7 @@
         console.error('Failed to load from API:', err);
         if (statusEl) {
           statusEl.className = 'badge-status status-damaged';
-          statusEl.innerHTML = `⚠️ ดึง API ไม่สำเร็จ: ${err.message}`;
+          statusEl.innerHTML = `⚠️ API ขัดข้อง: ${err.message}`;
         }
         if (tbody) {
           tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding: 40px; color: var(--cpe-danger)">
