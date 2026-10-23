@@ -21,6 +21,11 @@
   --cpe-border: rgba(232, 230, 227, 0.12);
   --cpe-border-strong: rgba(232, 230, 227, 0.2);
   --cpe-focus: #70b7ff;
+  --cpe-link: #9fc8ff;
+  --cpe-success-text: #72e0d4;
+  --cpe-warning-text: #ffdd72;
+  --cpe-danger-text: var(--cpe-danger);
+  --cpe-table-header: rgba(37, 41, 42, 0.65);
   --radius-panel: 18px;
   --radius-control: 10px;
   --shadow-panel: 0 18px 50px rgba(0, 0, 0, 0.18);
@@ -28,6 +33,33 @@
   font-family: "Leelawadee UI", "Noto Sans Thai", system-ui, Tahoma, "Segoe UI", sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+}
+
+:root[data-theme="light"] {
+  --cpe-page-start: #f4f7fa;
+  --cpe-page-end: #eaf0f5;
+  --cpe-surface: #ffffff;
+  --cpe-surface-raised: #f5f8fb;
+  --cpe-surface-soft: #eaf1f7;
+  --cpe-text: #1c2833;
+  --cpe-text-muted: #435361;
+  --cpe-text-subtle: #5f6f7e;
+  --cpe-brand-blue-deep: #0353a4;
+  --cpe-success-soft: #00695c;
+  --cpe-info: #0b63d0;
+  --cpe-warning-soft: #765000;
+  --cpe-danger: #c23c14;
+  --cpe-floating-tool: #ffffff;
+  --cpe-border: rgba(19, 41, 61, 0.12);
+  --cpe-border-strong: rgba(19, 41, 61, 0.2);
+  --cpe-focus: #0353a4;
+  --cpe-link: #0353a4;
+  --cpe-success-text: #00695c;
+  --cpe-warning-text: #765000;
+  --cpe-danger-text: #b93814;
+  --cpe-table-header: #edf3f8;
+  --shadow-panel: 0 12px 32px rgba(19, 41, 61, 0.08);
+  color-scheme: light;
 }
 
 * {
@@ -139,6 +171,7 @@ code {
 
 .app-header {
   justify-content: space-between;
+  gap: 12px;
   min-height: 48px;
   margin-bottom: 20px;
 }
@@ -194,6 +227,42 @@ code {
 .brand-copy strong {
   font-size: 0.96rem;
   letter-spacing: -0.01em;
+}
+
+.theme-toggle {
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 44px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 12px;
+  color: var(--cpe-text);
+  background: var(--cpe-surface);
+  border: 1px solid var(--cpe-border-strong);
+  border-radius: var(--radius-control);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.theme-toggle:hover {
+  background: var(--cpe-surface-soft);
+}
+
+.theme-toggle-icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+}
+
+[data-theme="dark"] .theme-toggle-icon-moon,
+[data-theme="light"] .theme-toggle-icon-sun,
+[data-theme="dark"] .theme-toggle-label-dark,
+[data-theme="light"] .theme-toggle-label-light {
+  display: none;
 }
 
 .module-nav {
@@ -304,7 +373,7 @@ code {
 .eyebrow,
 .panel-kicker {
   margin: 0 0 7px;
-  color: #70b7ff;
+  color: var(--cpe-focus);
 }
 
 h1,
@@ -431,7 +500,7 @@ h2 {
 
 .notice-date {
   flex: 0 0 auto;
-  color: #9fc8ff;
+  color: var(--cpe-link);
 }
 
 .metric-grid {
@@ -472,7 +541,7 @@ h2 {
   width: 25px;
   height: 25px;
   place-items: center;
-  color: #9fc8ff;
+  color: var(--cpe-link);
   border: 1px solid rgba(112, 183, 255, 0.45);
   border-radius: 7px;
   font-size: 0.68rem;
@@ -480,17 +549,17 @@ h2 {
 }
 
 .metric-icon-success {
-  color: #72e0d4;
+  color: var(--cpe-success-text);
   border-color: rgba(0, 150, 136, 0.55);
 }
 
 .metric-icon-warning {
-  color: #ffdd72;
+  color: var(--cpe-warning-text);
   border-color: rgba(255, 193, 7, 0.55);
 }
 
 .metric-icon-info {
-  color: #9fc8ff;
+  color: var(--cpe-link);
 }
 
 .metric-value {
@@ -615,25 +684,25 @@ input::placeholder {
 }
 
 .status-chip-info {
-  color: #9fc8ff;
+  color: var(--cpe-link);
   background: rgba(16, 107, 218, 0.12);
   border-color: rgba(16, 107, 218, 0.4);
 }
 
 .status-chip-success {
-  color: #72e0d4;
+  color: var(--cpe-success-text);
   background: rgba(0, 150, 136, 0.12);
   border-color: rgba(0, 150, 136, 0.4);
 }
 
 .status-chip-warning {
-  color: #ffdd72;
+  color: var(--cpe-warning-text);
   background: rgba(255, 193, 7, 0.11);
   border-color: rgba(255, 193, 7, 0.4);
 }
 
 .status-chip-danger {
-  color: var(--cpe-danger);
+  color: var(--cpe-danger-text);
   background: rgba(228, 63, 11, 0.12);
   border-color: rgba(228, 63, 11, 0.45);
 }
@@ -750,7 +819,7 @@ input::placeholder {
   display: inline-flex;
   gap: 7px;
   margin-top: 18px;
-  color: #9fc8ff;
+  color: var(--cpe-link);
   font-size: 0.78rem;
   font-weight: 700;
   text-decoration: none;
@@ -1280,7 +1349,7 @@ td {
 
 th {
   color: var(--cpe-text-subtle);
-  background: rgba(37, 41, 42, 0.65);
+  background: var(--cpe-table-header);
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.03em;
@@ -1321,7 +1390,7 @@ tbody tr:hover td {
 }
 
 .row-action {
-  color: #9fc8ff;
+  color: var(--cpe-link);
   background: transparent;
   border: 0;
   font-size: 0.74rem;

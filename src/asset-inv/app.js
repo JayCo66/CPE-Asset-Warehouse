@@ -65,6 +65,7 @@ const DASHBOARD_SECTION_FILES = [
   "sections/asset-register.html",
 ];
 const ASSET_DETAIL_SECTION_FILE = "sections/asset-detail.html";
+const THEME_STORAGE_KEY = "cpe-asset-inventory-theme";
 
 const assetApiState = {
   status: "idle",
@@ -93,6 +94,49 @@ let assetApiRequestId = 0;
 let assetApiSearchTimer;
 
 let elements;
+
+function readThemePreference() {
+  try {
+    const theme = window.localStorage.getItem(THEME_STORAGE_KEY);
+    return theme === "light" || theme === "dark" ? theme : null;
+  } catch {
+    return null;
+  }
+}
+
+function initializeThemeToggle() {
+  const toggle = document.querySelector("#theme-toggle");
+  if (!toggle) return;
+
+  const systemTheme = window.matchMedia?.("(prefers-color-scheme: light)");
+  let hasManualPreference = readThemePreference() !== null;
+
+  const applyTheme = (theme) => {
+    const isLight = theme === "light";
+    document.documentElement.dataset.theme = isLight ? "light" : "dark";
+  };
+
+  applyTheme(readThemePreference() ?? (systemTheme?.matches ? "light" : "dark"));
+  toggle.addEventListener("click", () => {
+    const nextTheme = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+    hasManualPreference = true;
+    applyTheme(nextTheme);
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+    } catch {
+      // The selected theme still applies for this page view without storage.
+    }
+  });
+
+  const followSystemTheme = (event) => {
+    if (!hasManualPreference) applyTheme(event.matches ? "light" : "dark");
+  };
+  if (typeof systemTheme?.addEventListener === "function") {
+    systemTheme.addEventListener("change", followSystemTheme);
+  } else {
+    systemTheme?.addListener?.(followSystemTheme);
+  }
+}
 
 function cacheElements() {
   elements = {
@@ -1054,6 +1098,8 @@ async function init() {
   renderBackToTop();
   if (getCurrentDashboardPage() === "explorer") loadAssetRegister();
 }
+
+initializeThemeToggle();
 
 init().catch((error) => {
   console.error("Dashboard initialization failed", error);
