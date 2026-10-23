@@ -371,16 +371,18 @@
   Views["repair-worth"] = async (root) => {
     const d = await api("repair.php?view=worth");
     const T = d.thresholds, all = d.assets;
-    const groups = { dispose: all.filter((a) => a.verdict === "dispose"), watch: all.filter((a) => a.verdict === "watch"), ok: all.filter((a) => a.verdict === "ok") };
+    const LABEL = { dispose: "ไม่คุ้มซ่อม", review: "ค่าซ่อมสูงแต่ยังใหม่", watch: "เฝ้าระวัง", ok: "ซ่อมต่อได้" };
+    const CLS = { dispose: "bad", review: "warn", watch: "warn", ok: "ok" };
+    const groups = Object.fromEntries(Object.keys(LABEL).map((k) => [k, all.filter((a) => a.verdict === k)]));
     stats(root, [
       { label: "ไม่คุ้มซ่อม ควรเสนอจำหน่าย", value: num(groups.dispose.length), unit: "ชิ้น",
-        sub: `ค่าซ่อม ≥ ${pct(T.dispose, 0)} ของราคาซื้อ`, subCls: "delta-bad" },
+        sub: `ค่าซ่อม ≥ ${pct(T.dispose, 0)} ของราคาซื้อ และใช้งานเกิน ${pct(T.life_share, 0)} ของอายุ`, subCls: "delta-bad" },
       { label: "ค่าซ่อมที่จ่ายไปกับกลุ่มนี้", value: num(d3.sum(groups.dispose, (a) => a.repair_cost)), unit: "บาท",
         sub: `ราคาซื้อรวม ${num(d3.sum(groups.dispose, (a) => a.price))} บาท` },
+      { label: "ค่าซ่อมสูงแต่ยังใหม่", value: num(groups.review.length), unit: "ชิ้น", sub: "ตรวจสาเหตุ/ประกันก่อนตัดสิน" },
       { label: "เฝ้าระวัง", value: num(groups.watch.length), unit: "ชิ้น", sub: `${pct(T.watch, 0)}–${pct(T.dispose, 0)} ของราคาซื้อ` },
     ], "สรุปความคุ้มค่าการซ่อม");
 
-    const LABEL = { dispose: "ไม่คุ้มซ่อม", watch: "เฝ้าระวัง", ok: "ซ่อมต่อได้" };
     let pick = "dispose";
     const sec = section(root, { id: "rep-worth", title: "ค่าซ่อมสะสมเทียบราคาซื้อ" });
     const seg = document.createElement("div");
@@ -398,11 +400,11 @@
       seg.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === pick)));
       const rows = groups[pick];
       if (!rows.length) { list.innerHTML = `<li class="state">ไม่มีครุภัณฑ์ในกลุ่มนี้</li>`; return; }
-      const cls = pick === "dispose" ? "bad" : pick === "watch" ? "warn" : "ok";
+      const cls = CLS[pick];
       list.innerHTML = rows.map((r) => html`
         <li>
           <div class="worth-name">${esc(r.asset_name)}
-            <span>${esc(r.category_name)} · ซ่อม ${num(r.repairs)} ครั้ง${r.age_years !== null ? ` · อายุ ${num(r.age_years)} ปี` : ""} · ${esc(r.asset_code)}</span></div>
+            <span>${esc(r.category_name)} · ซ่อม ${num(r.repairs)} ครั้ง${r.age_years !== null ? ` · อายุ ${num(r.age_years)}/${num(r.life_years)} ปี` : ""} · ${esc(r.asset_code)}</span></div>
           <div class="worth-bar" role="img" aria-label="ค่าซ่อม ${pct(r.ratio, 0)} ของราคาซื้อ">
             <span class="fill is-${cls}" style="width:${Math.min(100, r.ratio * 100)}%"></span>
             <i style="left:${T.watch * 100}%"></i><i style="left:${T.dispose * 100}%"></i>
@@ -413,6 +415,173 @@
     };
     seg.addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { pick = b.dataset.k; draw(); } });
     draw();
+  };
+
+  // ขอเงินลงทุน ----------------------------------------------------------
+  /**
+   * จำลองแผนทดแทนเมื่อได้งบเท่ากันทุกปี: แต่ละปีใช้งบกับ (1) รายการซ่อมไม่คุ้ม (2) ที่เกินอายุนานที่สุดก่อน
+   * ชิ้นที่ทดแทนแล้วกลับมาครบอายุอีกครั้งในอีก "อายุการใช้งาน" ปี ; งบที่ใช้ไม่หมดไม่ยกไปปีถัดไป
+   */
+  function simulateBudget(d, budget) {
+    const [y0, y1] = d.plan_years, life = d.categories.map((c) => c.life);
+    const pool = [...d.urgent_groups.map((g) => ({ cat: g[0], eol: g[1], n: g[2], cost: g[3], urgent: true })),
+      ...d.groups.map((g) => ({ cat: g[0], eol: g[1], n: g[2], cost: g[3], urgent: false }))];
+    const years = [];
+    for (let y = y0; y <= y1; y++) {
+      let money = budget;
+      const spend = { immediate: { n: 0, cost: 0 }, backlog: { n: 0, cost: 0 }, due: { n: 0, cost: 0 } };
+      const renewed = [];
+      const queue = pool.filter((g) => g.n > 0 && (g.urgent || g.eol <= y)).sort((a, b) => (b.urgent - a.urgent) || (a.eol - b.eol));
+      for (const g of queue) {
+        const unit = g.cost / g.n;
+        const take = Math.min(g.n, Math.floor(money / unit + 1e-9));
+        if (!take) continue;   // ซื้อชิ้นนี้ไม่พอ ลองรายการถัดไปที่ถูกกว่า
+        const cost = unit * take;
+        g.n -= take; g.cost -= cost; money -= cost;
+        const kind = g.urgent ? "immediate" : g.eol < y0 ? "backlog" : "due";
+        spend[kind].n += take; spend[kind].cost += cost;
+        renewed.push({ cat: g.cat, eol: y + life[g.cat], n: take, cost, urgent: false });
+      }
+      pool.push(...renewed);
+      const past = d3.sum(pool, (g) => (g.eol <= y ? g.n : 0));
+      years.push({ fiscal_year: y, key: String(y), past, share: past / d.total_assets, spend, unused: money,
+        immediate_cost: spend.immediate.cost, backlog_cost: spend.backlog.cost, due_cost: spend.due.cost });
+    }
+    const last = years[years.length - 1];
+    return { years, last, total: d3.sum(years, (r) => budget - r.unused),
+      byCat: d.categories.map((_, i) => d3.sum(pool, (g) => (g.cat === i && g.eol <= y1 ? g.n : 0))) };
+  }
+
+  /** งบต่อปีน้อยที่สุดที่ทำให้ไม่เหลือครุภัณฑ์เกินอายุในปีสุดท้ายของแผน (ค้นแบบแบ่งครึ่ง ละเอียด 1 แสนบาท) */
+  function budgetToClear(d) {
+    let lo = 0, hi = d3.sum(d.groups, (g) => g[3]) + d3.sum(d.urgent_groups, (g) => g[3]);
+    while (hi - lo > 1e5) {
+      const mid = (lo + hi) / 2;
+      if (simulateBudget(d, mid).last.past === 0) hi = mid; else lo = mid;
+    }
+    return Math.ceil(hi / 1e5) * 1e5;
+  }
+
+  Views["invest-overview"] = async (root, ctx) => {
+    const d = await api("invest.php");
+    if (d.empty) return emptyState(root, "ยังไม่มี snapshot ครุภัณฑ์", "รัน ETL อย่างน้อย 1 ครั้ง");
+    const cur = d.current_fiscal_year, [y0, y1] = d.plan_years, T = d.thresholds;
+    const mb = (v) => dec(v / 1e6);
+    const GREEN = "var(--cpe-success)";
+    const now = d.history[d.history.length - 1], prev = d.history[d.history.length - 2];
+    const clear = budgetToClear(d), keep = d.keep_up_per_year;
+    const none = simulateBudget(d, 0);
+
+    stats(root, [
+      { label: `เกินอายุการใช้งาน ปีงบ ${cur}`, value: pct(now.share, 0), sub: `${num(now.past)} จาก ${num(now.n)} ชิ้น`,
+        ...vsPrev(now.share, prev.share, prev.fiscal_year, { better: "down", kind: "rate" }) },
+      { label: `งบที่ล้างค้างได้ภายใน ${y1}`, value: mb(clear), unit: "ล้านบาท/ปี" },
+      { label: "งบเฉลี่ยตามอายุการใช้งาน", value: mb(keep), unit: "ล้านบาท/ปี", sub: "ราคา ÷ อายุการใช้งาน รวมทุกชิ้น" },
+      { label: "ควรทดแทนทันที", value: num(d.immediate.length), unit: "ชิ้น",
+        sub: `ค่าซ่อม ≥ ${pct(T.repair_ratio, 0)} ของราคาซื้อ และใช้งานเกิน ${pct(T.life_share, 0)} ของอายุ`, subCls: "delta-bad" },
+    ], "สรุปคำขอเงินลงทุน");
+
+    // ---------- ถ้าได้งบปีละเท่าไร (what-if) ----------
+    const max = Math.ceil((clear * 1.5) / 1e6);
+    const fromQuery = parseFloat(ctx.query.get("budget"));
+    let budget = Number.isFinite(fromQuery) ? Math.min(max, Math.max(0, fromQuery)) * 1e6 : clear;
+    const PRESET = [["ไม่ลงทุน", 0], ["เท่างบเฉลี่ยตามอายุ", keep], [`ล้างค้างภายใน ${y1}`, clear]];
+
+    const sim = section(root, { id: "inv-whatif", title: "ถ้าได้งบทดแทนปีละเท่าไร" });
+    const ctl = document.createElement("div");
+    ctl.className = "whatif";
+    ctl.innerHTML = html`
+      <label class="whatif-label" for="inv-budget">งบทดแทนต่อปี <output id="inv-budget-out"></output></label>
+      <input id="inv-budget" type="range" min="0" max="${max}" step="0.1">
+      <div class="seg" role="group" aria-label="งบที่ตั้งไว้ล่วงหน้า">${PRESET.map(([l, v], i) =>
+        `<button type="button" data-i="${i}">${esc(l)} <b>${mb(v)}</b></button>`).join("")}</div>`;
+    sim.appendChild(ctl);
+    const slider = ctl.querySelector("input"), out = ctl.querySelector("output");
+    const result = document.createElement("div");
+    sim.appendChild(result);
+
+    const s1 = section(root, { id: "inv-past-life", title: "ครุภัณฑ์ที่เกินอายุการใช้งาน" });
+    const b1 = chartBox(s1);
+    const s2 = section(root, { id: "inv-plan", title: "ใช้งบแต่ละปีกับอะไร (ล้านบาท)" });
+    toolbar(s2, "", [["คัดลอกแผนรายปี", () => tsv(
+      ["ปีงบประมาณ", "ทดแทนทันที (ชิ้น)", "ทดแทนทันที (บาท)", "เกินอายุค้างสะสม (ชิ้น)", "เกินอายุค้างสะสม (บาท)",
+        "ครบอายุระหว่างแผน (ชิ้น)", "ครบอายุระหว่างแผน (บาท)", "รวม (บาท)", "เกินอายุสิ้นปี"],
+      run.years.map((r) => [r.fiscal_year, r.spend.immediate.n, Math.round(r.spend.immediate.cost), r.spend.backlog.n, Math.round(r.spend.backlog.cost),
+        r.spend.due.n, Math.round(r.spend.due.cost), Math.round(budget - r.unused), pct(r.share, 0)]))]]);
+    const b2 = chartBox(s2, [["ทดแทนทันที", RED], ["เกินอายุค้างสะสม", BLUE], ["ครบอายุระหว่างแผน", MUTED]]);
+    const s3 = section(root, { id: "inv-category", title: "แยกตามหมวด" });
+    const catBox = document.createElement("div");
+    s3.appendChild(catBox);
+
+    let run = simulateBudget(d, budget);
+    const drawLines = () => {
+      const rows = [
+        ...d.history.map((h) => ({ key: String(h.fiscal_year), actual: h.share,
+          none: h.fiscal_year === cur ? h.share : null, plan: h.fiscal_year === cur ? h.share : null })),
+        ...run.years.map((r, i) => ({ key: r.key, actual: null, none: none.years[i].share, plan: r.share })),
+      ];
+      Charts.lines(b1, rows, { label: "สัดส่วนครุภัณฑ์ที่เกินอายุการใช้งาน", xKey: "key", xLabel: (r) => r.key, yMax: 1,
+        series: [{ key: "actual", label: "ที่ผ่านมา", color: BLUE }, { key: "none", label: "ไม่ลงทุน", color: RED },
+          { key: "plan", label: `ปีละ ${mb(budget)} ล้าน`, color: GREEN }],
+        yFmt: (v) => pct(v, 0), tipTitle: (r) => `ปีงบ ${r.key}` });
+    };
+    const drawBars = () => Charts.bars(b2, run.years, { label: "การใช้งบทดแทนรายปี",
+      series: [{ key: "immediate_cost", color: RED }, { key: "backlog_cost", color: BLUE }, { key: "due_cost", color: MUTED }],
+      yFmt: mb, xLabel: (r) => r.key, tipTitle: (r) => `ปีงบ ${r.key} · ใช้ ${mb(budget - r.unused)} ล้านบาท`,
+      tipLines: (r) => [["ทดแทนทันที", `${num(r.spend.immediate.n)} ชิ้น`, RED], ["ค้างสะสม", `${num(r.spend.backlog.n)} ชิ้น`, BLUE],
+        ["ครบอายุ", `${num(r.spend.due.n)} ชิ้น`, MUTED], ["เกินอายุสิ้นปี", pct(r.share, 0)]] });
+
+    function update() {
+      run = simulateBudget(d, budget);
+      out.textContent = `${mb(budget)} ล้านบาท`;
+      slider.value = String(budget / 1e6);
+      ctl.querySelectorAll(".seg button").forEach((b) => b.setAttribute("aria-pressed", String(Math.abs(PRESET[b.dataset.i][1] - budget) < 5e4)));
+      const L = run.last;
+      result.replaceChildren();
+      stats(result, [
+        { label: `เกินอายุ ปีงบ ${y1}`, value: pct(L.share, 0), sub: `ปัจจุบัน ${pct(now.share, 0)} · ไม่ลงทุน ${pct(none.last.share, 0)}`,
+          subCls: L.share < now.share ? "delta-good" : L.share > now.share ? "delta-bad" : "delta-flat" },
+        { label: `ยังค้างทดแทน สิ้นปีงบ ${y1}`, value: num(L.past), unit: "ชิ้น" },
+        { label: `ใช้งบรวม ${y0}–${y1}`, value: mb(run.total), unit: "ล้านบาท",
+          sub: run.total < budget * run.years.length - 1e5 ? `เหลือ ${mb(budget * run.years.length - run.total)} ล้านบาท` : "" },
+      ], "ผลของงบที่เลือก");
+      catBox.replaceChildren();
+      table(catBox, {
+        caption: "แผนทดแทนแยกตามหมวด", rows: d.categories.map((c, i) => ({ ...c, left: run.byCat[i] })), columns: [
+          { key: "name", label: "หมวด", align: "l", cls: "wrap" },
+          { label: "เกินอายุตอนนี้", render: (r) => `<span class="big-cell">${pct(ratio(r.past, r.assets), 0)}</span>` },
+          { label: `เหลือเกินอายุ ${y1}`, render: (r) => `<span class="big-cell ${r.left ? "" : "is-ok"}">${pct(ratio(r.left, r.assets), 0)}</span>` },
+          { label: "อายุใช้งาน", render: (r) => `${num(r.life)} ปี` },
+          { label: "ทั้งหมด", render: (r) => num(r.assets) },
+          { label: `ต้องทดแทนภายใน ${y1}`, render: (r) => num(r.past + r.due) },
+          { label: "งบทดแทน (บาท)", render: (r) => num(r.cost) },
+        ],
+      });
+      drawLines();
+      drawBars();
+      ctx.setQuery({ budget: budget / 1e6 });
+    }
+    slider.addEventListener("input", () => { budget = parseFloat(slider.value) * 1e6; update(); });
+    ctl.querySelector(".seg").addEventListener("click", (e) => {
+      const b = e.target.closest("button");
+      if (b) { budget = PRESET[b.dataset.i][1]; update(); }
+    });
+    update();
+    responsive(b1, drawLines);
+    responsive(b2, drawBars);
+
+    const s4 = section(root, { id: "inv-now", title: "ควรทดแทนทันที" });
+    if (!d.immediate.length) emptyState(s4, "ไม่มีรายการ", "");
+    else table(s4, {
+      caption: "ครุภัณฑ์ที่ควรทดแทนทันที", rows: d.immediate, columns: [
+        { key: "asset_name", label: "ครุภัณฑ์", align: "l", cls: "wrap" },
+        { label: "ค่าซ่อม / ราคาซื้อ", render: (r) => `<span class="big-cell is-bad">${pct(r.ratio, 0)}</span>` },
+        { label: "บาท", render: (r) => `${num(r.repair_cost)} / ${num(r.price)}` },
+        { label: "อายุ / อายุใช้งาน", render: (r) => `${num(r.age_years)} / ${num(r.life_years)} ปี` },
+        { key: "category_name", label: "หมวด", align: "l", cls: "wrap" },
+        { key: "asset_code", label: "เลขครุภัณฑ์", align: "l" },
+      ],
+    });
   };
 
   Views["borrow-overview"] = async (root) => {

@@ -135,7 +135,7 @@ function median(array $xs): ?float
 
 /**
  * ราคาซื้อ (บาท) ของครุภัณฑ์ — ระบบครุภัณฑ์ยังไม่มี purchase_price จึงจำลองให้ได้ค่าเดิมทุกครั้งจากรหัสครุภัณฑ์
- * ช่วงราคาตามหมวด และสอดคล้องกับธงต่ำกว่าเกณฑ์ 5,000 บาท ; เมื่อ warehouse มีราคาจริงให้ใช้ค่านั้นแทนฟังก์ชันนี้
+ * ช่วงราคาตามหมวด (จับคู่จากต้นชื่อหมวด) และสอดคล้องกับธงต่ำกว่าเกณฑ์ 5,000 บาท ; เมื่อ warehouse มีราคาจริงให้ใช้ค่านั้นแทนฟังก์ชันนี้
  */
 function mock_purchase_price(string $code, ?string $category, bool $belowThreshold): float
 {
@@ -145,23 +145,49 @@ function mock_purchase_price(string $code, ?string $category, bool $belowThresho
         'ครุภัณฑ์ไฟฟ้าและวิทยุ' => [6000, 35000],
         'ครุภัณฑ์วิทยาศาสตร์หรือการแพทย์' => [15000, 150000],
         'ครุภัณฑ์โฆษณาและเผยแพร่' => [8000, 60000],
+        'ครุภัณฑ์ยานพาหนะ' => [300000, 1500000],
+        'ครุภัณฑ์โรงงาน (เครื่องจักร)' => [50000, 400000],
+        'ครุภัณฑ์ก่อสร้าง (เครื่องจักร)' => [50000, 500000],
+        'ครุภัณฑ์การเกษตร (เครื่องจักร)' => [30000, 300000],
+        'ครุภัณฑ์ไฟฟ้า (เครื่องกำเนิดไฟฟ้า)' => [20000, 300000],
     ];
     $h = crc32($code) / 4294967295;
     if ($belowThreshold) {
         return round(1500 + $h * 3400, -2);
     }
-    [$lo, $hi] = $range[$category] ?? [6000, 40000];
+    [$lo, $hi] = [6000, 40000];
+    foreach ($range as $prefix => $r) {
+        if ($category !== null && str_starts_with($category, $prefix)) {
+            [$lo, $hi] = $r;
+            break;
+        }
+    }
     return round($lo + $h * ($hi - $lo), -2);
 }
 
+/** อายุการใช้งาน (ปี) ตามหมวด จาก settings.useful_life_years (จับคู่จากต้นชื่อหมวด ไม่พบใช้ default) */
+function useful_life(?string $category): int
+{
+    $table = setting('useful_life_years', []);
+    foreach ($table as $prefix => $years) {
+        if ($prefix[0] !== '_' && $prefix !== 'default' && $category !== null && str_starts_with($category, $prefix)) {
+            return (int)$years;
+        }
+    }
+    return (int)($table['default'] ?? 8);
+}
+
 /**
- * ครุภัณฑ์ทุกชิ้นที่เคยส่งซ่อม: ค่าซ่อมสะสมเทียบราคาซื้อ (จำลอง)
- * verdict: dispose = ค่าซ่อมสะสม >= เกณฑ์เสนอจำหน่าย, watch = ถึงเกณฑ์เฝ้าระวัง, ok = ซ่อมต่อได้
+ * ครุภัณฑ์ทุกชิ้นที่เคยส่งซ่อม: ค่าซ่อมสะสมเทียบราคาซื้อ (จำลอง) และอายุเทียบอายุการใช้งาน
+ * verdict: dispose = ค่าซ่อม >= เกณฑ์ และใช้งานเกินครึ่งอายุ (ควรทดแทน)
+ *          review  = ค่าซ่อม >= เกณฑ์ แต่ยังใหม่ (ตรวจสาเหตุ/ประกันก่อนตัดสิน)
+ *          watch   = ค่าซ่อมถึงเกณฑ์เฝ้าระวัง ; ok = ซ่อมต่อได้
  */
 function repair_vs_price(): array
 {
     $dispose = (float)setting('repair_cost_ratio_dispose', 0.5);
     $watch = (float)setting('repair_cost_ratio_watch', 0.3);
+    $lifeShare = (float)setting('replace_min_life_share', 0.5);
     $snap = row("SELECT MAX(snapshot_date_key) AS k FROM fact_asset_inventory")['k'];
     $rows = rows("SELECT a.asset_code, a.asset_name, COALESCE(c.category_name, 'ไม่ระบุหมวด') AS category_name, a.asset_status,
                          COUNT(*) AS repairs, COALESCE(SUM(f.total_repair_cost), 0) AS repair_cost,
@@ -176,10 +202,12 @@ function repair_vs_price(): array
     foreach ($rows as &$r) {
         $r['price'] = mock_purchase_price($r['asset_code'], $r['category_name'], (bool)$r['below_threshold']);
         $r['ratio'] = $r['price'] ? round($r['repair_cost'] / $r['price'], 3) : null;
-        $r['verdict'] = $r['ratio'] >= $dispose ? 'dispose' : ($r['ratio'] >= $watch ? 'watch' : 'ok');
+        $r['life_years'] = useful_life($r['category_name']);
+        $old = $r['age_years'] !== null && $r['age_years'] >= $r['life_years'] * $lifeShare;
+        $r['verdict'] = $r['ratio'] >= $dispose ? ($old ? 'dispose' : 'review') : ($r['ratio'] >= $watch ? 'watch' : 'ok');
     }
     usort($rows, fn($a, $b) => $b['ratio'] <=> $a['ratio']);
-    return ['thresholds' => ['dispose' => $dispose, 'watch' => $watch], 'assets' => $rows];
+    return ['thresholds' => ['dispose' => $dispose, 'watch' => $watch, 'life_share' => $lifeShare], 'assets' => $rows];
 }
 
 function today(): string
