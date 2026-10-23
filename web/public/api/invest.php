@@ -2,9 +2,8 @@
 // ขอเงินลงทุน: ครุภัณฑ์ (หมวดที่ขึ้นต้นด้วย "ครุภัณฑ์") จาก snapshot ล่าสุด
 //   อายุ = ปีงบ - ปีงบที่ได้มา (จากรหัส) ; เกินอายุการใช้งานเมื่ออายุ >= อายุการใช้งานของหมวด (settings.useful_life_years)
 //   history    สัดส่วนที่เกินอายุการใช้งานของแต่ละปีงบที่ผ่านมา (นับเฉพาะชิ้นที่ยังอยู่ในระบบ)
-//   projection ปีงบถัดไป N ปี: ถ้าไม่ทดแทนเลย เทียบกับทำตามแผน
-//   plan       ปีแรกทดแทนรายการซ่อมไม่คุ้มทันที + ทยอยทดแทนที่เกินอายุค้างสะสม (เก่าสุดก่อน) เท่า ๆ กันทุกปี
-//              + ทดแทนชิ้นที่ครบอายุในปีนั้น ; ราคาทดแทนประมาณจากราคาซื้อ (จำลอง)
+//   groups     [หมวด, ปีงบที่ครบอายุ, จำนวน, ราคารวม] ให้หน้าเว็บจำลอง "ถ้าได้งบปีละเท่าไร" เอง (ราคาทดแทนประมาณจากราคาซื้อจำลอง)
+//   immediate  ซ่อมไม่คุ้ม + ใช้งานเกินครึ่งอายุ: ทดแทนก่อนรายการอื่น (แยกออกจาก groups)
 require __DIR__ . '/db.php';
 
 run(function () {
@@ -28,52 +27,12 @@ run(function () {
         $assets[$r['asset_code']] = $r + ['life' => $life, 'eol' => $r['acq_fy'] + $life,
             'price' => mock_purchase_price($r['asset_code'], $r['category_name'], (bool)$r['below_threshold'])];
     }
-    $pastShare = function (int $y) use ($assets) {
-        $n = $past = 0;
-        foreach ($assets as $a) {
-            if ($a['acq_fy'] <= $y) {
-                $n++;
-                $past += $a['eol'] <= $y;
-            }
-        }
-        return ['n' => $n, 'past' => $past];
-    };
 
-    // ซ่อมไม่คุ้ม + เกินครึ่งอายุ -> ทดแทนปีแรก
     $immediate = array_values(array_filter(repair_vs_price()['assets'],
         fn($r) => $r['verdict'] === 'dispose' && isset($assets[$r['asset_code']])));
     $now = array_flip(array_column($immediate, 'asset_code'));
 
-    // เกินอายุค้างสะสม ณ ปีงบปัจจุบัน เรียงจากเกินมานานที่สุด
-    $backlog = array_values(array_filter($assets, fn($a) => $a['eol'] <= $cur && !isset($now[$a['asset_code']])));
-    usort($backlog, fn($a, $b) => $a['eol'] <=> $b['eol']);
-    $chunk = (int)ceil(count($backlog) / max(1, $years));
-
-    $plan = [];
-    $projection = [];
-    $total = $pastShare($cur)['n'];
-    $remaining = count($backlog);
-    for ($k = 1; $k <= $years; $k++) {
-        $y = $cur + $k;
-        $slice = array_slice($backlog, ($k - 1) * $chunk, $chunk);
-        $eol = array_filter($assets, fn($a) => $a['eol'] === $y && !isset($now[$a['asset_code']]));
-        $first = $k === 1 ? $immediate : [];
-        $plan[] = ['fiscal_year' => $y,
-                   'immediate_n' => count($first), 'immediate_cost' => array_sum(array_column($first, 'price')),
-                   'backlog_n' => count($slice), 'backlog_cost' => array_sum(array_column($slice, 'price')),
-                   'eol_n' => count($eol), 'eol_cost' => array_sum(array_column($eol, 'price'))];
-        $remaining -= count($slice);
-        $s = $pastShare($y);
-        $projection[] = ['fiscal_year' => $y, 'no_invest' => $total ? $s['past'] / $total : null,
-                         'with_plan' => $total ? $remaining / $total : null];
-    }
-
-    $history = [];
-    for ($y = $cur - 10; $y <= $cur; $y++) {
-        $s = $pastShare($y);
-        $history[] = ['fiscal_year' => $y, 'n' => $s['n'], 'past' => $s['past'], 'share' => $s['n'] ? $s['past'] / $s['n'] : null];
-    }
-
+    // หมวด -> index (ส่งเป็นตัวเลขให้ JSON เล็ก)
     $cats = [];
     foreach ($assets as $a) {
         $c = &$cats[$a['category_name']];
@@ -91,6 +50,34 @@ run(function () {
     }
     $cats = array_values($cats);
     usort($cats, fn($a, $b) => $b['cost'] <=> $a['cost']);
+    $idx = array_flip(array_column($cats, 'name'));
+
+    $groups = [];
+    $urgent = [];
+    foreach ($assets as $code => $a) {
+        $key = $idx[$a['category_name']] . ':' . $a['eol'];
+        if (isset($now[$code])) {
+            $g = &$urgent[$key];
+        } else {
+            $g = &$groups[$key];
+        }
+        $g ??= [$idx[$a['category_name']], $a['eol'], 0, 0];
+        $g[2]++;
+        $g[3] += $a['price'];
+        unset($g);
+    }
+
+    $history = [];
+    for ($y = $cur - 10; $y <= $cur; $y++) {
+        $n = $past = 0;
+        foreach ($assets as $a) {
+            if ($a['acq_fy'] <= $y) {
+                $n++;
+                $past += $a['eol'] <= $y;
+            }
+        }
+        $history[] = ['fiscal_year' => $y, 'n' => $n, 'past' => $past, 'share' => $n ? $past / $n : null];
+    }
 
     return [
         'current_fiscal_year' => $cur,
@@ -98,10 +85,12 @@ run(function () {
         'thresholds' => ['repair_ratio' => (float)setting('repair_cost_ratio_dispose', 0.5),
                          'life_share' => (float)setting('replace_min_life_share', 0.5)],
         'keep_up_per_year' => round(array_sum(array_map(fn($a) => $a['price'] / $a['life'], $assets)), -3),
+        'total_assets' => count($assets),
         'history' => $history,
-        'projection' => $projection,
-        'plan' => $plan,
         'categories' => $cats,
-        'immediate' => array_map(fn($r) => array_intersect_key($r, array_flip(['asset_code', 'asset_name', 'category_name', 'repairs', 'repair_cost', 'price', 'ratio', 'age_years', 'life_years'])), $immediate),
+        'groups' => array_values($groups),
+        'urgent_groups' => array_values($urgent),
+        'immediate' => array_map(fn($r) => array_intersect_key($r, array_flip(
+            ['asset_code', 'asset_name', 'category_name', 'repairs', 'repair_cost', 'price', 'ratio', 'age_years', 'life_years'])), $immediate),
     ];
 });

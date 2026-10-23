@@ -305,3 +305,11 @@ tr.is-partial td { color: var(--text-faint); }
   .stats { border-color: #888; }
   a { color: #000; text-decoration: none; }
 }
+
+/* ขอเงินลงทุน: ตัวปรับงบ (what-if) */
+.whatif { display: grid; gap: var(--sp-3); padding: var(--sp-4) var(--sp-5); background: var(--cpe-surface);
+  border: 1px solid var(--line); border-radius: var(--radius); }
+.whatif-label { display: flex; align-items: baseline; gap: var(--sp-3); flex-wrap: wrap; font-size: var(--fs-md); color: var(--cpe-text-muted); }
+.whatif-label output { font-size: var(--fs-num); font-weight: 600; color: var(--cpe-text); font-variant-numeric: tabular-nums; }
+.whatif input[type="range"] { width: 100%; accent-color: var(--cpe-brand-blue); height: 28px; }
+.whatif .seg { justify-self: start; flex-wrap: wrap; }
