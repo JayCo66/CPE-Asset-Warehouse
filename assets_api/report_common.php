@@ -1,7 +1,7 @@
 <?php
 // ==============================================================================
 // helper กลางของ dashboard_report.html (report_*.php) : อ่านอย่างเดียวจาก Data Warehouse
-// เชื่อมต่อด้วย WAREHOUSE_DB_* (ค่าเริ่มต้นแบบ XAMPP: localhost, root, ไม่มีรหัสผ่าน, cpeasset_warehouse)
+// เชื่อมต่อด้วย WAREHOUSE_DB_* (ค่าเริ่มต้นแบบ XAMPP: localhost, root, ไม่มีรหัสผ่าน, cpe_warehouse เหมือน dw_borrow.php)
 // เกณฑ์ต่าง ๆ อยู่ใน report_config.json
 // ==============================================================================
 header('Content-Type: application/json; charset=UTF-8');
@@ -28,7 +28,7 @@ function db(): PDO
     }
     $env = fn(string $name, string $default) => ($v = getenv($name)) === false ? $default : $v;
     $dsn = sprintf('mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4',
-        $env('WAREHOUSE_DB_HOST', 'localhost'), $env('WAREHOUSE_DB_PORT', '3306'), $env('WAREHOUSE_DB_NAME', 'cpeasset_warehouse'));
+        $env('WAREHOUSE_DB_HOST', 'localhost'), $env('WAREHOUSE_DB_PORT', '3306'), $env('WAREHOUSE_DB_NAME', 'cpe_warehouse'));
     try {
         $pdo = new PDO($dsn, $env('WAREHOUSE_DB_USER', 'root'), $env('WAREHOUSE_DB_PASS', ''), [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,

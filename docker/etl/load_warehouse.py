@@ -11,7 +11,7 @@ with open(path, encoding="utf-8") as f:
 
 conn = pymysql.connect(host=os.getenv("WH_HOST", "warehouse-db"), port=int(os.getenv("WH_PORT", "3306")),
                        user=os.getenv("WH_USER", "root"), password=os.getenv("WH_PASS", "root"),
-                       database=os.getenv("WH_NAME", "warehouse"), charset="utf8mb4",
+                       database=os.getenv("WH_NAME", "cpe_warehouse"), charset="utf8mb4",
                        client_flag=CLIENT.MULTI_STATEMENTS, autocommit=True)
 with conn.cursor() as cur:
     cur.execute(sql)
