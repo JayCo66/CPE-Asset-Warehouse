@@ -14,13 +14,18 @@ import {
 } from "./asset-detail.mjs";
 import {
   buildAssetInventoryCsv,
-  compareInventorySnapshots,
   normalizeSnapshotSummary,
 } from "./inventory-data.mjs";
 import {
   buildAssetInventoryApiUrl,
   buildAssetInventoryExportUrl,
 } from "./inventory-api.mjs";
+import {
+  getExecutiveDashboardFilters,
+  initExecutiveDashboard,
+  refreshExecutiveDashboard,
+  setInventoryDashboardPage,
+} from "./executive-dashboard.mjs";
 
 const dashboardData = {
   moduleNav: [
@@ -48,8 +53,15 @@ const ASSET_INVENTORY_API_ENDPOINT = new URL(
   ASSET_API_BASE_URL,
 ).href;
 const DASHBOARD_SECTION_FILES = [
+  "sections/executive-filters.html",
+  "sections/executive-navigation.html",
   "sections/overview.html",
-  "sections/analysis.html",
+  "sections/portfolio.html",
+  "sections/departments.html",
+  "sections/locations.html",
+  "sections/aging.html",
+  "sections/acquisition.html",
+  "sections/governance.html",
   "sections/asset-register.html",
 ];
 const ASSET_DETAIL_SECTION_FILE = "sections/asset-detail.html";
@@ -90,33 +102,6 @@ function cacheElements() {
     modulePlaceholder: document.querySelector("#module-placeholder"),
     modulePlaceholderTitle: document.querySelector("#module-placeholder-title"),
     modulePlaceholderDescription: document.querySelector("#module-placeholder-description"),
-    ageChart: document.querySelector("#age-chart"),
-    ageDataEmpty: document.querySelector("#age-data-empty"),
-    ageUnknownCount: document.querySelector("#age-unknown-count"),
-    locationSummaryPercent: document.querySelector("#location-summary-percent"),
-    locationSummaryCount: document.querySelector("#location-summary-count"),
-    locationSummaryDetail: document.querySelector("#location-summary-detail"),
-    locationSummaryMeter: document.querySelector("#location-summary-meter"),
-    inventoryDataNotice: document.querySelector("#inventory-data-notice"),
-    inventoryDataState: document.querySelector("#inventory-data-state"),
-    inventoryDataDetail: document.querySelector("#inventory-data-detail"),
-    inventorySnapshotDate: document.querySelector("#inventory-snapshot-date"),
-    metricTotal: document.querySelector("#metric-total"),
-    metricTotalFootnote: document.querySelector("#metric-total-footnote"),
-    metricReady: document.querySelector("#metric-ready"),
-    metricReadyFootnote: document.querySelector("#metric-ready-footnote"),
-    metricThreshold: document.querySelector("#metric-threshold"),
-    metricThresholdFootnote: document.querySelector("#metric-threshold-footnote"),
-    metricLocation: document.querySelector("#metric-location"),
-    metricLocationFootnote: document.querySelector("#metric-location-footnote"),
-    snapshotComparisonEmpty: document.querySelector("#snapshot-comparison-empty"),
-    snapshotComparisonTitle: document.querySelector("#snapshot-comparison-title"),
-    snapshotComparisonMessage: document.querySelector("#snapshot-comparison-message"),
-    snapshotComparisonTableWrap: document.querySelector("#snapshot-comparison-table-wrap"),
-    snapshotComparisonBody: document.querySelector("#snapshot-comparison-body"),
-    snapshotCurrentDate: document.querySelector("#snapshot-current-date"),
-    snapshotPreviousDate: document.querySelector("#snapshot-previous-date"),
-    annualAuditDataState: document.querySelector("#annual-audit-data-state"),
     backToTop: document.querySelector("#back-to-top"),
     toast: document.querySelector("#toast"),
     assetApiStatus: document.querySelector("#asset-api-status"),
@@ -127,8 +112,6 @@ function cacheElements() {
     assetApiTypeCount: document.querySelector("#asset-api-type-count"),
     assetApiLatest: document.querySelector("#asset-api-latest"),
     assetApiSearch: document.querySelector("#asset-api-search"),
-    assetApiStatusFilter: document.querySelector("#asset-api-status-filter"),
-    assetApiTypeFilter: document.querySelector("#asset-api-type-filter"),
     assetApiPageSizeButtons: document.querySelector("#asset-api-page-size-buttons"),
     refreshAssetApiButton: document.querySelector("#refresh-asset-api-button"),
     assetApiExportButton: document.querySelector("#asset-api-export-button"),
@@ -318,6 +301,13 @@ function getCurrentRouteSegments() {
 function getCurrentAssetId() {
   const [moduleId, routeName, rawAssetId] = getCurrentRouteSegments();
   return moduleId === "inventory" && routeName === "asset" ? normalizeAssetId(rawAssetId) : null;
+}
+
+function getCurrentDashboardPage() {
+  const [, routeName] = getCurrentRouteSegments();
+  return ["overview", "portfolio", "departments", "locations", "aging", "acquisition", "governance", "explorer"].includes(routeName)
+    ? routeName
+    : "overview";
 }
 
 function getCurrentModuleId() {
@@ -620,6 +610,8 @@ function renderModuleView(moduleId = getCurrentModuleId()) {
     elements.modulePlaceholderTitle.textContent = activeModule.label;
     elements.modulePlaceholderDescription.textContent = activeModule.description;
     elements.modulePlaceholderTitle.focus({ preventScroll: true });
+  } else {
+    setInventoryDashboardPage(getCurrentDashboardPage());
   }
 }
 
@@ -628,209 +620,14 @@ function handleModuleRoute() {
   const isAssetDetail = getCurrentAssetId() !== null;
   renderModuleNav(activeModuleId);
   renderModuleView(activeModuleId);
+  if (activeModuleId === "inventory" && !isAssetDetail && getCurrentDashboardPage() === "explorer") {
+    loadAssetRegister(1);
+  }
   if (activeModuleId !== "inventory" || isAssetDetail) window.scrollTo({ top: 0, behavior: "auto" });
 }
 
 function getCurrentInventorySnapshot() {
   return normalizeSnapshotSummary(assetApiState.summary?.current);
-}
-
-function getPreviousInventorySnapshot() {
-  return normalizeSnapshotSummary(assetApiState.summary?.previous);
-}
-
-function renderInventoryDataSource() {
-  const current = getCurrentInventorySnapshot();
-  const isLoading = assetApiState.status === "loading";
-  const isError = assetApiState.status === "error";
-  elements.inventoryDataNotice.classList.toggle("is-error", isError);
-
-  if (isLoading) {
-    elements.inventoryDataState.textContent = "กำลังเชื่อมต่อคลังสินทรัพย์";
-    elements.inventoryDataDetail.textContent = "กำลังโหลดข้อมูลจาก MySQL โดยไม่ใช้ข้อมูลตัวอย่าง";
-    elements.inventorySnapshotDate.textContent = "กำลังโหลด…";
-  } else if (isError) {
-    elements.inventoryDataState.textContent = "ไม่สามารถเชื่อมต่อคลังสินทรัพย์";
-    elements.inventoryDataDetail.textContent = "ไม่แสดงตัวเลขตัวอย่าง โปรดลองรีเฟรชแหล่งข้อมูล";
-    elements.inventorySnapshotDate.textContent = "ข้อมูลไม่พร้อมใช้งาน";
-  } else if (assetApiState.status === "ready" && !current && assetApiState.total === 0) {
-    elements.inventoryDataState.textContent = "ยังไม่มีชุดข้อมูลในคลังสินทรัพย์";
-    elements.inventoryDataDetail.textContent = "ยังไม่มีข้อมูลจริงสำหรับคำนวณภาพรวม";
-    elements.inventorySnapshotDate.textContent = "ไม่มีข้อมูล";
-  } else if (assetApiState.status === "ready" && !current) {
-    elements.inventoryDataState.textContent = "ข้อมูลสรุปจากคลังยังไม่พร้อมใช้งาน";
-    elements.inventoryDataDetail.textContent = "แสดงเฉพาะค่าที่ API ยืนยันได้ และไม่เติมค่าตัวอย่าง";
-    elements.inventorySnapshotDate.textContent = "ข้อมูลสรุปไม่ครบ";
-  } else if (current) {
-    elements.inventoryDataState.textContent = "ข้อมูลเชื่อมต่อจาก MySQL";
-    elements.inventoryDataDetail.textContent = "ภาพรวมและทะเบียนมาจากชุดข้อมูลจริง ไม่มีการใช้ข้อมูลตัวอย่าง";
-    elements.inventorySnapshotDate.textContent = `ข้อมูลล่าสุด · ${formatApiDate(current.snapshotDate)}`;
-  }
-}
-
-function renderMetrics() {
-  const snapshot = getCurrentInventorySnapshot();
-  if (!snapshot) {
-    const emptyValue = assetApiState.status === "loading" ? "กำลังโหลด…" : "—";
-    [elements.metricTotal, elements.metricReady, elements.metricThreshold, elements.metricLocation].forEach((element) => {
-      element.textContent = emptyValue;
-    });
-    elements.metricTotalFootnote.textContent = "รอข้อมูลสรุปจาก API";
-    elements.metricReadyFootnote.textContent = "ไม่มีข้อมูลที่ยืนยันได้";
-    elements.metricThresholdFootnote.textContent = "ไม่มีข้อมูลที่ยืนยันได้";
-    elements.metricLocationFootnote.textContent = "ไม่มีข้อมูลที่ยืนยันได้";
-    return;
-  }
-
-  const located = snapshot.total - snapshot.missingLocation;
-  const readyPercent = snapshot.total > 0 ? percent((snapshot.ready / snapshot.total) * 100) : "—";
-  const thresholdPercent = snapshot.total > 0 ? percent((snapshot.belowThreshold / snapshot.total) * 100) : "—";
-  const locationPercent = snapshot.total > 0 ? percent((located / snapshot.total) * 100) : "—";
-
-  elements.metricTotal.textContent = formatNumber(snapshot.total);
-  elements.metricReady.textContent = readyPercent;
-  elements.metricThreshold.textContent = thresholdPercent;
-  elements.metricLocation.textContent = locationPercent;
-  elements.metricTotalFootnote.textContent = "จำนวนแถวในชุดข้อมูลล่าสุด";
-  elements.metricReadyFootnote.textContent = `${formatNumber(snapshot.ready)} รายการพร้อมใช้งาน`;
-  elements.metricThresholdFootnote.textContent = `${formatNumber(snapshot.belowThreshold)} รายการถูกกำหนดธงจากรหัส/ชื่อประเภท · นิยามธุรกิจยังไม่ยืนยัน · ไม่ใช่จำนวนสต็อก`;
-  elements.metricLocationFootnote.textContent = `${formatNumber(snapshot.missingLocation)} รายการไม่มีตำแหน่ง · ระบุแล้ว ${formatNumber(located)}`;
-}
-
-function signedCount(value) {
-  return `${value > 0 ? "+" : ""}${formatNumber(value)}`;
-}
-
-function renderSnapshotComparison() {
-  const current = getCurrentInventorySnapshot();
-  const previous = getPreviousInventorySnapshot();
-  const comparison = compareInventorySnapshots(current, previous);
-  elements.snapshotComparisonTableWrap.hidden = true;
-  elements.snapshotComparisonEmpty.hidden = false;
-
-  if (assetApiState.status === "loading") {
-    elements.snapshotComparisonTitle.textContent = "กำลังโหลดข้อมูลย้อนหลัง";
-    elements.snapshotComparisonMessage.textContent = "ตารางเปรียบเทียบจะแสดงเมื่อคลังส่งข้อมูล";
-    return;
-  }
-  if (assetApiState.status === "error") {
-    elements.snapshotComparisonTitle.textContent = "เปรียบเทียบข้อมูลย้อนหลังไม่ได้";
-    elements.snapshotComparisonMessage.textContent = "เชื่อมต่อคลังข้อมูลไม่สำเร็จ จึงไม่มีข้อมูลสำหรับเปรียบเทียบ";
-    return;
-  }
-  if (!current) {
-    elements.snapshotComparisonTitle.textContent = "ยังไม่มีข้อมูลชุดล่าสุด";
-    elements.snapshotComparisonMessage.textContent = "ตารางจะปรากฏเมื่อคลังส่งข้อมูลสรุปที่ตรวจสอบได้";
-    return;
-  }
-  if (!previous || !comparison) {
-    elements.snapshotComparisonTitle.textContent = "ยังไม่มีชุดข้อมูลก่อนหน้า";
-    elements.snapshotComparisonMessage.textContent = `พบข้อมูลล่าสุด ${formatApiDate(current.snapshotDate)} แต่ยังไม่มีข้อมูลย้อนหลังให้คำนวณความเปลี่ยนแปลง`;
-    return;
-  }
-
-  elements.snapshotComparisonEmpty.hidden = true;
-  elements.snapshotComparisonTableWrap.hidden = false;
-  elements.snapshotCurrentDate.textContent = `ล่าสุด · ${formatApiDate(current.snapshotDate)}`;
-  elements.snapshotPreviousDate.textContent = `ก่อนหน้า · ${formatApiDate(previous.snapshotDate)}`;
-
-  const readyCurrentRate = current.total > 0 ? percent((current.ready / current.total) * 100) : "—";
-  const readyPreviousRate = previous.total > 0 ? percent((previous.ready / previous.total) * 100) : "—";
-  const locatedCurrent = current.total - current.missingLocation;
-  const locatedPrevious = previous.total - previous.missingLocation;
-  const locatedCurrentRate = current.total > 0 ? percent((locatedCurrent / current.total) * 100) : "—";
-  const locatedPreviousRate = previous.total > 0 ? percent((locatedPrevious / previous.total) * 100) : "—";
-  const readyChange = comparison.ready.percentagePointDelta;
-  const locationChange = comparison.located.percentagePointDelta;
-  const rows = [
-    ["สินทรัพย์ทั้งหมด", formatNumber(current.total), formatNumber(previous.total), `${signedCount(comparison.total.delta)} รายการ`],
-    ["พร้อมใช้งาน", `${formatNumber(current.ready)} (${readyCurrentRate})`, `${formatNumber(previous.ready)} (${readyPreviousRate})`, `${signedCount(comparison.ready.delta)} รายการ · ${readyChange === null ? "—" : `${readyChange > 0 ? "+" : ""}${readyChange.toFixed(1)} จุดร้อยละ`}`],
-    ["ธงประเภท (นิยามยังไม่ยืนยัน)", formatNumber(current.belowThreshold), formatNumber(previous.belowThreshold), `${signedCount(comparison.belowThreshold.delta)} รายการ`],
-    ["มีตำแหน่งระบุ", `${formatNumber(locatedCurrent)} (${locatedCurrentRate})`, `${formatNumber(locatedPrevious)} (${locatedPreviousRate})`, `${signedCount(comparison.located.delta)} รายการ · ${locationChange === null ? "—" : `${locationChange > 0 ? "+" : ""}${locationChange.toFixed(1)} จุดร้อยละ`}`],
-  ];
-
-  elements.snapshotComparisonBody.innerHTML = rows
-    .map(([label, currentValue, previousValue, delta]) => `<tr><th scope="row">${label}</th><td>${currentValue}</td><td>${previousValue}</td><td>${delta}</td></tr>`)
-    .join("");
-}
-
-function renderAnnualAuditState() {
-  if (assetApiState.status === "loading") {
-    elements.annualAuditDataState.innerHTML = "<strong>กำลังตรวจสอบข้อมูล</strong><p>กำลังตรวจสอบแหล่งข้อมูลคลังสินทรัพย์</p>";
-  } else if (assetApiState.status === "error") {
-    elements.annualAuditDataState.innerHTML = "<strong>ตรวจสอบสถานะรอบนับไม่ได้</strong><p>เชื่อมต่อคลังไม่สำเร็จ จึงยังยืนยันข้อมูลการตรวจนับไม่ได้</p>";
-  } else {
-    elements.annualAuditDataState.innerHTML = "<strong>คลังข้อมูลยังไม่มีสถานะการตรวจนับ</strong><p>คลังส่งข้อมูลชุดสินทรัพย์ แต่ไม่ได้ส่งผลการยืนยันรายชิ้น จึงไม่แสดงเปอร์เซ็นต์ความคืบหน้าตัวอย่าง</p>";
-  }
-}
-
-function renderAgeChart() {
-  const snapshot = getCurrentInventorySnapshot();
-  if (!snapshot) {
-    elements.ageChart.hidden = true;
-    elements.ageDataEmpty.hidden = false;
-    elements.ageUnknownCount.textContent = "อายุที่ไม่ทราบ — รายการ";
-    return;
-  }
-
-  const bands = [
-    ["0–2 ปี", snapshot.ageBands.zeroToTwo],
-    ["3–5 ปี", snapshot.ageBands.threeToFive],
-    ["6–8 ปี", snapshot.ageBands.sixToEight],
-    ["9 ปีขึ้นไป", snapshot.ageBands.ninePlus],
-  ];
-  const maxCount = Math.max(...bands.map(([, count]) => count), 0);
-  elements.ageChart.innerHTML = bands
-    .map(([label, count]) => {
-      const height = maxCount > 0 ? (count / maxCount) * 100 : 0;
-      return `
-        <div class="age-column" role="img" aria-label="อายุ ${label}: ${formatNumber(count)} รายการ">
-          <div class="age-bar-wrap"><span class="age-bar" style="height: ${height}%" title="${formatNumber(count)} รายการ"></span></div>
-          <strong class="age-count">${formatNumber(count)}</strong>
-          <span class="age-label">${label}</span>
-        </div>
-      `;
-    })
-    .join("");
-  elements.ageUnknownCount.textContent = `อายุที่ไม่ทราบ ${formatNumber(snapshot.ageBands.unknown)} รายการ`;
-  elements.ageChart.hidden = false;
-  elements.ageDataEmpty.hidden = true;
-}
-
-function renderLocationSummary() {
-  const snapshot = getCurrentInventorySnapshot();
-  if (!snapshot) {
-    elements.locationSummaryPercent.textContent = "—";
-    elements.locationSummaryCount.textContent = "ยังไม่มีข้อมูล";
-    elements.locationSummaryDetail.textContent = "รอข้อมูลสรุปจากคลังสินทรัพย์";
-    elements.locationSummaryMeter.hidden = true;
-    return;
-  }
-
-  const located = snapshot.total - snapshot.missingLocation;
-  const percentage = snapshot.total > 0 ? (located / snapshot.total) * 100 : null;
-  elements.locationSummaryPercent.textContent = percentage === null ? "—" : percent(percentage);
-  elements.locationSummaryCount.textContent = `${formatNumber(located)} รายการมีตำแหน่งระบุ`;
-  elements.locationSummaryDetail.textContent = `${formatNumber(snapshot.missingLocation)} รายการไม่มีตำแหน่งในชุดข้อมูลล่าสุด`;
-  elements.locationSummaryMeter.hidden = percentage === null;
-  elements.locationSummaryMeter.setAttribute("aria-valuenow", percentage === null ? "0" : percentage.toFixed(1));
-  elements.locationSummaryMeter.setAttribute("aria-valuetext", percentage === null ? "ไม่มีข้อมูล" : percent(percentage));
-  elements.locationSummaryMeter.querySelector("span").style.width = `${percentage ?? 0}%`;
-}
-
-function setAssetApiFilterOptions(select, values, allLabel) {
-  const currentValue = select.value;
-  select.innerHTML = [
-    `<option value="all">${escapeHtml(allLabel)}</option>`,
-    ...values.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`),
-  ].join("");
-
-  select.value = values.includes(currentValue) ? currentValue : "all";
-}
-
-function renderAssetApiFilters() {
-  setAssetApiFilterOptions(elements.assetApiStatusFilter, assetApiState.filterOptions.statuses, "ทุกสถานะ");
-  setAssetApiFilterOptions(elements.assetApiTypeFilter, assetApiState.filterOptions.types, "ทุกประเภท");
 }
 
 function getAssetApiPageRows() {
@@ -1072,12 +869,6 @@ function renderAssetApiState() {
     elements.assetApiUpdated.textContent = `โหลดเมื่อ ${formatApiDate(assetApiState.loadedAt, true)}`;
   }
 
-  renderInventoryDataSource();
-  renderMetrics();
-  renderSnapshotComparison();
-  renderAnnualAuditState();
-  renderAgeChart();
-  renderLocationSummary();
   renderAssetApiSummary();
   renderAssetApiPagination();
   if (isReady) renderAssetApiTable();
@@ -1096,11 +887,10 @@ async function loadAssetRegister(page = assetApiState.page, pageSize = assetApiS
 
   try {
     const endpoint = buildAssetInventoryApiUrl(ASSET_INVENTORY_API_ENDPOINT, {
+      ...getExecutiveDashboardFilters(),
       page: assetApiState.page,
       pageSize: assetApiState.pageSize,
       search: elements.assetApiSearch.value,
-      status: elements.assetApiStatusFilter.value,
-      type: elements.assetApiTypeFilter.value,
     });
 
     const response = await fetch(endpoint, { headers: { Accept: "application/json" } });
@@ -1144,7 +934,6 @@ async function loadAssetRegister(page = assetApiState.page, pageSize = assetApiS
     assetApiState.page = clampPage(payload.page ?? assetApiState.page, getAssetApiTotalPages());
     assetApiState.loadedAt = new Date();
     assetApiState.status = "ready";
-    renderAssetApiFilters();
     renderAssetApiState();
   } catch (error) {
     if (requestId !== assetApiRequestId) return;
@@ -1212,19 +1001,14 @@ function exportAllMatchingAssetRows() {
   if (assetApiState.status !== "ready" || assetApiState.matchedTotal === 0) return;
 
   const endpoint = buildAssetInventoryExportUrl(ASSET_INVENTORY_API_ENDPOINT, {
+    ...getExecutiveDashboardFilters(),
     search: elements.assetApiSearch.value,
-    status: elements.assetApiStatusFilter.value,
-    type: elements.assetApiTypeFilter.value,
   });
   window.location.assign(endpoint);
   showToast(`กำลังส่งออกรายการที่ตรงกับตัวกรอง ${formatNumber(assetApiState.matchedTotal)} รายการ`);
 }
 
 function initInteractions() {
-  const loadFilteredAssetPage = () => {
-    window.clearTimeout(assetApiSearchTimer);
-    loadAssetRegister(1);
-  };
   elements.assetApiSearch.addEventListener("input", () => {
     window.clearTimeout(assetApiSearchTimer);
     assetApiRequestId += 1;
@@ -1234,10 +1018,11 @@ function initInteractions() {
     elements.refreshAssetApiButton.disabled = true;
     assetApiSearchTimer = window.setTimeout(() => loadAssetRegister(1), 300);
   });
-  elements.assetApiStatusFilter.addEventListener("change", loadFilteredAssetPage);
-  elements.assetApiTypeFilter.addEventListener("change", loadFilteredAssetPage);
   elements.assetApiPageSizeButtons.addEventListener("click", handleAssetApiPageSizeButtonClick);
-  elements.refreshAssetApiButton.addEventListener("click", loadAssetRegister);
+  elements.refreshAssetApiButton.addEventListener("click", () => {
+    refreshExecutiveDashboard();
+    loadAssetRegister(1);
+  });
   elements.assetApiExportButton.addEventListener("click", exportCurrentAssetPage);
   elements.assetApiExportAllButton.addEventListener("click", exportAllMatchingAssetRows);
   elements.assetApiPageNavigation.addEventListener("click", handleAssetApiPageButtonClick);
@@ -1259,8 +1044,15 @@ async function init() {
   renderModuleNav();
   renderModuleView();
   initInteractions();
+  initExecutiveDashboard({
+    onFilterChange: () => {
+      if (getCurrentModuleId() === "inventory" && getCurrentDashboardPage() === "explorer" && !getCurrentAssetId()) {
+        loadAssetRegister(1);
+      }
+    },
+  });
   renderBackToTop();
-  loadAssetRegister();
+  if (getCurrentDashboardPage() === "explorer") loadAssetRegister();
 }
 
 init().catch((error) => {

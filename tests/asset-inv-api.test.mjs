@@ -51,3 +51,51 @@ test("omits empty search and unfiltered criteria from API URLs", () => {
   assert.equal(exportUrl.searchParams.has("status"), false);
   assert.equal(exportUrl.searchParams.has("type"), false);
 });
+
+test("preserves every shared inventory filter in paginated and all-matching requests", () => {
+  const filters = {
+    snapshot: "20261022",
+    department: "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+    category: "ครุภัณฑ์สำนักงาน",
+    type: "คอมพิวเตอร์",
+    building: "อาคาร 8",
+    floor: "3",
+    room: "8302",
+    area: "ห้องปฏิบัติการ",
+    source: "เงินงบประมาณ",
+    status: "พร้อมใช้งาน",
+    acquisitionYear: "2024",
+    fiscalYear: "2567",
+    acquisitionFiscalYear: "2568",
+    ageBand: "11-15",
+    availability: "unavailable",
+    damage: "damaged",
+    locationStatus: "incomplete",
+    belowThreshold: "yes",
+  };
+  const pageUrl = new URL(buildAssetInventoryApiUrl(endpoint, { ...filters, search: " CPE-1 ", page: 2 }));
+  const exportUrl = new URL(buildAssetInventoryExportUrl(endpoint, { ...filters, search: " CPE-1 " }));
+
+  for (const [name, value] of Object.entries(filters)) {
+    assert.equal(pageUrl.searchParams.get(name), value, `${name} should apply to the asset page`);
+    assert.equal(exportUrl.searchParams.get(name), value, `${name} should apply to the all-match export`);
+  }
+  assert.equal(pageUrl.searchParams.get("q"), "CPE-1");
+  assert.equal(exportUrl.searchParams.get("q"), "CPE-1");
+  assert.equal(exportUrl.searchParams.has("page"), false);
+  assert.equal(exportUrl.searchParams.has("limit"), false);
+});
+
+test("preserves missing-value filters and a literal latest value outside the snapshot filter", () => {
+  const url = new URL(buildAssetInventoryApiUrl(endpoint, {
+    department: "__missing__",
+    status: "__missing__",
+    source: "latest",
+    snapshot: "latest",
+  }));
+
+  assert.equal(url.searchParams.get("department"), "__missing__");
+  assert.equal(url.searchParams.get("status"), "__missing__");
+  assert.equal(url.searchParams.get("source"), "latest");
+  assert.equal(url.searchParams.has("snapshot"), false);
+});

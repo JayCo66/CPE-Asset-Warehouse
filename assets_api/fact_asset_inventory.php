@@ -64,25 +64,6 @@ function warehouseInventoryBindParameters(PDOStatement $statement, array $parame
     }
 }
 
-function warehouseInventoryFromSql(): string
-{
-    return 'FROM `fact_asset_inventory` fai
-        LEFT JOIN `dim_date` snapshot_date
-            ON snapshot_date.`date_key` = fai.`snapshot_date_key`
-        LEFT JOIN `dim_date` acquisition_date
-            ON acquisition_date.`date_key` = fai.`acquisition_date_key`
-        LEFT JOIN `dim_asset` da
-            ON da.`asset_key` = fai.`asset_key`
-        LEFT JOIN `dim_asset_type` asset_type
-            ON asset_type.`type_key` = fai.`type_key`
-        LEFT JOIN `dim_asset_category` asset_category
-            ON asset_category.`category_key` = fai.`category_key`
-        LEFT JOIN `dim_department` department
-            ON department.`department_key` = fai.`department_key`
-        LEFT JOIN `dim_location` location
-            ON location.`location_key` = fai.`location_key`';
-}
-
 function warehouseInventoryFetchFilterOptions(PDO $pdo, int $snapshotDateKey): array
 {
     $statusStatement = $pdo->prepare(
@@ -229,19 +210,36 @@ try {
     }
 
     $latestSnapshotDateKey = (int)$latestSnapshotDateKey;
+    $selectedSnapshotDateKey = $latestSnapshotDateKey;
+    if ($filters['snapshot'] !== 'latest') {
+        $selectedSnapshotDateKey = (int)$filters['snapshot'];
+        $selectedSnapshotStmt = $warehousePdo->prepare(
+            'SELECT 1 FROM `fact_asset_inventory`
+            WHERE `snapshot_date_key` = :snapshot_date_key LIMIT 1'
+        );
+        $selectedSnapshotStmt->bindValue(':snapshot_date_key', $selectedSnapshotDateKey, PDO::PARAM_INT);
+        $selectedSnapshotStmt->execute();
+        if ($selectedSnapshotStmt->fetchColumn() === false) {
+            sendWarehouseInventoryResponse(false, 'ไม่พบชุดข้อมูล snapshot ที่เลือก', 0, [], 400);
+        }
+    }
+
     if ($format === 'csv') {
         warehouseInventorySendCsv(
             $warehousePdo,
-            warehouseInventoryBuildWhere($filters, $latestSnapshotDateKey),
+            warehouseInventoryBuildWhere($filters, $selectedSnapshotDateKey),
         );
     }
 
-    $snapshotKeysStmt = $warehousePdo->query(
+    $snapshotKeysStmt = $warehousePdo->prepare(
         'SELECT DISTINCT `snapshot_date_key`
         FROM `fact_asset_inventory`
+        WHERE `snapshot_date_key` <= :snapshot_date_key
         ORDER BY `snapshot_date_key` DESC
         LIMIT 2'
     );
+    $snapshotKeysStmt->bindValue(':snapshot_date_key', $selectedSnapshotDateKey, PDO::PARAM_INT);
+    $snapshotKeysStmt->execute();
     $snapshotDateKeys = array_map('intval', $snapshotKeysStmt->fetchAll(PDO::FETCH_COLUMN));
     $summary = ['current' => null, 'previous' => null];
 
@@ -251,15 +249,15 @@ try {
             'SELECT
                 fai.`snapshot_date_key`,
                 snapshot_date.`full_date` AS `snapshot_date`,
-                COUNT(*) AS `total`,
-                SUM(CASE WHEN fai.`is_available_flag` = 1 THEN 1 ELSE 0 END) AS `ready`,
-                SUM(CASE WHEN fai.`is_below_threshold_flag` = 1 THEN 1 ELSE 0 END) AS `below_threshold`,
-                SUM(CASE WHEN fai.`has_location_flag` = 0 THEN 1 ELSE 0 END) AS `missing_location`,
-                SUM(CASE WHEN fai.`asset_age_years` BETWEEN 0 AND 2 THEN 1 ELSE 0 END) AS `age_zero_to_two`,
-                SUM(CASE WHEN fai.`asset_age_years` BETWEEN 3 AND 5 THEN 1 ELSE 0 END) AS `age_three_to_five`,
-                SUM(CASE WHEN fai.`asset_age_years` BETWEEN 6 AND 8 THEN 1 ELSE 0 END) AS `age_six_to_eight`,
-                SUM(CASE WHEN fai.`asset_age_years` >= 9 THEN 1 ELSE 0 END) AS `age_nine_plus`,
-                SUM(CASE WHEN fai.`asset_age_years` IS NULL THEN 1 ELSE 0 END) AS `age_unknown`
+                SUM(COALESCE(fai.`asset_count`, 0)) AS `total`,
+                SUM(CASE WHEN fai.`is_available_flag` = 1 THEN COALESCE(fai.`asset_count`, 0) ELSE 0 END) AS `ready`,
+                SUM(CASE WHEN fai.`is_below_threshold_flag` = 1 THEN COALESCE(fai.`asset_count`, 0) ELSE 0 END) AS `below_threshold`,
+                SUM(CASE WHEN fai.`has_location_flag` = 0 THEN COALESCE(fai.`asset_count`, 0) ELSE 0 END) AS `missing_location`,
+                SUM(CASE WHEN fai.`asset_age_years` BETWEEN 0 AND 2 THEN COALESCE(fai.`asset_count`, 0) ELSE 0 END) AS `age_zero_to_two`,
+                SUM(CASE WHEN fai.`asset_age_years` BETWEEN 3 AND 5 THEN COALESCE(fai.`asset_count`, 0) ELSE 0 END) AS `age_three_to_five`,
+                SUM(CASE WHEN fai.`asset_age_years` BETWEEN 6 AND 8 THEN COALESCE(fai.`asset_count`, 0) ELSE 0 END) AS `age_six_to_eight`,
+                SUM(CASE WHEN fai.`asset_age_years` >= 9 THEN COALESCE(fai.`asset_count`, 0) ELSE 0 END) AS `age_nine_plus`,
+                SUM(CASE WHEN fai.`asset_age_years` IS NULL THEN COALESCE(fai.`asset_count`, 0) ELSE 0 END) AS `age_unknown`
             FROM `fact_asset_inventory` fai
             LEFT JOIN `dim_date` snapshot_date
                 ON snapshot_date.`date_key` = fai.`snapshot_date_key`
@@ -297,11 +295,11 @@ try {
     $countStmt = $warehousePdo->prepare(
         'SELECT COUNT(*) FROM `fact_asset_inventory` WHERE `snapshot_date_key` = :snapshot_date_key'
     );
-    $countStmt->bindValue(':snapshot_date_key', $latestSnapshotDateKey, PDO::PARAM_INT);
+    $countStmt->bindValue(':snapshot_date_key', $selectedSnapshotDateKey, PDO::PARAM_INT);
     $countStmt->execute();
     $total = (int)$countStmt->fetchColumn();
 
-    $filter = warehouseInventoryBuildWhere($filters, $latestSnapshotDateKey);
+    $filter = warehouseInventoryBuildWhere($filters, $selectedSnapshotDateKey);
 
     $matchedCountStmt = $warehousePdo->prepare(
         'SELECT COUNT(*) ' . warehouseInventoryFromSql() . ' ' . $filter['sql']
@@ -311,7 +309,7 @@ try {
     $matchedTotal = (int)$matchedCountStmt->fetchColumn();
     $page = min($page, max(1, (int)ceil($matchedTotal / $limit)));
     $offset = ($page - 1) * $limit;
-    $filterOptions = warehouseInventoryFetchFilterOptions($warehousePdo, $latestSnapshotDateKey);
+    $filterOptions = warehouseInventoryFetchFilterOptions($warehousePdo, $selectedSnapshotDateKey);
 
     $inventoryStmt = $warehousePdo->prepare(
         'SELECT

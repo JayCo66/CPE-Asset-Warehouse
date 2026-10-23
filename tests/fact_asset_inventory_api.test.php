@@ -39,22 +39,28 @@ function runTest(string $name, callable $callback): void
 }
 
 runTest('uses empty search and all filters by default', static function (): void {
-    expectSame(
-        ['search' => '', 'status' => 'all', 'type' => 'all'],
-        warehouseInventoryParseFilters([]),
-        'Default filters should not restrict the inventory.',
-    );
+    $filters = warehouseInventoryParseFilters([]);
+    expectSame('', $filters['search'], 'Search should be empty by default.');
+    foreach ([
+        'status', 'type', 'department', 'category', 'building', 'source',
+        'acquisitionYear', 'fiscalYear', 'ageBand', 'availability', 'damage',
+        'locationStatus', 'belowThreshold',
+        'room', 'floor', 'area', 'acquisitionFiscalYear',
+    ] as $name) {
+        expectSame('all', $filters[$name], "{$name} should not restrict the inventory by default.");
+    }
+    expectSame('latest', $filters['snapshot'], 'The latest snapshot should be selected by default.');
+    expectSame(10, $filters['ageThreshold'], 'The default analysis threshold should be ten years.');
 });
 
 runTest('trims query values while retaining Thai text', static function (): void {
-    expectSame(
-        ['search' => 'เครื่องมือ', 'status' => 'พร้อมใช้งาน', 'type' => 'all'],
-        warehouseInventoryParseFilters([
-            'q' => '  เครื่องมือ  ',
-            'status' => ' พร้อมใช้งาน ',
-        ]),
-        'Filter parsing should trim values without altering Thai text.',
-    );
+    $filters = warehouseInventoryParseFilters([
+        'q' => '  เครื่องมือ  ',
+        'status' => ' พร้อมใช้งาน ',
+    ]);
+    expectSame('เครื่องมือ', $filters['search'], 'Search should be trimmed without altering Thai text.');
+    expectSame('พร้อมใช้งาน', $filters['status'], 'Status should be trimmed without altering Thai text.');
+    expectSame('all', $filters['type'], 'Unselected type should remain unrestricted.');
 });
 
 runTest('rejects array, oversized, and invalid UTF-8 filter values', static function (): void {
@@ -74,6 +80,135 @@ runTest('rejects array, oversized, and invalid UTF-8 filter values', static func
         static fn() => warehouseInventoryParseFilters(['q' => "\xFF"]),
         'Invalid UTF-8 must be rejected.',
     );
+});
+
+runTest('validates executive filters and age thresholds', static function (): void {
+    $filters = warehouseInventoryParseFilters([
+        'department' => 'ภาควิชาวิศวกรรมคอมพิวเตอร์',
+        'category' => 'ครุภัณฑ์สำนักงาน',
+        'building' => 'อาคาร 8',
+        'source' => 'เงินงบประมาณ',
+        'acquisitionYear' => '2024',
+        'fiscalYear' => '2567',
+        'acquisitionFiscalYear' => '2568',
+        'room' => '8302',
+        'floor' => '3',
+        'area' => 'Server room',
+        'ageBand' => '11-15',
+        'availability' => 'unavailable',
+        'damage' => 'damaged',
+        'locationStatus' => 'incomplete',
+        'belowThreshold' => 'yes',
+        'snapshot' => '20261022',
+        'ageThreshold' => '15',
+    ]);
+
+    expectSame('ภาควิชาวิศวกรรมคอมพิวเตอร์', $filters['department'], 'Thai department values should be retained.');
+    expectSame('11-15', $filters['ageBand'], 'Supported age bands should be retained.');
+    expectSame('8302', $filters['room'], 'Room filters should be retained.');
+    expectSame('3', $filters['floor'], 'Floor filters should be retained.');
+    expectSame('Server room', $filters['area'], 'Area filters should be retained.');
+    expectSame('2567', $filters['fiscalYear'], 'Asset fiscal-year filters should use the asset dimension.');
+    expectSame('2568', $filters['acquisitionFiscalYear'], 'Acquisition fiscal-year filters should remain distinct.');
+    expectSame(15, $filters['ageThreshold'], 'Configured age thresholds should be parsed as integers.');
+
+    expectInvalidArgument(
+        static fn() => warehouseInventoryParseFilters(['ageBand' => 'future']),
+        'Unknown age bands must be rejected.',
+    );
+    expectInvalidArgument(
+        static fn() => warehouseInventoryParseFilters(['availability' => 'sometimes']),
+        'Unknown availability states must be rejected.',
+    );
+    expectInvalidArgument(
+        static fn() => warehouseInventoryParseFilters(['snapshot' => 'latest; DROP TABLE']),
+        'Snapshot keys must not accept arbitrary query text.',
+    );
+    expectInvalidArgument(
+        static fn() => warehouseInventoryParseFilters(['ageThreshold' => '0']),
+        'Age thresholds below one year must be rejected.',
+    );
+    expectInvalidArgument(
+        static fn() => warehouseInventoryParseFilters(['ageThreshold' => '51']),
+        'Age thresholds above fifty years must be rejected.',
+    );
+});
+
+runTest('builds dimension and flag filters with bound values', static function (): void {
+    $filters = warehouseInventoryParseFilters([
+        'department' => "Unit'; DROP TABLE dim_department;--",
+        'category' => 'ครุภัณฑ์สำนักงาน',
+        'building' => 'อาคาร 8',
+        'source' => 'เงินงบประมาณ',
+        'acquisitionYear' => '2024',
+        'fiscalYear' => '2567',
+        'acquisitionFiscalYear' => '2568',
+        'room' => '8302',
+        'floor' => '3',
+        'area' => "Lab'; DROP TABLE dim_location;--",
+        'ageBand' => '11-15',
+        'availability' => 'unavailable',
+        'damage' => 'damaged',
+        'locationStatus' => 'incomplete',
+        'belowThreshold' => 'yes',
+    ]);
+    $where = warehouseInventoryBuildWhere($filters, 20261022);
+
+    expectTrue(str_contains($where['sql'], 'department.`department_name` = :filter_department'), 'Department should use its dimension name.');
+    expectTrue(str_contains($where['sql'], 'asset_category.`category_name` = :filter_category'), 'Category should use its dimension name.');
+    expectTrue(str_contains($where['sql'], 'acquisition_date.`year` = :filter_acquisition_year'), 'Acquisition year should use the acquisition date dimension.');
+    expectTrue(str_contains($where['sql'], 'da.`year_fiscal` = :filter_fiscal_year'), 'Asset fiscal year should use the asset dimension.');
+    expectTrue(str_contains($where['sql'], 'acquisition_date.`fiscal_year` = :filter_acquisition_fiscal_year'), 'Acquisition fiscal year should use the date dimension.');
+    expectTrue(str_contains($where['sql'], 'location.`room` = :filter_room'), 'Room should be available as an inventory filter.');
+    expectTrue(str_contains($where['sql'], 'location.`floor` = :filter_floor'), 'Floor should be available as an inventory filter.');
+    expectTrue(str_contains($where['sql'], 'location.`area_name` = :filter_area'), 'Area should be available as an inventory filter.');
+    expectTrue(str_contains($where['sql'], 'fai.`asset_age_years` BETWEEN 11 AND 15'), 'Age bands should map to fixed SQL.');
+    expectTrue(str_contains($where['sql'], 'fai.`is_available_flag` = 0'), 'Unavailable means the availability flag is zero.');
+    expectTrue(str_contains($where['sql'], 'fai.`is_damaged_flag` = 1'), 'Damaged means the damage flag is one.');
+    expectTrue(str_contains($where['sql'], 'location.`area_name`'), 'Location detail completeness must include the area.');
+    expectSame("Unit'; DROP TABLE dim_department;--", $where['params']['filter_department'], 'Dimension values must remain bound data.');
+    expectSame('8302', $where['params']['filter_room'], 'Room values must remain bound data.');
+    expectSame('3', $where['params']['filter_floor'], 'Floor values must remain bound data.');
+    expectSame("Lab'; DROP TABLE dim_location;--", $where['params']['filter_area'], 'Area values must remain bound data.');
+    expectSame('2567', $where['params']['filter_fiscal_year'], 'Asset fiscal years must remain bound data.');
+    expectSame('2568', $where['params']['filter_acquisition_fiscal_year'], 'Acquisition fiscal years must remain bound data.');
+    expectTrue(!str_contains($where['sql'], 'DROP TABLE'), 'User values must never be concatenated into SQL.');
+});
+
+runTest('filters missing dimension values explicitly without binding sentinels', static function (): void {
+    $filters = warehouseInventoryParseFilters([
+        'department' => '__missing__',
+        'category' => '__missing__',
+        'building' => '__missing__',
+        'source' => '__missing__',
+        'status' => '__missing__',
+        'type' => '__missing__',
+        'acquisitionYear' => '__missing__',
+        'fiscalYear' => '__missing__',
+        'acquisitionFiscalYear' => '__missing__',
+        'room' => '__missing__',
+        'floor' => '__missing__',
+        'area' => '__missing__',
+    ]);
+    $where = warehouseInventoryBuildWhere($filters, 20261022);
+
+    foreach ([
+        'department.`department_name` IS NULL',
+        'asset_category.`category_name` IS NULL',
+        'location.`building` IS NULL',
+        'da.`source` IS NULL',
+        'da.`asset_status` IS NULL',
+        'asset_type.`type_name` IS NULL',
+        'acquisition_date.`year` IS NULL',
+        'da.`year_fiscal` IS NULL',
+        'acquisition_date.`fiscal_year` IS NULL',
+        'location.`room` IS NULL',
+        'location.`floor` IS NULL',
+        'location.`area_name` IS NULL',
+    ] as $condition) {
+        expectTrue(str_contains($where['sql'], $condition), "Missing-value filter should include {$condition}.");
+    }
+    expectSame(['snapshot_date_key' => 20261022], $where['params'], 'Missing sentinels must not be interpolated as bound dimension values.');
 });
 
 runTest('uses fixed search columns and bound parameters for filters', static function (): void {

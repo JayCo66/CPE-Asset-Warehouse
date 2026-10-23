@@ -1,88 +1,55 @@
-<section class="page-heading" aria-labelledby="page-title">
-  <div>
-    <h1 id="page-title">ทะเบียนสินทรัพย์และวงจรชีวิต</h1>
-    <p class="page-intro">
-      ภาพรวมสินทรัพย์จากคลังข้อมูล MySQL สำหรับติดตามสถานะ ตำแหน่ง และอายุการใช้งาน
+<section class="dashboard-page" data-dashboard-page="overview" aria-labelledby="overview-title">
+  <header class="page-heading executive-page-heading">
+    <div>
+      <h1 id="overview-title">ภาพรวมสินทรัพย์</h1>
+      <p class="page-intro">สถานะ ความพร้อม ตำแหน่ง และอายุของสินทรัพย์จากชุดข้อมูลที่เลือก</p>
+    </div>
+    <a class="button button-secondary" href="#/inventory/explorer">เปิดค้นหาสินทรัพย์</a>
+  </header>
+
+  <section class="data-notice" id="dashboard-data-notice" aria-label="แหล่งข้อมูล" role="status" aria-live="polite">
+    <span class="notice-icon" aria-hidden="true">i</span>
+    <p>
+      <strong id="dashboard-data-state">กำลังตรวจสอบแหล่งข้อมูล</strong>
+      <span id="dashboard-data-detail">กำลังเชื่อมต่อคลังสินทรัพย์</span>
     </p>
-  </div>
-</section>
+    <span class="notice-date" id="dashboard-snapshot-date">—</span>
+  </section>
 
-<section class="data-notice" id="inventory-data-notice" aria-label="แหล่งข้อมูล" role="status" aria-live="polite">
-  <span class="notice-icon" aria-hidden="true">i</span>
-  <p>
-    <strong id="inventory-data-state">กำลังตรวจสอบแหล่งข้อมูล</strong>
-    <span id="inventory-data-detail">กำลังเชื่อมต่อคลังสินทรัพย์</span>
-  </p>
-  <span class="notice-date" id="inventory-snapshot-date">—</span>
-</section>
+  <div class="metric-grid executive-metrics" id="executive-metrics" aria-label="ตัวชี้วัดภาพรวม"></div>
+  <dl class="executive-secondary-metrics" id="overview-secondary-metrics" aria-label="ตัวชี้วัดเพิ่มเติม"></dl>
 
-<section class="metric-grid" aria-label="สรุปภาพรวมสินทรัพย์จากชุดข้อมูลล่าสุด">
-  <article class="metric-card metric-card-primary">
-    <div class="metric-label-row">
-      <span class="metric-label">สินทรัพย์ทั้งหมด</span>
-      <span class="metric-icon" aria-hidden="true">01</span>
-    </div>
-    <strong class="metric-value" id="metric-total">—</strong>
-    <p class="metric-footnote" id="metric-total-footnote">รอข้อมูลจากคลังสินทรัพย์</p>
-  </article>
-  <article class="metric-card">
-    <div class="metric-label-row">
-      <span class="metric-label">พร้อมใช้งาน</span>
-      <span class="metric-icon metric-icon-success" aria-hidden="true">✓</span>
-    </div>
-    <strong class="metric-value" id="metric-ready">—</strong>
-    <p class="metric-footnote" id="metric-ready-footnote">ไม่มีข้อมูลสรุป</p>
-  </article>
-  <article class="metric-card">
-    <div class="metric-label-row">
-      <span class="metric-label">ธงประเภท “ต่ำกว่าเกณฑ์” · นิยามยังไม่ยืนยัน</span>
-      <span class="metric-icon metric-icon-warning" aria-hidden="true">!</span>
-    </div>
-    <strong class="metric-value" id="metric-threshold">—</strong>
-    <p class="metric-footnote" id="metric-threshold-footnote">ไม่มีข้อมูลสรุป</p>
-  </article>
-  <article class="metric-card">
-    <div class="metric-label-row">
-      <span class="metric-label">มีตำแหน่งระบุ</span>
-      <span class="metric-icon metric-icon-info" aria-hidden="true">⌖</span>
-    </div>
-    <strong class="metric-value" id="metric-location">—</strong>
-    <p class="metric-footnote" id="metric-location-footnote">ไม่มีข้อมูลสรุป</p>
-  </article>
-</section>
+  <section class="dashboard-panel-grid overview-primary-grid" aria-label="สถานะ ความพร้อม และอายุสินทรัพย์">
+    <article class="panel">
+      <div class="panel-heading"><h2>สถานะสินทรัพย์</h2></div>
+      <div id="overview-status-distribution" class="dashboard-chart"></div>
+    </article>
+    <article class="panel">
+      <div class="panel-heading"><h2>ความพร้อมใช้งาน</h2></div>
+      <div id="overview-availability-distribution" class="dashboard-chart"></div>
+    </article>
+    <article class="panel">
+      <div class="panel-heading"><h2>การกระจายตามอายุ</h2></div>
+      <div id="overview-age-distribution" class="dashboard-chart"></div>
+    </article>
+  </section>
 
-<section class="dashboard-grid" aria-label="การเปรียบเทียบชุดข้อมูลและการตรวจนับ">
-  <article class="panel comparison-panel">
-    <div class="panel-heading">
-      <h2>เปรียบเทียบชุดข้อมูลสินทรัพย์</h2>
-    </div>
-    <div class="empty-state comparison-empty" id="snapshot-comparison-empty" role="status" aria-live="polite">
-      <strong id="snapshot-comparison-title">กำลังรอข้อมูลคลัง</strong>
-      <p id="snapshot-comparison-message">ผลสรุปจะแสดงเมื่อเชื่อมต่อข้อมูลสำเร็จ</p>
-    </div>
-    <div class="table-wrap comparison-table-wrap" id="snapshot-comparison-table-wrap" hidden>
-      <table class="comparison-table">
-        <caption class="sr-only">เปรียบเทียบจำนวนสินทรัพย์ระหว่างชุดข้อมูลล่าสุดและชุดข้อมูลก่อนหน้า</caption>
-        <thead>
-          <tr>
-            <th scope="col">รายการ</th>
-            <th scope="col"><span id="snapshot-current-date">ชุดข้อมูลล่าสุด</span></th>
-            <th scope="col"><span id="snapshot-previous-date">ชุดข้อมูลก่อนหน้า</span></th>
-            <th scope="col">เปลี่ยนแปลง</th>
-          </tr>
-        </thead>
-        <tbody id="snapshot-comparison-body"></tbody>
-      </table>
-    </div>
-  </article>
+  <section class="dashboard-panel-grid overview-secondary-grid" aria-label="การกระจายและประเด็นที่ต้องติดตาม">
+    <article class="panel">
+      <div class="panel-heading">
+        <h2>สินทรัพย์ตามหน่วยงาน</h2>
+        <a href="#/inventory/departments">ดูเปรียบเทียบหน่วยงาน</a>
+      </div>
+      <div id="overview-departments" class="dashboard-chart"></div>
+    </article>
+    <article class="panel">
+      <div class="panel-heading"><h2>ประเด็นที่ควรติดตาม</h2></div>
+      <div id="overview-attention" class="dashboard-chart"></div>
+    </article>
+  </section>
 
-  <article class="panel audit-panel">
-    <div class="panel-heading">
-      <h2>สถานะการตรวจนับประจำปี</h2>
-    </div>
-    <div class="empty-state" id="annual-audit-data-state" role="status" aria-live="polite">
-      <strong>กำลังตรวจสอบข้อมูล</strong>
-      <p>กำลังตรวจสอบว่าคลังมีข้อมูลสถานะการตรวจนับหรือไม่</p>
-    </div>
-  </article>
+  <section class="panel snapshot-history-panel" id="overview-history-panel" aria-labelledby="overview-history-title">
+    <div class="panel-heading"><h2 id="overview-history-title">การเปรียบเทียบชุดข้อมูล</h2></div>
+    <div id="overview-history-content" class="empty-state" role="status" aria-live="polite"></div>
+  </section>
 </section>

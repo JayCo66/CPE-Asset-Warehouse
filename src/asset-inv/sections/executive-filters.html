@@ -1,0 +1,125 @@
+<section class="dashboard-filter-panel" aria-label="ตัวกรองข้อมูลร่วม">
+  <div class="snapshot-filter-row">
+    <label class="select-label" for="dashboard-filter-snapshot">ชุดข้อมูล ณ วันที่</label>
+    <select id="dashboard-filter-snapshot" data-dashboard-filter="snapshot">
+      <option value="latest">ชุดข้อมูลล่าสุด</option>
+    </select>
+    <span id="dashboard-snapshot-context" class="filter-context">กำลังตรวจสอบข้อมูลจากคลัง</span>
+  </div>
+
+  <div class="api-state dashboard-request-state api-state-loading" id="dashboard-request-state" role="status" aria-live="polite" hidden>
+    <span id="dashboard-request-message">กำลังโหลดข้อมูลจากคลังสินทรัพย์</span>
+    <button class="button button-secondary" type="button" id="dashboard-retry" hidden>ลองอีกครั้ง</button>
+  </div>
+
+  <details class="dashboard-filter-details" id="dashboard-filter-details">
+    <summary>
+      <span>ตัวกรองร่วม</span>
+      <span class="filter-count" id="dashboard-filter-count">ยังไม่ได้กรอง</span>
+    </summary>
+    <div class="dashboard-filter-grid">
+      <label class="select-label" for="dashboard-filter-department">
+        หน่วยงาน
+        <select id="dashboard-filter-department" data-dashboard-filter="department"><option value="all">ทุกหน่วยงาน</option></select>
+      </label>
+      <label class="select-label" for="dashboard-filter-category">
+        หมวดหมู่
+        <select id="dashboard-filter-category" data-dashboard-filter="category"><option value="all">ทุกหมวดหมู่</option></select>
+      </label>
+      <label class="select-label" for="dashboard-filter-type">
+        ประเภทสินทรัพย์
+        <select id="dashboard-filter-type" data-dashboard-filter="type"><option value="all">ทุกประเภท</option></select>
+      </label>
+      <label class="select-label" for="dashboard-filter-building">
+        อาคาร
+        <select id="dashboard-filter-building" data-dashboard-filter="building"><option value="all">ทุกอาคาร</option></select>
+      </label>
+      <label class="select-label" for="dashboard-filter-floor">
+        ชั้น
+        <select id="dashboard-filter-floor" data-dashboard-filter="floor"><option value="all">ทุกชั้น</option></select>
+      </label>
+      <label class="select-label" for="dashboard-filter-room">
+        ห้อง
+        <select id="dashboard-filter-room" data-dashboard-filter="room"><option value="all">ทุกห้อง</option></select>
+      </label>
+      <label class="select-label" for="dashboard-filter-area">
+        พื้นที่
+        <select id="dashboard-filter-area" data-dashboard-filter="area"><option value="all">ทุกพื้นที่</option></select>
+      </label>
+      <label class="select-label" for="dashboard-filter-source">
+        แหล่งเงิน
+        <select id="dashboard-filter-source" data-dashboard-filter="source"><option value="all">ทุกแหล่งเงิน</option></select>
+      </label>
+      <label class="select-label" for="dashboard-filter-status">
+        สถานะสินทรัพย์
+        <select id="dashboard-filter-status" data-dashboard-filter="status"><option value="all">ทุกสถานะ</option></select>
+      </label>
+      <label class="select-label" for="dashboard-filter-acquisition-year">
+        ปีจัดหา (ค.ศ.)
+        <select id="dashboard-filter-acquisition-year" data-dashboard-filter="acquisitionYear"><option value="all">ทุกปี</option></select>
+      </label>
+      <label class="select-label" for="dashboard-filter-fiscal-year">
+        ปีงบประมาณของสินทรัพย์
+        <select id="dashboard-filter-fiscal-year" data-dashboard-filter="fiscalYear"><option value="all">ทุกปี</option></select>
+      </label>
+      <label class="select-label" for="dashboard-filter-acquisition-fiscal-year">
+        ปีงบประมาณจัดหา
+        <select id="dashboard-filter-acquisition-fiscal-year" data-dashboard-filter="acquisitionFiscalYear"><option value="all">ทุกปี</option></select>
+      </label>
+      <label class="select-label" for="dashboard-filter-age-band">
+        ช่วงอายุ
+        <select id="dashboard-filter-age-band" data-dashboard-filter="ageBand">
+          <option value="all">ทุกช่วงอายุ</option>
+          <option value="0-2">0–2 ปี</option>
+          <option value="3-5">3–5 ปี</option>
+          <option value="6-10">6–10 ปี</option>
+          <option value="11-15">11–15 ปี</option>
+          <option value="16-20">16–20 ปี</option>
+          <option value="over-20">มากกว่า 20 ปี</option>
+          <option value="unknown">ไม่ทราบอายุ</option>
+        </select>
+      </label>
+      <label class="select-label" for="dashboard-filter-availability">
+        ความพร้อมใช้งาน
+        <select id="dashboard-filter-availability" data-dashboard-filter="availability">
+          <option value="all">ทุกสถานะความพร้อม</option>
+          <option value="available">พร้อมใช้งาน</option>
+          <option value="unavailable">ไม่พร้อมใช้งาน</option>
+          <option value="unknown">ไม่ระบุ</option>
+        </select>
+      </label>
+      <label class="select-label" for="dashboard-filter-damage">
+        สภาพชำรุด
+        <select id="dashboard-filter-damage" data-dashboard-filter="damage">
+          <option value="all">ทุกสถานะ</option>
+          <option value="damaged">ชำรุด</option>
+          <option value="not-damaged">ไม่ชำรุด</option>
+          <option value="unknown">ไม่ระบุ</option>
+        </select>
+      </label>
+      <label class="select-label" for="dashboard-filter-location-status">
+        สถานที่
+        <select id="dashboard-filter-location-status" data-dashboard-filter="locationStatus">
+          <option value="all">ทุกสถานะสถานที่</option>
+          <option value="assigned">ระบุตำแหน่งแล้ว</option>
+          <option value="missing">ไม่มีตำแหน่ง</option>
+          <option value="complete">รายละเอียดครบ</option>
+          <option value="incomplete">รายละเอียดไม่ครบ</option>
+          <option value="unknown">ไม่ระบุสถานะ</option>
+        </select>
+      </label>
+      <label class="select-label" for="dashboard-filter-below-threshold">
+        ธงต่ำกว่าเกณฑ์
+        <select id="dashboard-filter-below-threshold" data-dashboard-filter="belowThreshold">
+          <option value="all">ทุกสถานะธง</option>
+          <option value="yes">มีธง</option>
+          <option value="no">ไม่มีธง</option>
+          <option value="unknown">ไม่ระบุ</option>
+        </select>
+      </label>
+      <div class="dashboard-filter-actions">
+        <button class="button button-secondary" type="button" id="dashboard-filter-reset">ล้างตัวกรอง</button>
+      </div>
+    </div>
+  </details>
+</section>

@@ -1,0 +1,20 @@
+<section class="dashboard-page" data-dashboard-page="portfolio" aria-labelledby="portfolio-title" hidden>
+  <header class="page-heading executive-page-heading">
+    <div>
+      <h1 id="portfolio-title">องค์ประกอบพอร์ตสินทรัพย์</h1>
+      <p class="page-intro">ดูประเภทและหมวดหมู่ที่หน่วยงานถือครอง พร้อมใช้จำนวนและสัดส่วนประกอบการเปรียบเทียบ</p>
+    </div>
+  </header>
+  <section class="dashboard-panel-grid portfolio-top-grid" aria-label="หมวดหมู่และประเภทสินทรัพย์">
+    <article class="panel"><div class="panel-heading"><h2>จำนวนตามหมวดหมู่</h2></div><div id="portfolio-categories" class="dashboard-chart"></div></article>
+    <article class="panel"><div class="panel-heading"><h2>ประเภทที่มีจำนวนมาก</h2></div><div id="portfolio-types" class="dashboard-chart"></div></article>
+  </section>
+  <section class="dashboard-panel-grid portfolio-matrix-grid" aria-label="องค์ประกอบสินทรัพย์รายหน่วยงาน">
+    <article class="panel"><div class="panel-heading"><h2>หน่วยงาน × หมวดหมู่</h2></div><div id="portfolio-department-category" class="dashboard-table-wrap"></div></article>
+    <article class="panel"><div class="panel-heading"><h2>หน่วยงาน × ประเภท</h2></div><div id="portfolio-department-type" class="dashboard-table-wrap"></div></article>
+  </section>
+  <article class="panel">
+    <div class="panel-heading"><h2>ความหลากหลายของพอร์ตแต่ละหน่วยงาน</h2></div>
+    <div id="portfolio-diversity" class="dashboard-table-wrap"></div>
+  </article>
+</section>

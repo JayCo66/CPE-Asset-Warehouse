@@ -1,0 +1,19 @@
+<section class="dashboard-page" data-dashboard-page="locations" aria-labelledby="locations-title" hidden>
+  <header class="page-heading executive-page-heading">
+    <div>
+      <h1 id="locations-title">การกระจายตามสถานที่</h1>
+      <p class="page-intro">แยกการมีรหัสตำแหน่งออกจากความครบถ้วนของอาคาร ชั้น ห้อง และพื้นที่</p>
+    </div>
+  </header>
+  <div class="location-coverage-summary" id="location-coverage-summary"></div>
+  <section class="dashboard-panel-grid location-rank-grid" aria-label="สินทรัพย์ตามลำดับสถานที่">
+    <article class="panel"><div class="panel-heading"><h2>ตามอาคาร</h2></div><div id="location-buildings" class="dashboard-chart"></div></article>
+    <article class="panel"><div class="panel-heading"><h2>ตามชั้น</h2></div><div id="location-floors" class="dashboard-chart"></div></article>
+    <article class="panel"><div class="panel-heading"><h2>ตามห้องและพื้นที่</h2></div><div id="location-rooms" class="dashboard-chart"></div></article>
+  </section>
+  <section class="dashboard-panel-grid location-matrix-grid" aria-label="สถานที่ตามหน่วยงานและหมวดหมู่">
+    <article class="panel"><div class="panel-heading"><h2>หน่วยงาน × อาคาร</h2></div><div id="location-department-building" class="dashboard-table-wrap"></div></article>
+    <article class="panel"><div class="panel-heading"><h2>หมวดหมู่ × อาคาร</h2></div><div id="location-category-building" class="dashboard-table-wrap"></div></article>
+  </section>
+  <article class="panel"><div class="panel-heading"><h2>ตำแหน่งที่ขาดหรือมีรายละเอียดไม่ครบ แยกตามหน่วยงาน</h2></div><div id="location-missing-departments" class="dashboard-table-wrap"></div></article>
+</section>
