@@ -8,7 +8,23 @@
       content="แดชบอร์ดทะเบียนและวงจรชีวิตสินทรัพย์ของคลังสินทรัพย์ CPE"
     />
     <title>คลังสินทรัพย์ CPE</title>
-    <link rel="stylesheet" href="styles.css?v=20261023.6" />
+    <script>
+      (() => {
+        const systemTheme =
+          typeof window.matchMedia === "function" && window.matchMedia("(prefers-color-scheme: light)").matches
+            ? "light"
+            : "dark";
+        let theme = systemTheme;
+        try {
+          const savedTheme = window.localStorage.getItem("cpe-asset-inventory-theme");
+          if (savedTheme === "light" || savedTheme === "dark") theme = savedTheme;
+        } catch {
+          // Keep the device theme if browser storage is unavailable.
+        }
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
+    <link rel="stylesheet" href="styles.css?v=20261023.7" />
   </head>
   <body>
     <a class="skip-link" href="#main-content">ข้ามไปยังแดชบอร์ด</a>
@@ -22,7 +38,23 @@
             <strong>คลังสินทรัพย์</strong>
           </span>
         </a>
-
+        <button
+          class="theme-toggle"
+          id="theme-toggle"
+          type="button"
+          aria-label="สลับระหว่างโหมดสว่างและโหมดมืด"
+          title="สลับระหว่างโหมดสว่างและโหมดมืด"
+        >
+          <svg class="theme-toggle-icon theme-toggle-icon-sun" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.8" />
+            <path d="M12 2.5v2m0 15v2m9.5-9.5h-2m-15 0h-2m16.22-6.72-1.42 1.42M6.7 17.3l-1.42 1.42m13.44 0-1.42-1.42M6.7 6.7 5.28 5.28" stroke="currentColor" stroke-linecap="round" stroke-width="1.8" />
+          </svg>
+          <svg class="theme-toggle-icon theme-toggle-icon-moon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M20.2 15.1A8.5 8.5 0 0 1 8.9 3.8 8.5 8.5 0 1 0 20.2 15.1Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
+          </svg>
+          <span class="theme-toggle-label theme-toggle-label-light">สว่าง</span>
+          <span class="theme-toggle-label theme-toggle-label-dark">มืด</span>
+        </button>
       </header>
 
       <nav class="module-nav" aria-label="โมดูลพื้นที่ทำงาน">
