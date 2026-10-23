@@ -1,0 +1,2406 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบคลังข้อมูล CPE Assets — แดชบอร์ดการยืม-คืนครุภัณฑ์ & ตรวจจับความผิดปกติ</title>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('cpe_theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+    })();
+  </script>
+  <style>
+    /* =====================================================================
+       CPE Assets Design System Tokens (docs/design-guide.md)
+       ===================================================================== */
+    :root {
+      /* Base Dark Theme (Default) */
+      --cpe-page-start: #1B1D1E;
+      --cpe-page-end: #1D1F20;
+      --cpe-surface: #181A1B;
+      --cpe-surface-subtle: #212426;
+      --cpe-surface-hover: #292D30;
+      --cpe-border: #313538;
+      --cpe-border-focus: #0466C8;
+      --cpe-text: #E8E6E3;
+      --cpe-text-muted: #CCC8C1;
+      --cpe-text-dim: #8C8881;
+      
+      --cpe-brand-blue: #0466C8;
+      --cpe-brand-blue-deep: #0353A4;
+      --cpe-action-start: #1E169C;
+      --cpe-action-end: #460FA5;
+      
+      --cpe-success: #009688;
+      --cpe-success-bg: rgba(0, 150, 136, 0.15);
+      --cpe-info: #106BDA;
+      --cpe-info-bg: rgba(16, 107, 218, 0.15);
+      --cpe-warning: #FFC107;
+      --cpe-warning-bg: rgba(255, 193, 7, 0.15);
+      --cpe-danger: #E43F0B;
+      --cpe-danger-bg: rgba(228, 63, 11, 0.15);
+      --cpe-purple: #A855F7;
+      --cpe-purple-bg: rgba(124, 58, 237, 0.15);
+      
+      --cpe-card-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      --cpe-floating-nav-bg: rgba(24, 26, 27, 0.95);
+      --cpe-floating-nav-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+      --cpe-modal-backdrop: rgba(0, 0, 0, 0.75);
+      --cpe-modal-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+      --cpe-chart-grid: #26292B;
+      --cpe-chart-text: #CCC8C1;
+      
+      --radius-sm: 4px;
+      --radius-md: 8px;
+      --radius-pill: 9999px;
+      --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Sarabun", "Noto Sans Thai", Helvetica, Arial, sans-serif;
+    }
+
+    /* Light Theme (White Mode) */
+    [data-theme="light"] {
+      --cpe-page-start: #F4F6F9;
+      --cpe-page-end: #E9ECEF;
+      --cpe-surface: #FFFFFF;
+      --cpe-surface-subtle: #F8FAFC;
+      --cpe-surface-hover: #EFF6FF; /* Soft blue from docs/design-guide.md */
+      --cpe-border: #D6D3CD;        /* Input border from docs/design-guide.md */
+      --cpe-border-focus: #0466C8;
+      --cpe-text: #181A1B;          /* High contrast deep charcoal */
+      --cpe-text-muted: #4B5563;
+      --cpe-text-dim: #6B7280;
+      
+      --cpe-brand-blue: #0466C8;
+      --cpe-brand-blue-deep: #0353A4;
+      --cpe-action-start: #1E169C;
+      --cpe-action-end: #460FA5;
+      
+      --cpe-success: #00796B;
+      --cpe-success-bg: rgba(0, 150, 136, 0.12);
+      --cpe-info: #0466C8;
+      --cpe-info-bg: rgba(4, 102, 200, 0.1);
+      --cpe-warning: #B45309;
+      --cpe-warning-bg: rgba(245, 158, 11, 0.14);
+      --cpe-danger: #DC2626;
+      --cpe-danger-bg: rgba(220, 38, 38, 0.12);
+      --cpe-purple: #7C3AED;
+      --cpe-purple-bg: rgba(124, 58, 237, 0.12);
+      
+      --cpe-card-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      --cpe-floating-nav-bg: rgba(255, 255, 255, 0.95);
+      --cpe-floating-nav-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      --cpe-modal-backdrop: rgba(15, 23, 42, 0.5);
+      --cpe-modal-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+      --cpe-chart-grid: #E2E8F0;
+      --cpe-chart-text: #4B5563;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: var(--font-stack);
+      color: var(--cpe-text-muted);
+      background: linear-gradient(180deg, var(--cpe-page-start) 0%, var(--cpe-page-end) 100%);
+      min-height: 100vh;
+      line-height: 1.5;
+      padding-bottom: 60px;
+    }
+
+    /* Top Application Bar */
+    .app-header {
+      background: var(--cpe-surface);
+      border-bottom: 1px solid var(--cpe-border);
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-badge {
+      background: var(--cpe-brand-blue);
+      color: #fff;
+      font-weight: 700;
+      font-size: 13px;
+      padding: 3px 8px;
+      border-radius: var(--radius-sm);
+      letter-spacing: 0.5px;
+    }
+    .brand-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--cpe-text);
+    }
+    .app-meta {
+      font-size: 13px;
+      color: var(--cpe-text-dim);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    code {
+      background: var(--cpe-surface-subtle);
+      border: 1px solid var(--cpe-border);
+      padding: 2px 6px;
+      border-radius: var(--radius-sm);
+      font-family: monospace;
+      font-size: 12px;
+      color: var(--cpe-brand-blue);
+    }
+    .theme-toggle-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      background: var(--cpe-surface-subtle);
+      border: 1px solid var(--cpe-border);
+      border-radius: var(--radius-pill);
+      color: var(--cpe-text);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-family: inherit;
+      user-select: none;
+    }
+    .theme-toggle-btn:hover {
+      background: var(--cpe-surface-hover);
+      border-color: var(--cpe-brand-blue);
+      color: var(--cpe-brand-blue);
+    }
+    .theme-toggle-icon {
+      font-size: 14px;
+      line-height: 1;
+    }
+    .theme-toggle-text {
+      font-size: 12px;
+    }
+
+    /* Floating Global Module Navigation (docs/frontend-guide.md) */
+    .floating-nav-wrapper {
+      position: sticky;
+      top: 14px;
+      z-index: 90;
+      display: flex;
+      justify-content: center;
+      margin: 16px auto 20px auto;
+      padding: 0 16px;
+    }
+    .floating-nav {
+      background: var(--cpe-floating-nav-bg);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--cpe-border);
+      border-radius: var(--radius-pill);
+      padding: 4px;
+      display: flex;
+      gap: 4px;
+      box-shadow: var(--cpe-floating-nav-shadow);
+      max-width: 100%;
+      overflow-x: auto;
+    }
+    .nav-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      border-radius: var(--radius-pill);
+      color: var(--cpe-text-muted);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+    }
+    .nav-pill:hover {
+      color: var(--cpe-text);
+      background: var(--cpe-surface-hover);
+    }
+    .nav-pill[aria-current="page"] {
+      background: var(--cpe-brand-blue);
+      color: #FFFFFF;
+      font-weight: 600;
+    }
+    .nav-pill .badge {
+      background: rgba(255, 255, 255, 0.18);
+      font-size: 11px;
+      padding: 1px 6px;
+      border-radius: 10px;
+    }
+    .nav-pill[aria-current="page"] .badge {
+      background: rgba(0, 0, 0, 0.25);
+      color: #FFFFFF;
+    }
+
+    /* Main Container */
+    .container {
+      max-width: 1380px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* Context Header */
+    .context-header {
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .context-title h1 {
+      font-size: 22px;
+      color: var(--cpe-text);
+      font-weight: 600;
+    }
+    .context-title p {
+      font-size: 14px;
+      color: var(--cpe-text-dim);
+      margin-top: 2px;
+    }
+
+    /* Anomaly & Risk Radar Panel */
+    .radar-panel {
+      background: var(--cpe-surface);
+      border: 1px solid var(--cpe-border);
+      border-radius: var(--radius-md);
+      padding: 14px 18px;
+      margin-bottom: 16px;
+      box-shadow: var(--cpe-card-shadow);
+    }
+    .radar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .radar-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--cpe-text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .radar-hint {
+      font-size: 12px;
+      color: var(--cpe-text-dim);
+    }
+    .radar-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .radar-btn {
+      background: var(--cpe-surface-subtle);
+      border: 1px solid var(--cpe-border);
+      color: var(--cpe-text-muted);
+      padding: 5px 12px;
+      border-radius: var(--radius-pill);
+      font-size: 12px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+    .radar-btn:hover {
+      color: var(--cpe-text);
+      border-color: var(--cpe-brand-blue);
+      background: var(--cpe-surface-hover);
+    }
+    .radar-btn.active {
+      background: var(--cpe-brand-blue);
+      color: #fff;
+      border-color: var(--cpe-brand-blue);
+      font-weight: 600;
+    }
+    .radar-badge {
+      background: rgba(255, 255, 255, 0.15);
+      padding: 1px 6px;
+      border-radius: 10px;
+      font-size: 11px;
+    }
+    .radar-btn.active .radar-badge {
+      background: rgba(0, 0, 0, 0.3);
+      color: #fff;
+    }
+
+    /* Active Filter Pills Bar (Drill-Down Indicators) */
+    .active-filters-bar {
+      display: none;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      background: rgba(4, 102, 200, 0.08);
+      border: 1px solid rgba(4, 102, 200, 0.3);
+      border-radius: var(--radius-md);
+      padding: 8px 14px;
+      margin-bottom: 16px;
+      font-size: 13px;
+    }
+    .filter-tag {
+      background: var(--cpe-surface-subtle);
+      border: 1px solid var(--cpe-border);
+      color: var(--cpe-text);
+      padding: 2px 10px;
+      border-radius: var(--radius-pill);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+    }
+    .filter-tag .tag-remove {
+      cursor: pointer;
+      color: var(--cpe-text-dim);
+      font-weight: bold;
+    }
+    .filter-tag .tag-remove:hover { color: var(--cpe-danger); }
+    .btn-reset-filters {
+      background: transparent;
+      border: none;
+      color: var(--cpe-brand-blue);
+      text-decoration: underline;
+      cursor: pointer;
+      font-size: 12px;
+      margin-left: 6px;
+    }
+
+    /* Toolbar Filter Controls */
+    .toolbar {
+      background: var(--cpe-surface);
+      border: 1px solid var(--cpe-border);
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+    .filter-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .filter-label {
+      font-size: 13px;
+      color: var(--cpe-text-dim);
+    }
+    .form-control {
+      background: var(--cpe-surface-subtle);
+      border: 1px solid var(--cpe-border);
+      color: var(--cpe-text);
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .form-control:focus {
+      border-color: var(--cpe-border-focus);
+    }
+    .search-input {
+      min-width: 250px;
+    }
+
+    /* KPI Summary Cards Grid */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    .kpi-card {
+      background: var(--cpe-surface);
+      border: 1px solid var(--cpe-border);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      position: relative;
+    }
+    .kpi-card:hover {
+      border-color: var(--cpe-brand-blue);
+      transform: translateY(-2px);
+    }
+    .kpi-card.active-kpi {
+      border-color: var(--cpe-brand-blue);
+      box-shadow: 0 0 0 2px rgba(4, 102, 200, 0.4);
+    }
+    .kpi-title {
+      font-size: 13px;
+      color: var(--cpe-text-dim);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .kpi-value {
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--cpe-text);
+      margin: 6px 0 2px 0;
+      font-variant-numeric: tabular-nums;
+    }
+    .kpi-sub {
+      font-size: 12px;
+      color: var(--cpe-text-dim);
+    }
+
+    /* Multi-Dimensional Analytics Grid */
+    .charts-multi-grid {
+      display: grid;
+      grid-template-columns: 1.6fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 1024px) {
+      .charts-multi-grid { grid-template-columns: 1fr; }
+    }
+    .chart-panel {
+      background: var(--cpe-surface);
+      border: 1px solid var(--cpe-border);
+      border-radius: var(--radius-md);
+      padding: 16px 20px;
+      position: relative;
+    }
+    .chart-panel-full {
+      background: var(--cpe-surface);
+      border: 1px solid var(--cpe-border);
+      border-radius: var(--radius-md);
+      padding: 18px 20px;
+      margin-bottom: 24px;
+    }
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .panel-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--cpe-text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .panel-hint {
+      font-size: 12px;
+      color: var(--cpe-text-dim);
+      margin-top: 2px;
+      display: block;
+    }
+    .dim-switcher {
+      display: inline-flex;
+      gap: 4px;
+      background: var(--cpe-surface-subtle);
+      padding: 3px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--cpe-border);
+    }
+    .dim-btn {
+      background: transparent;
+      border: none;
+      color: var(--cpe-text-dim);
+      padding: 3px 10px;
+      border-radius: var(--radius-pill);
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-family: inherit;
+    }
+    .dim-btn:hover {
+      color: var(--cpe-text);
+    }
+    .dim-btn.active {
+      background: var(--cpe-brand-blue);
+      color: #FFFFFF;
+      font-weight: 600;
+    }
+    .chart-container {
+      position: relative;
+      height: 290px;
+      width: 100%;
+    }
+    .chart-container-lg {
+      position: relative;
+      height: 330px;
+      width: 100%;
+    }
+    .outlier-chips-bar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 14px;
+      padding: 8px 12px;
+      background: var(--cpe-surface-subtle);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--cpe-border);
+      font-size: 12px;
+    }
+    .outlier-chips-title {
+      color: var(--cpe-text);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .outlier-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--cpe-surface);
+      border: 1px solid var(--cpe-border);
+      padding: 3px 10px;
+      border-radius: var(--radius-pill);
+      cursor: pointer;
+      color: var(--cpe-text-muted);
+      transition: all 0.15s ease;
+    }
+    .outlier-chip:hover {
+      border-color: var(--cpe-brand-blue);
+      color: var(--cpe-text);
+      transform: translateY(-1px);
+    }
+    .outlier-chip strong {
+      color: var(--cpe-danger);
+    }
+
+    /* Operational Data Table */
+    .table-panel {
+      background: var(--cpe-surface);
+      border: 1px solid var(--cpe-border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+    .table-responsive {
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 13px;
+    }
+    thead {
+      background: var(--cpe-surface-subtle);
+      border-bottom: 1px solid var(--cpe-border);
+    }
+    th {
+      padding: 12px 14px;
+      color: var(--cpe-text-dim);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    td {
+      padding: 11px 14px;
+      border-bottom: 1px solid var(--cpe-border);
+      color: var(--cpe-text-muted);
+    }
+    tr.data-row {
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    tr.data-row:hover td {
+      background: var(--cpe-surface-hover);
+    }
+
+    /* Links inside table */
+    .table-link {
+      color: var(--cpe-brand-blue);
+      text-decoration: none;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .table-link:hover {
+      text-decoration: underline;
+      color: #3b82f6;
+    }
+
+    /* Status Badges */
+    .badge-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 7px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .status-ready { background: var(--cpe-success-bg); color: var(--cpe-success); }
+    .status-overdue { background: var(--cpe-warning-bg); color: var(--cpe-warning); }
+    .status-damaged { background: var(--cpe-danger-bg); color: var(--cpe-danger); }
+    .status-active { background: var(--cpe-info-bg); color: var(--cpe-info); }
+    .status-purple { background: var(--cpe-purple-bg); color: var(--cpe-purple); }
+
+    /* Action buttons in row */
+    .btn-inspect {
+      background: var(--cpe-surface-subtle);
+      border: 1px solid var(--cpe-border);
+      color: var(--cpe-text);
+      padding: 4px 10px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-inspect:hover {
+      background: var(--cpe-brand-blue);
+      color: #fff;
+      border-color: var(--cpe-brand-blue);
+    }
+
+    /* Table Footer & Pagination */
+    .table-footer {
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      color: var(--cpe-text-dim);
+    }
+    .pagination-btn {
+      background: var(--cpe-surface-subtle);
+      border: 1px solid var(--cpe-border);
+      color: var(--cpe-text);
+      padding: 5px 12px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .pagination-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* =====================================================================
+       Drill-Through Detail Inspector Modal
+       ===================================================================== */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: var(--cpe-modal-backdrop);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+
+    .modal-window {
+      background: var(--cpe-surface);
+      border: 1px solid var(--cpe-border);
+      border-radius: var(--radius-md);
+      width: 100%;
+      max-width: 880px;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: var(--cpe-modal-shadow);
+      overflow: hidden;
+    }
+    .modal-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--cpe-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--cpe-surface-subtle);
+    }
+    .modal-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--cpe-text);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .btn-close-modal {
+      background: transparent;
+      border: none;
+      color: var(--cpe-text-dim);
+      font-size: 22px;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .btn-close-modal:hover { color: var(--cpe-text); }
+
+    /* Modal Navigation Tabs */
+    .modal-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--cpe-border);
+      background: var(--cpe-surface);
+      padding: 0 20px;
+      gap: 8px;
+    }
+    .modal-tab-btn {
+      padding: 10px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--cpe-text-dim);
+      border: none;
+      background: transparent;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .modal-tab-btn:hover { color: var(--cpe-text); }
+    .modal-tab-btn.active {
+      color: var(--cpe-text);
+      border-bottom-color: var(--cpe-brand-blue);
+      font-weight: 600;
+    }
+
+    .modal-body {
+      padding: 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Risk Assessment Box in Modal */
+    .risk-assessment-box {
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      border-left: 4px solid;
+    }
+    .risk-box-high {
+      background: rgba(228, 63, 11, 0.1);
+      border-color: var(--cpe-danger);
+    }
+    .risk-box-medium {
+      background: rgba(255, 193, 7, 0.1);
+      border-color: var(--cpe-warning);
+    }
+    .risk-box-low {
+      background: rgba(16, 107, 218, 0.1);
+      border-color: var(--cpe-info);
+    }
+    .risk-box-normal {
+      background: rgba(0, 150, 136, 0.1);
+      border-color: var(--cpe-success);
+    }
+
+    /* Key-Value Details Grid */
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 600px) {
+      .detail-grid { grid-template-columns: 1fr; }
+    }
+    .detail-item {
+      background: var(--cpe-surface-subtle);
+      border: 1px solid var(--cpe-border);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+    }
+    .detail-item .label {
+      font-size: 12px;
+      color: var(--cpe-text-dim);
+      margin-bottom: 2px;
+    }
+    .detail-item .value {
+      font-size: 14px;
+      color: var(--cpe-text);
+      font-weight: 500;
+      word-break: break-word;
+    }
+
+    /* Sub-table in modal */
+    .subtable-container {
+      margin-top: 14px;
+      border: 1px solid var(--cpe-border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+    .subtable-header {
+      background: var(--cpe-surface-subtle);
+      padding: 8px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--cpe-text);
+      border-bottom: 1px solid var(--cpe-border);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Application Bar -->
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-badge">CPE</span>
+      <span class="brand-title">คลังข้อมูลครุภัณฑ์และการซ่อมบำรุง (Data Warehouse)</span>
+    </div>
+    <div class="app-meta">
+      <span>ตารางข้อเท็จจริง: <code>fact_borrow_transaction</code></span>
+      <span id="apiStatusBadge" class="badge-status status-active">🔄 กำลังเชื่อมต่อ API...</span>
+      <button id="themeToggleBtn" class="theme-toggle-btn" aria-label="สลับโหมดมืด/สว่าง (Dark / Light Mode)" title="สลับโหมดมืด/สว่าง">
+        <span class="theme-toggle-icon">🌙</span>
+        <span class="theme-toggle-text">โหมดมืด</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Floating Global Module Navigation (docs/frontend-guide.md) -->
+  <div class="floating-nav-wrapper">
+    <nav class="floating-nav" id="moduleNav" aria-label="Global Module Navigation">
+      <!-- Injected via JS -->
+    </nav>
+  </div>
+
+  <main class="container">
+    
+    <!-- Active Module Context Header -->
+    <div class="context-header">
+      <div class="context-title">
+        <h1>📦 สถิติและรายการยืม-คืนครุภัณฑ์ (Borrowing Analytics)</h1>
+        <p>วิเคราะห์ความต้องการใช้งาน พฤติกรรมส่งคืน และเรดาร์ตรวจจับรายการน่าสงสัย/ผิดปกติ</p>
+      </div>
+    </div>
+
+    <!-- 🚨 Anomaly & Risk Radar Panel (NEW) -->
+    <div class="radar-panel">
+      <div class="radar-header">
+        <div class="radar-title">
+          <span>🚨 เรดาร์ตรวจจับพฤติกรรมผิดปกติ & ความเสี่ยง (Anomaly & Risk Radar)</span>
+        </div>
+        <span class="radar-hint">คลิกปุ่มด้านล่างเพื่อกรองดูรายการเฉพาะกลุ่มที่มีพฤติกรรมน่าสงสัยทันที</span>
+      </div>
+      <div class="radar-buttons">
+        <button class="radar-btn active" data-risk="ALL">
+          <span>ทั้งหมด</span>
+          <span class="radar-badge" id="radarCountAll">0</span>
+        </button>
+        <button class="radar-btn" data-risk="ANY_FLAG">
+          <span>🔥 รายการมีสัญญาณเตือน</span>
+          <span class="radar-badge" id="radarCountFlagged" style="color:var(--cpe-danger);">0</span>
+        </button>
+        <button class="radar-btn" data-risk="REPEAT_ASSET">
+          <span>🔄 ผูกขาดเครื่องเดิมซ้ำ</span>
+          <span class="radar-badge" id="radarCountRepeat">0</span>
+        </button>
+        <button class="radar-btn" data-risk="MASS_BORROW">
+          <span>📦 กวาด/ยืมหลายชิ้นพร้อมกัน (≥3 ชิ้น)</span>
+          <span class="radar-badge" id="radarCountMass">0</span>
+        </button>
+        <button class="radar-btn" data-risk="CHRONIC_OVERDUE">
+          <span>⏰ ผู้ยืมประวัติล่าช้าเรื้อรัง (≥50%)</span>
+          <span class="radar-badge" id="radarCountChronic">0</span>
+        </button>
+        <button class="radar-btn" data-risk="EXCESSIVE_DURATION">
+          <span>⏳ ถือครองยาวนาน (>30 วัน)</span>
+          <span class="radar-badge" id="radarCountDuration">0</span>
+        </button>
+        <button class="radar-btn" data-risk="MACHINE_REPLACED">
+          <span>🔄 มีการเปลี่ยนเครื่องทดแทน</span>
+          <span class="radar-badge" id="radarCountReplaced">0</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Active Filter Indicators Bar -->
+    <div class="active-filters-bar" id="activeFiltersBar">
+      <span style="color:var(--cpe-text-dim); font-size:12px;">🔍 ตัวกรองปัจจุบัน:</span>
+      <div id="filterPillsContainer" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
+      <button class="btn-reset-filters" id="btnResetFilters">ล้างตัวกรองทั้งหมด</button>
+    </div>
+
+    <!-- Toolbar Filters -->
+    <div class="toolbar">
+      <div class="filter-group">
+        <label class="filter-label" for="searchInput">ค้นหา:</label>
+        <input type="text" id="searchInput" class="form-control search-input" placeholder="พิมพ์ชื่อผู้ยืม, รหัสครุภัณฑ์, อุปกรณ์, หรือคำขอ...">
+      </div>
+      <div class="filter-group">
+        <label class="filter-label" for="deptFilter">ภาควิชา/สังกัด:</label>
+        <select id="deptFilter" class="form-control">
+          <option value="ALL">ทั้งหมดทุกภาควิชา</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label class="filter-label" for="roleFilter">สถานภาพ:</label>
+        <select id="roleFilter" class="form-control">
+          <option value="ALL">ทุกสถานภาพ</option>
+          <option value="นิสิต">นิสิต</option>
+          <option value="อาจารย์">อาจารย์</option>
+          <option value="เจ้าหน้าที่">เจ้าหน้าที่</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label class="filter-label" for="statusFilter">สถานะส่งคืน:</label>
+        <select id="statusFilter" class="form-control">
+          <option value="ALL">ทั้งหมด</option>
+          <option value="NORMAL">คืนตรงเวลา (ปกติ)</option>
+          <option value="OVERDUE">คืนล่าช้า (Overdue)</option>
+          <option value="DAMAGED">ชำรุดตอนคืน</option>
+          <option value="REPLACED">เปลี่ยนเครื่องทดแทน</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- KPI Cards Grid (Clickable to Drill-down) -->
+    <div class="kpi-grid">
+      <div class="kpi-card" id="kpiCardAll" title="คลิกเพื่อแสดงทุกรายการ">
+        <div class="kpi-title">รายการยืมทั้งหมด <span>📋</span></div>
+        <div class="kpi-value" id="kpiTotalBorrows">0</div>
+        <div class="kpi-sub" id="kpiTotalRequests">0 ใบคำขอ</div>
+      </div>
+      <div class="kpi-card" id="kpiCardOverdue" title="คลิกเพื่อกรองเฉพาะรายการคืนล่าช้า">
+        <div class="kpi-title">คืนล่าช้า (Overdue) <span>⏰</span></div>
+        <div class="kpi-value" id="kpiOverdueRate" style="color: var(--cpe-warning)">0%</div>
+        <div class="kpi-sub" id="kpiOverdueCount">0 รายการเกินกำหนด</div>
+      </div>
+      <div class="kpi-card" id="kpiCardNormal" title="คลิกเพื่อกรองเฉพาะรายการคืนปกติ">
+        <div class="kpi-title">คืนสภาพสมบูรณ์ <span>✅</span></div>
+        <div class="kpi-value" id="kpiNormalRate" style="color: var(--cpe-success)">0%</div>
+        <div class="kpi-sub" id="kpiNormalCount">0 ชิ้นสภาพปกติ</div>
+      </div>
+      <div class="kpi-card" id="kpiCardDamaged" title="คลิกเพื่อกรองเฉพาะรายการที่ชำรุด">
+        <div class="kpi-title">ชำรุดตอนส่งคืน <span>⚠️</span></div>
+        <div class="kpi-value" id="kpiDamagedCount" style="color: var(--cpe-danger)">0</div>
+        <div class="kpi-sub">ต้องส่งซ่อมบำรุงต่อ</div>
+      </div>
+      <div class="kpi-card" id="kpiCardReplaced" title="คลิกเพื่อกรองเฉพาะรายการเปลี่ยนเครื่อง">
+        <div class="kpi-title">เปลี่ยนเครื่องทดแทน <span>🔄</span></div>
+        <div class="kpi-value" id="kpiReplacedCount" style="color: var(--cpe-info)">0</div>
+        <div class="kpi-sub">เครื่องเดิมไม่พร้อมใช้งาน</div>
+      </div>
+    </div>
+
+    <!-- Multi-Dimensional Analytics Instruments (Row 1) -->
+    <div class="charts-multi-grid">
+      <!-- 1. Multi-Dim Time & Return Health Combo Chart (4 Dimensions) -->
+      <div class="chart-panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">
+              <span>📈 แนวโน้มการยืม & สภาพการส่งคืนข้ามเวลา (Multi-Dimensional Time & Status Matrix)</span>
+            </div>
+            <span class="panel-hint">แกนซ้าย: ปริมาณชิ้นซ้อนตามสภาพคืน (ตรงเวลา/ล่าช้า/ชำรุด) | แกนขวา: เส้นแนวโน้ม % ส่งคืนล่าช้า (Overdue Rate)</span>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="monthlyTrendChart"></canvas>
+        </div>
+      </div>
+
+      <!-- 2. Department Cross-Dimensional Analysis (3 Dimensions with Switcher) -->
+      <div class="chart-panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">
+              <span>🏢 วิเคราะห์ข้ามมิติระดับภาควิชา (Department Cross-Analysis)</span>
+            </div>
+            <span class="panel-hint" id="deptSubDimHint">แสดงสัดส่วนผู้ยืมตามบทบาทในแต่ละภาควิชา</span>
+          </div>
+          <!-- Dimension Switcher -->
+          <div class="dim-switcher" id="deptDimSwitcher" role="radiogroup" aria-label="เลือกมิติวิเคราะห์">
+            <button class="dim-btn active" data-dim="role">👤 บทบาท</button>
+            <button class="dim-btn" data-dim="category">📦 ครุภัณฑ์</button>
+            <button class="dim-btn" data-dim="risk">🚨 ความเสี่ยง</button>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="deptCrossChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Multi-Dimensional Analytics Instruments (Row 2: 5 Dimensions Correlation Radar) -->
+    <div class="chart-panel-full">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">
+            <span>🎯 เรดาร์พฤติกรรม & ตรวจจับค่าผิดปกติ (Behavior Correlation & Outlier Bubble Matrix)</span>
+          </div>
+          <span class="panel-hint">แกน X: ระยะเวลายืม (วัน) | แกน Y: วันเกินกำหนด (วัน) | ขนาดฟอง: ปริมาณชิ้นในคำขอ | สีฟอง: ระดับความเสี่ยง</span>
+        </div>
+        <span style="font-size:12px; color:var(--cpe-brand-blue); font-weight:500;">💡 คลิกที่จุดฟอง เพื่อเปิดดูข้อมูลเชิงลึกราย Record ทันที</span>
+      </div>
+
+      <!-- Quick Outlier Insights Bar -->
+      <div class="outlier-chips-bar" id="outlierChipsBar">
+        <span class="outlier-chips-title">🚨 Outliers เด่นที่ตรวจพบ:</span>
+        <div id="outlierChipsList" style="display:flex; gap:8px; flex-wrap:wrap;">
+          <!-- Injected via JS -->
+        </div>
+      </div>
+
+      <div class="chart-container-lg">
+        <canvas id="outlierBubbleChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Operational Data Table with Anomaly Indicators -->
+    <div class="table-panel">
+      <div class="panel-header" style="padding: 16px 20px; border-bottom: 1px solid var(--cpe-border); margin-bottom: 0;">
+        <div class="panel-title">📋 รายการข้อเท็จจริงการยืม-คืน (fact_borrow_transaction)</div>
+        <span id="recordCount" style="font-size: 13px; color: var(--cpe-text-dim)">แสดง 0 จาก 0 รายการ</span>
+      </div>
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Fact ID</th>
+              <th>คำขอ #</th>
+              <th>วันที่ยืม</th>
+              <th>กำหนดคืน</th>
+              <th>ผู้ยืม (คลิกดูประวัติ)</th>
+              <th>ภาควิชา</th>
+              <th>ครุภัณฑ์ที่ยืม</th>
+              <th>สถานะส่งคืน</th>
+              <th>สัญญาณเตือน / พฤติกรรม</th>
+              <th style="text-align:center;">เจาะลึก</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <!-- Populated via JS -->
+          </tbody>
+        </table>
+      </div>
+      <div class="table-footer">
+        <div id="pageInfo">หน้า 1 จาก 1</div>
+        <div style="display: flex; gap: 8px;">
+          <button id="prevBtn" class="pagination-btn">← ก่อนหน้า</button>
+          <button id="nextBtn" class="pagination-btn">ถัดไป →</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Drill-Through Record Inspector Modal -->
+  <div class="modal-overlay" id="inspectorModal">
+    <div class="modal-window">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span>🔍 เจาะลึกข้อมูลรายการ:</span>
+          <span id="modalHeaderFactId" style="color:var(--cpe-brand-blue);">#0</span>
+        </div>
+        <button class="btn-close-modal" id="btnCloseModal" title="ปิดหน้าต่าง (Esc)">&times;</button>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <div class="modal-tabs">
+        <button class="modal-tab-btn active" data-tab="tabRequest">📋 ข้อมูลใบคำขอยืม & ผลการตรวจจับ</button>
+        <button class="modal-tab-btn" data-tab="tabUser">👤 เจาะลึกประวัติผู้ยืมรายนี้</button>
+        <button class="modal-tab-btn" data-tab="tabAsset">📦 เจาะลึกครุภัณฑ์ชิ้นนี้</button>
+      </div>
+
+      <div class="modal-body">
+        
+        <!-- Tab 1: Request Overview & Anomaly Assessment -->
+        <div class="tab-content active" id="tabRequest">
+          
+          <!-- Anomaly Risk Assessment Alert Box -->
+          <div id="mRiskAssessmentBox" class="risk-assessment-box risk-box-normal">
+            <div style="font-size: 14px; font-weight: 600; margin-bottom: 4px;" id="mRiskBoxTitle">
+              🛡️ ผลการประเมินความเสี่ยง: ปกติ
+            </div>
+            <div style="font-size: 13px; color: var(--cpe-text-muted);" id="mRiskBoxDesc">
+              ไม่พบพฤติกรรมน่าสงสัยหรือผิดปกติในรายการนี้
+            </div>
+            <ul id="mRiskEvidenceList" style="margin-top: 8px; margin-left: 18px; font-size: 13px; line-height: 1.6;">
+            </ul>
+          </div>
+
+          <div class="detail-grid">
+            <div class="detail-item">
+              <div class="label">รหัสคำขอเดิม (borrow_request_id)</div>
+              <div class="value" id="mReqId">-</div>
+            </div>
+            <div class="detail-item">
+              <div class="label">สถานะการส่งคืน</div>
+              <div class="value" id="mStatusBadge">-</div>
+            </div>
+            <div class="detail-item">
+              <div class="label">วันที่เริ่มยืม</div>
+              <div class="value" id="mBorrowDate">-</div>
+            </div>
+            <div class="detail-item">
+              <div class="label">กำหนดส่งคืนตามใบยืม</div>
+              <div class="value" id="mDueDate">-</div>
+            </div>
+            <div class="detail-item">
+              <div class="label">วันที่ส่งคืนจริง</div>
+              <div class="value" id="mActualDate">-</div>
+            </div>
+            <div class="detail-item">
+              <div class="label">ระยะเวลายืมใช้งานจริง</div>
+              <div class="value" id="mDuration">-</div>
+            </div>
+            <div class="detail-item">
+              <div class="label">สภาพครุภัณฑ์ตอนตรวจคืน</div>
+              <div class="value" id="mCondition">-</div>
+            </div>
+            <div class="detail-item">
+              <div class="label">อาจารย์/ผู้อนุมัติคำขอ</div>
+              <div class="value" id="mApprover">-</div>
+            </div>
+          </div>
+          <div class="detail-item" style="margin-bottom: 12px;">
+            <div class="label">วัตถุประสงค์ในการยืมใช้งาน (Reason)</div>
+            <div class="value" id="mReason" style="color: var(--cpe-text); font-weight: normal;">-</div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Borrower Profile & History -->
+        <div class="tab-content" id="tabUser">
+          <div class="detail-grid">
+            <div class="detail-item">
+              <div class="label">ชื่อ-นามสกุล ผู้ยืม</div>
+              <div class="value" id="mUserName">-</div>
+            </div>
+            <div class="detail-item">
+              <div class="label">สถานภาพ</div>
+              <div class="value" id="mUserRole">-</div>
+            </div>
+            <div class="detail-item">
+              <div class="label">ภาควิชา/สังกัด</div>
+              <div class="value" id="mUserDept">-</div>
+            </div>
+            <div class="detail-item">
+              <div class="label">สถิติความรับผิดชอบสะสม</div>
+              <div class="value" id="mUserStatSummary">-</div>
+            </div>
+          </div>
+
+          <div class="subtable-container">
+            <div class="subtable-header">📚 ประวัติการยืมทั้งหมดของบุคคลนี้ในระบบ</div>
+            <div style="max-height: 220px; overflow-y: auto;">
+              <table>
+                <thead>
+                  <tr>
+                    <th>วันที่ยืม</th>
+                    <th>ครุภัณฑ์ที่ยืม</th>
+                    <th>กำหนดคืน</th>
+                    <th>สภาพตอนคืน</th>
+                    <th>สถานะ</th>
+                  </tr>
+                </thead>
+                <tbody id="mUserHistoryTable">
+                  <!-- Populated via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 3: Asset Profile & History -->
+        <div class="tab-content" id="tabAsset">
+          <div class="detail-grid">
+            <div class="detail-item">
+              <div class="label">รหัสครุภัณฑ์ (Asset Code)</div>
+              <div class="value" id="mAssetCode" style="font-family: monospace;">-</div>
+            </div>
+            <div class="detail-item">
+              <div class="label">ชื่อครุภัณฑ์</div>
+              <div class="value" id="mAssetName">-</div>
+            </div>
+            <div class="detail-item">
+              <div class="label">ประเภทครุภัณฑ์</div>
+              <div class="value" id="mAssetType">-</div>
+            </div>
+            <div class="detail-item">
+              <div class="label">หมวดหมู่ครุภัณฑ์</div>
+              <div class="value" id="mAssetCat">-</div>
+            </div>
+            <div class="detail-item">
+              <div class="label">ยี่ห้อ (Brand)</div>
+              <div class="value" id="mAssetBrand">-</div>
+            </div>
+            <div class="detail-item">
+              <div class="label">ความถี่การถูกยืมในระบบ</div>
+              <div class="value" id="mAssetStatSummary">-</div>
+            </div>
+          </div>
+
+          <div class="subtable-container">
+            <div class="subtable-header">🔄 ประวัติการถูกยืมทั้งหมดของครุภัณฑ์ชิ้นนี้</div>
+            <div style="max-height: 220px; overflow-y: auto;">
+              <table>
+                <thead>
+                  <tr>
+                    <th>วันที่ยืม</th>
+                    <th>ผู้ยืม</th>
+                    <th>สังกัด</th>
+                    <th>สภาพตอนคืน</th>
+                    <th>สถานะ</th>
+                  </tr>
+                </thead>
+                <tbody id="mAssetHistoryTable">
+                  <!-- Populated via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // 0. Theme Switcher (Dark / White Mode)
+    // =========================================================================
+    function initTheme() {
+      const savedTheme = localStorage.getItem('cpe_theme') || 'dark';
+      setTheme(savedTheme, false);
+
+      const toggleBtn = document.getElementById('themeToggleBtn');
+      if (toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+          const current = document.documentElement.getAttribute('data-theme') || 'dark';
+          const next = current === 'dark' ? 'light' : 'dark';
+          setTheme(next, true);
+        });
+      }
+    }
+
+    function setTheme(theme, updateCharts = true) {
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('cpe_theme', theme);
+
+      const toggleBtn = document.getElementById('themeToggleBtn');
+      if (toggleBtn) {
+        if (theme === 'light') {
+          toggleBtn.innerHTML = '<span class="theme-toggle-icon">☀️</span><span class="theme-toggle-text">โหมดสว่าง</span>';
+          toggleBtn.title = 'คลิกเพื่อสลับเป็นโหมดมืด (Dark Mode)';
+        } else {
+          toggleBtn.innerHTML = '<span class="theme-toggle-icon">🌙</span><span class="theme-toggle-text">โหมดมืด</span>';
+          toggleBtn.title = 'คลิกเพื่อสลับเป็นโหมดสว่าง (White / Light Mode)';
+        }
+      }
+
+      if (updateCharts) {
+        applyThemeToCharts();
+      }
+    }
+
+    function applyThemeToCharts() {
+      const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+      const textColor = isLight ? '#475569' : '#CCC8C1';
+      const gridColor = isLight ? '#E2E8F0' : '#26292B';
+
+      Chart.defaults.color = textColor;
+
+      if (monthlyChartInst) {
+        monthlyChartInst.options.scales.x.grid.color = gridColor;
+        monthlyChartInst.options.scales.x.ticks.color = textColor;
+        monthlyChartInst.options.scales.y.grid.color = gridColor;
+        monthlyChartInst.options.scales.y.ticks.color = textColor;
+        if (monthlyChartInst.options.scales.y1) {
+          monthlyChartInst.options.scales.y1.ticks.color = textColor;
+          if (monthlyChartInst.options.scales.y1.title) monthlyChartInst.options.scales.y1.title.color = textColor;
+        }
+        if (monthlyChartInst.options.scales.y.title) monthlyChartInst.options.scales.y.title.color = textColor;
+        if (monthlyChartInst.options.plugins.legend) monthlyChartInst.options.plugins.legend.labels.color = textColor;
+        monthlyChartInst.update();
+      }
+      if (deptCrossChartInst) {
+        deptCrossChartInst.options.scales.x.grid.color = gridColor;
+        deptCrossChartInst.options.scales.x.ticks.color = textColor;
+        deptCrossChartInst.options.scales.y.ticks.color = textColor;
+        if (deptCrossChartInst.options.plugins.legend) deptCrossChartInst.options.plugins.legend.labels.color = textColor;
+        deptCrossChartInst.update();
+      }
+      if (bubbleChartInst) {
+        bubbleChartInst.options.scales.x.grid.color = gridColor;
+        bubbleChartInst.options.scales.x.ticks.color = textColor;
+        if (bubbleChartInst.options.scales.x.title) bubbleChartInst.options.scales.x.title.color = textColor;
+        bubbleChartInst.options.scales.y.grid.color = gridColor;
+        bubbleChartInst.options.scales.y.ticks.color = textColor;
+        if (bubbleChartInst.options.scales.y.title) bubbleChartInst.options.scales.y.title.color = textColor;
+        if (bubbleChartInst.options.plugins.legend) bubbleChartInst.options.plugins.legend.labels.color = textColor;
+        bubbleChartInst.update();
+      }
+    }
+
+    initTheme();
+
+    // =========================================================================
+    // 1. Data-Driven Floating Global Navigation
+    // =========================================================================
+    const APP_MODULES = [
+      { id: 'borrow', label: '📦 การยืม-คืนครุภัณฑ์', count: '266 รายการ', active: true },
+      { id: 'asset_inv', label: '📋 ยอดคงคลังครุภัณฑ์', count: '4,324 ชิ้น', active: false },
+      { id: 'maint_asset', label: '🛠️ ซ่อมบำรุงครุภัณฑ์', count: '211 งาน', active: false },
+      { id: 'maint_gen', label: '🏢 แจ้งซ่อมทั่วไป', count: '270 เรื่อง', active: false }
+    ];
+
+    function renderFloatingNav() {
+      const navContainer = document.getElementById('moduleNav');
+      navContainer.innerHTML = APP_MODULES.map(m => `
+        <button class="nav-pill" ${m.active ? 'aria-current="page"' : ''} title="${m.label}">
+          <span>${m.label}</span>
+          <span class="badge">${m.count}</span>
+        </button>
+      `).join('');
+    }
+    renderFloatingNav();
+
+    // =========================================================================
+    // 2. State & Drill-Down Filters
+    // =========================================================================
+    let allData = [];
+    let filteredData = [];
+    let currentPage = 1;
+    const pageSize = 15;
+
+    // Active drill-down state
+    const drillState = {
+      search: '',
+      dept: 'ALL',
+      role: 'ALL',
+      status: 'ALL',
+      month: null,
+      kpiMode: 'ALL',
+      riskMode: 'ALL'
+    };
+
+    // Multi-Dimensional Chart instances
+    let monthlyChartInst, deptCrossChartInst, bubbleChartInst;
+    let deptSubDim = 'role'; // 'role' | 'category' | 'risk'
+
+    function populateFilterOptions() {
+      const deptSelect = document.getElementById('deptFilter');
+      deptSelect.innerHTML = '<option value="ALL">ทั้งหมดทุกภาควิชา</option>';
+      const uniqueDepts = Array.from(new Set(allData.map(d => d.dept_name))).sort();
+      uniqueDepts.forEach(dept => {
+        const opt = document.createElement('option');
+        opt.value = dept;
+        opt.textContent = dept;
+        deptSelect.appendChild(opt);
+      });
+    }
+
+    function updateRadarCounters() {
+      const total = allData.length;
+      const flagged = allData.filter(r => r.risk_level !== 'NORMAL').length;
+      const repeat = allData.filter(r => r.anomalies.some(a => a.type === 'REPEAT_ASSET')).length;
+      const mass = allData.filter(r => r.anomalies.some(a => a.type === 'MASS_BORROW')).length;
+      const chronic = allData.filter(r => r.anomalies.some(a => a.type === 'CHRONIC_OVERDUE')).length;
+      const duration = allData.filter(r => r.anomalies.some(a => a.type === 'EXCESSIVE_DURATION')).length;
+      const replaced = allData.filter(r => r.is_replaced === 1).length;
+
+      document.getElementById('radarCountAll').textContent = total;
+      document.getElementById('radarCountFlagged').textContent = flagged;
+      document.getElementById('radarCountRepeat').textContent = repeat;
+      document.getElementById('radarCountMass').textContent = mass;
+      document.getElementById('radarCountChronic').textContent = chronic;
+      document.getElementById('radarCountDuration').textContent = duration;
+      document.getElementById('radarCountReplaced').textContent = replaced;
+    }
+
+    function applyFilters() {
+      filteredData = allData.filter(item => {
+        // Search text
+        const q = drillState.search.toLowerCase();
+        const matchSearch = !q ||
+          item.fact_id.toString().includes(q) ||
+          item.request_id.toString().includes(q) ||
+          item.user.name.toLowerCase().includes(q) ||
+          item.dept_name.toLowerCase().includes(q) ||
+          item.asset.code.toLowerCase().includes(q) ||
+          item.asset.name.toLowerCase().includes(q);
+
+        // Dept filter
+        const matchDept = (drillState.dept === 'ALL') || (item.dept_name === drillState.dept);
+
+        // Role filter
+        const matchRole = (drillState.role === 'ALL') || (item.user.role === drillState.role);
+
+        // Status filter
+        let matchStatus = true;
+        if (drillState.status === 'NORMAL') {
+          matchStatus = (item.is_overdue === 0 && item.return_condition === 'ปกติ');
+        } else if (drillState.status === 'OVERDUE') {
+          matchStatus = (item.is_overdue === 1);
+        } else if (drillState.status === 'DAMAGED') {
+          matchStatus = (item.return_condition === 'ชำรุด');
+        } else if (drillState.status === 'REPLACED') {
+          matchStatus = (item.is_replaced === 1);
+        }
+
+        // Monthly drill-down
+        const matchMonth = !drillState.month || (item.borrow_date && item.borrow_date.startsWith(drillState.month));
+
+        // KPI card drill-down mode
+        let matchKPI = true;
+        if (drillState.kpiMode === 'OVERDUE') matchKPI = (item.is_overdue === 1);
+        else if (drillState.kpiMode === 'NORMAL') matchKPI = (item.return_condition === 'ปกติ');
+        else if (drillState.kpiMode === 'DAMAGED') matchKPI = (item.return_condition === 'ชำรุด');
+        else if (drillState.kpiMode === 'REPLACED') matchKPI = (item.is_replaced === 1);
+
+        // Risk radar mode
+        let matchRisk = true;
+        if (drillState.riskMode === 'ANY_FLAG') {
+          matchRisk = item.risk_level !== 'NORMAL';
+        } else if (drillState.riskMode === 'REPEAT_ASSET') {
+          matchRisk = item.anomalies.some(a => a.type === 'REPEAT_ASSET');
+        } else if (drillState.riskMode === 'MASS_BORROW') {
+          matchRisk = item.anomalies.some(a => a.type === 'MASS_BORROW');
+        } else if (drillState.riskMode === 'CHRONIC_OVERDUE') {
+          matchRisk = item.anomalies.some(a => a.type === 'CHRONIC_OVERDUE');
+        } else if (drillState.riskMode === 'EXCESSIVE_DURATION') {
+          matchRisk = item.anomalies.some(a => a.type === 'EXCESSIVE_DURATION');
+        } else if (drillState.riskMode === 'MACHINE_REPLACED') {
+          matchRisk = item.is_replaced === 1;
+        }
+
+        return matchSearch && matchDept && matchRole && matchStatus && matchMonth && matchKPI && matchRisk;
+      });
+
+      currentPage = 1;
+      updateFilterPills();
+      updateKPIs();
+      renderTable();
+      updateCharts();
+    }
+
+    // =========================================================================
+    // 3. Drill-Down Indicator Pills
+    // =========================================================================
+    function updateFilterPills() {
+      const container = document.getElementById('filterPillsContainer');
+      const bar = document.getElementById('activeFiltersBar');
+      const pills = [];
+
+      if (drillState.riskMode !== 'ALL') {
+        const riskLabels = {
+          'ANY_FLAG': 'สัญญาณเตือนความเสี่ยง',
+          'REPEAT_ASSET': 'ผูกขาดเครื่องเดิมซ้ำ',
+          'MASS_BORROW': 'ยืมหลายชิ้น (Mass)',
+          'CHRONIC_OVERDUE': 'ประวัติคืนล่าช้าเรื้อรัง',
+          'EXCESSIVE_DURATION': 'ถือครองยาวนาน (>30 วัน)',
+          'MACHINE_REPLACED': 'เปลี่ยนเครื่องทดแทน'
+        };
+        pills.push({ label: `เรดาร์: ${riskLabels[drillState.riskMode] || drillState.riskMode}`, clear: () => { setRadarMode('ALL'); applyFilters(); } });
+      }
+      if (drillState.month) {
+        pills.push({ label: `เดือน: ${drillState.month}`, clear: () => { drillState.month = null; applyFilters(); } });
+      }
+      if (drillState.dept !== 'ALL') {
+        pills.push({ label: `ภาควิชา: ${drillState.dept}`, clear: () => { drillState.dept = 'ALL'; document.getElementById('deptFilter').value = 'ALL'; applyFilters(); } });
+      }
+      if (drillState.role !== 'ALL') {
+        pills.push({ label: `สถานภาพ: ${drillState.role}`, clear: () => { drillState.role = 'ALL'; document.getElementById('roleFilter').value = 'ALL'; applyFilters(); } });
+      }
+      if (drillState.status !== 'ALL') {
+        pills.push({ label: `สถานะ: ${drillState.status}`, clear: () => { drillState.status = 'ALL'; document.getElementById('statusFilter').value = 'ALL'; applyFilters(); } });
+      }
+      if (drillState.kpiMode !== 'ALL') {
+        pills.push({ label: `หมวดหมู่ KPI: ${drillState.kpiMode}`, clear: () => { drillState.kpiMode = 'ALL'; highlightKpiCard('ALL'); applyFilters(); } });
+      }
+      if (drillState.search) {
+        pills.push({ label: `ค้นหา: "${drillState.search}"`, clear: () => { drillState.search = ''; document.getElementById('searchInput').value = ''; applyFilters(); } });
+      }
+
+      if (pills.length > 0) {
+        bar.style.display = 'flex';
+        container.innerHTML = pills.map((p, idx) => `
+          <span class="filter-tag">
+            ${p.label}
+            <span class="tag-remove" data-idx="${idx}">&times;</span>
+          </span>
+        `).join('');
+
+        container.querySelectorAll('.tag-remove').forEach(el => {
+          el.addEventListener('click', () => {
+            const idx = parseInt(el.dataset.idx);
+            pills[idx].clear();
+          });
+        });
+      } else {
+        bar.style.display = 'none';
+        container.innerHTML = '';
+      }
+    }
+
+    function setRadarMode(mode) {
+      drillState.riskMode = mode;
+      document.querySelectorAll('.radar-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.risk === mode);
+      });
+    }
+
+    document.querySelectorAll('.radar-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        setRadarMode(btn.dataset.risk);
+        applyFilters();
+      });
+    });
+
+    document.getElementById('btnResetFilters').addEventListener('click', () => {
+      drillState.search = '';
+      drillState.dept = 'ALL';
+      drillState.role = 'ALL';
+      drillState.status = 'ALL';
+      drillState.month = null;
+      drillState.kpiMode = 'ALL';
+      setRadarMode('ALL');
+      document.getElementById('searchInput').value = '';
+      document.getElementById('deptFilter').value = 'ALL';
+      document.getElementById('roleFilter').value = 'ALL';
+      document.getElementById('statusFilter').value = 'ALL';
+      highlightKpiCard('ALL');
+      applyFilters();
+    });
+
+    // =========================================================================
+    // 4. Update KPIs
+    // =========================================================================
+    function updateKPIs() {
+      const total = filteredData.length;
+      const uniqueRequests = new Set(filteredData.map(r => r.request_id)).size;
+      const overdueCount = filteredData.filter(r => r.is_overdue === 1).length;
+      const damagedCount = filteredData.filter(r => r.return_condition === 'ชำรุด').length;
+      const normalCount = filteredData.filter(r => r.return_condition === 'ปกติ').length;
+      const replacedCount = filteredData.filter(r => r.is_replaced === 1).length;
+      const returnedTotal = normalCount + damagedCount;
+
+      const overdueRate = total > 0 ? ((overdueCount / total) * 100).toFixed(1) : '0.0';
+      const normalRate = returnedTotal > 0 ? ((normalCount / returnedTotal) * 100).toFixed(1) : '0.0';
+
+      document.getElementById('kpiTotalBorrows').textContent = total.toLocaleString();
+      document.getElementById('kpiTotalRequests').textContent = `${uniqueRequests.toLocaleString()} ใบคำขอ`;
+      document.getElementById('kpiOverdueRate').textContent = `${overdueRate}%`;
+      document.getElementById('kpiOverdueCount').textContent = `${overdueCount} ชิ้นเกินกำหนด`;
+      document.getElementById('kpiNormalRate').textContent = `${normalRate}%`;
+      document.getElementById('kpiNormalCount').textContent = `${normalCount} ชิ้นสภาพสมบูรณ์`;
+      document.getElementById('kpiDamagedCount').textContent = damagedCount;
+      document.getElementById('kpiReplacedCount').textContent = replacedCount;
+    }
+
+    function highlightKpiCard(mode) {
+      document.querySelectorAll('.kpi-card').forEach(c => c.classList.remove('active-kpi'));
+      if (mode === 'ALL') document.getElementById('kpiCardAll').classList.add('active-kpi');
+      else if (mode === 'OVERDUE') document.getElementById('kpiCardOverdue').classList.add('active-kpi');
+      else if (mode === 'NORMAL') document.getElementById('kpiCardNormal').classList.add('active-kpi');
+      else if (mode === 'DAMAGED') document.getElementById('kpiCardDamaged').classList.add('active-kpi');
+      else if (mode === 'REPLACED') document.getElementById('kpiCardReplaced').classList.add('active-kpi');
+    }
+
+    // KPI Card Click Triggers
+    document.getElementById('kpiCardAll').addEventListener('click', () => { drillState.kpiMode = 'ALL'; highlightKpiCard('ALL'); applyFilters(); });
+    document.getElementById('kpiCardOverdue').addEventListener('click', () => { drillState.kpiMode = 'OVERDUE'; highlightKpiCard('OVERDUE'); applyFilters(); });
+    document.getElementById('kpiCardNormal').addEventListener('click', () => { drillState.kpiMode = 'NORMAL'; highlightKpiCard('NORMAL'); applyFilters(); });
+    document.getElementById('kpiCardDamaged').addEventListener('click', () => { drillState.kpiMode = 'DAMAGED'; highlightKpiCard('DAMAGED'); applyFilters(); });
+    document.getElementById('kpiCardReplaced').addEventListener('click', () => { drillState.kpiMode = 'REPLACED'; highlightKpiCard('REPLACED'); applyFilters(); });
+
+    // =========================================================================
+    // 5. Render Operational Table with Behavior Signals
+    // =========================================================================
+    function renderTable() {
+      const tbody = document.getElementById('tableBody');
+      const start = (currentPage - 1) * pageSize;
+      const pageData = filteredData.slice(start, start + pageSize);
+      const totalPages = Math.ceil(filteredData.length / pageSize) || 1;
+
+      document.getElementById('recordCount').textContent = `แสดง ${filteredData.length.toLocaleString()} รายการ`;
+      document.getElementById('pageInfo').textContent = `หน้า ${currentPage} จาก ${totalPages}`;
+      document.getElementById('prevBtn').disabled = (currentPage <= 1);
+      document.getElementById('nextBtn').disabled = (currentPage >= totalPages);
+
+      if (pageData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding: 30px; color: var(--cpe-text-dim)">ไม่พบข้อมูลที่ตรงกับเงื่อนไขการตรวจจับ/ค้นหา</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = pageData.map(r => {
+        let statusBadge = '';
+        if (r.is_overdue === 1) {
+          statusBadge = `<span class="badge-status status-overdue">เกิน ${r.overdue_days} วัน</span>`;
+        } else if (r.actual_return_date) {
+          statusBadge = `<span class="badge-status status-ready">คืนตรงเวลา</span>`;
+        } else {
+          statusBadge = `<span class="badge-status status-active">อยู่ระหว่างยืม</span>`;
+        }
+
+        // Generate Anomaly / Risk Signal Badges for Row
+        let riskBadges = '';
+        if (r.anomalies && r.anomalies.length > 0) {
+          riskBadges = r.anomalies.slice(0, 2).map(a => {
+            if (a.type === 'REPEAT_ASSET') return `<span class="badge-status status-damaged" title="${a.detail}">🔄 ซ้ำ ${r.anomaly_metrics.repeat_asset_times}x</span>`;
+            if (a.type === 'MASS_BORROW') return `<span class="badge-status status-active" title="${a.detail}">📦 กวาด ${r.anomaly_metrics.items_in_request} ชิ้น</span>`;
+            if (a.type === 'CHRONIC_OVERDUE') return `<span class="badge-status status-overdue" title="${a.detail}">⏰ ช้า ${r.anomaly_metrics.user_overdue_rate_pct}%</span>`;
+            if (a.type === 'EXCESSIVE_DURATION') return `<span class="badge-status status-purple" title="${a.detail}">⏳ ${r.duration_days} วัน</span>`;
+            if (a.type === 'MACHINE_REPLACED') return `<span class="badge-status status-active" title="${a.detail}">🔄 เปลี่ยนเครื่อง</span>`;
+            return `<span class="badge-status status-damaged">${a.title}</span>`;
+          }).join(' ');
+        } else {
+          riskBadges = `<span class="badge-status status-ready" style="opacity:0.75;">ปกติ</span>`;
+        }
+
+        return `
+          <tr class="data-row" data-id="${r.fact_id}">
+            <td><strong>#${r.fact_id}</strong></td>
+            <td><span class="table-link" onclick="openInspector(${r.fact_id}, 'tabRequest'); event.stopPropagation();">REQ #${r.request_id}</span></td>
+            <td>${r.borrow_date || '-'}</td>
+            <td>${r.return_date || '-'}</td>
+            <td>
+              <span class="table-link" onclick="openInspector(${r.fact_id}, 'tabUser'); event.stopPropagation();" title="คลิกดูประวัติผู้ยืม">${r.user.name}</span>
+              <span style="font-size:11px; color:var(--cpe-text-dim);">(${r.user.role})</span>
+            </td>
+            <td>${r.dept_name}</td>
+            <td>
+              <span class="table-link" onclick="openInspector(${r.fact_id}, 'tabAsset'); event.stopPropagation();" title="คลิกดูสถิติครุภัณฑ์">${r.asset.name}</span>
+              <div style="font-size:11px; color:var(--cpe-text-dim); font-family: monospace;">${r.asset.code}</div>
+            </td>
+            <td>${statusBadge}</td>
+            <td>${riskBadges}</td>
+            <td style="text-align:center;">
+              <button class="btn-inspect" onclick="openInspector(${r.fact_id}, 'tabRequest'); event.stopPropagation();">🔍 เจาะลึก</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      // Row click to inspect
+      tbody.querySelectorAll('tr.data-row').forEach(row => {
+        row.addEventListener('click', () => {
+          const fid = parseInt(row.dataset.id);
+          openInspector(fid, 'tabRequest');
+        });
+      });
+    }
+
+    // =========================================================================
+    // 6. Multi-Dimensional Interactive Analytics Instruments
+    // =========================================================================
+    function initCharts() {
+      const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+      const textColor = isLight ? '#475569' : '#CCC8C1';
+      const gridColor = isLight ? '#E2E8F0' : '#26292B';
+
+      Chart.defaults.color = textColor;
+      Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Sarabun", sans-serif';
+
+      // -----------------------------------------------------------------------
+      // Chart 1: Multi-Dimensional Time & Status Matrix (Stacked Bar + Line)
+      // Dims: Time (X) × Status Volumes (Y left) × Overdue Rate % (Y right)
+      // -----------------------------------------------------------------------
+      const monthlyCtx = document.getElementById('monthlyTrendChart').getContext('2d');
+      monthlyChartInst = new Chart(monthlyCtx, {
+        data: {
+          labels: [],
+          datasets: [
+            {
+              type: 'bar',
+              label: 'คืนตรงเวลา (On-Time)',
+              data: [],
+              backgroundColor: '#009688',
+              stack: 'borrow_status',
+              borderRadius: 3
+            },
+            {
+              type: 'bar',
+              label: 'ส่งคืนล่าช้า (Overdue)',
+              data: [],
+              backgroundColor: '#FFC107',
+              stack: 'borrow_status',
+              borderRadius: 3
+            },
+            {
+              type: 'bar',
+              label: 'ส่งคืนชำรุด (Damaged)',
+              data: [],
+              backgroundColor: '#E43F0B',
+              stack: 'borrow_status',
+              borderRadius: 3
+            },
+            {
+              type: 'line',
+              label: '% อัตราส่งคืนล่าช้า',
+              data: [],
+              borderColor: '#0466C8',
+              backgroundColor: '#0466C8',
+              yAxisID: 'y1',
+              tension: 0.3,
+              pointRadius: 4,
+              pointHoverRadius: 6,
+              borderWidth: 2.5
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'top',
+              labels: { color: textColor, boxWidth: 12, padding: 12, font: { size: 11 } }
+            },
+            tooltip: {
+              callbacks: {
+                footer: (items) => {
+                  let total = 0;
+                  items.forEach(it => {
+                    if (it.dataset.type === 'bar') total += it.parsed.y;
+                  });
+                  return `รวมในเดือนนี้: ${total} ชิ้น`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              stacked: true,
+              grid: { color: gridColor },
+              ticks: { color: textColor, maxRotation: 45, minRotation: 45, font: { size: 11 } }
+            },
+            y: {
+              stacked: true,
+              grid: { color: gridColor },
+              ticks: { color: textColor },
+              beginAtZero: true,
+              title: { display: true, text: 'จำนวนชิ้นที่ยืม', color: textColor, font: { size: 10 } }
+            },
+            y1: {
+              type: 'linear',
+              position: 'right',
+              min: 0,
+              max: 100,
+              grid: { drawOnChartArea: false },
+              ticks: { color: textColor, callback: v => v + '%' },
+              title: { display: true, text: 'อัตราส่งคืนล่าช้า (%)', color: textColor, font: { size: 10 } }
+            }
+          },
+          onClick: (evt, elements) => {
+            if (elements.length > 0) {
+              const idx = elements[0].index;
+              const selectedMonth = monthlyChartInst.data.labels[idx];
+              drillState.month = selectedMonth;
+              applyFilters();
+            }
+          }
+        }
+      });
+
+      // -----------------------------------------------------------------------
+      // Chart 2: Department Cross-Dimensional Analysis (Stacked Horizontal Bar)
+      // Dims: Department (Y) × Volume (X) × Dynamic Sub-Dim (Role / Category / Risk)
+      // -----------------------------------------------------------------------
+      const deptCtx = document.getElementById('deptCrossChart').getContext('2d');
+      deptCrossChartInst = new Chart(deptCtx, {
+        type: 'bar',
+        data: { labels: [], datasets: [] },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'top',
+              labels: { color: textColor, boxWidth: 12, padding: 10, font: { size: 11 } }
+            },
+            tooltip: {
+              callbacks: {
+                footer: (items) => {
+                  let total = 0;
+                  items.forEach(it => { total += it.parsed.x; });
+                  return `รวมของภาควิชานี้: ${total} ชิ้น`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              stacked: true,
+              grid: { color: gridColor },
+              ticks: { color: textColor },
+              beginAtZero: true,
+              title: { display: true, text: 'จำนวนชิ้นที่ยืม (ชิ้น)', color: textColor, font: { size: 10 } }
+            },
+            y: {
+              stacked: true,
+              grid: { display: false },
+              ticks: { color: textColor, font: { size: 11 } }
+            }
+          },
+          onClick: (evt, elements) => {
+            if (elements.length > 0) {
+              const el = elements[0];
+              const dept = deptCrossChartInst.data.labels[el.index];
+              const datasetLabel = deptCrossChartInst.data.datasets[el.datasetIndex].label;
+              drillState.dept = dept;
+              document.getElementById('deptFilter').value = dept;
+
+              if (deptSubDim === 'role') {
+                drillState.role = datasetLabel;
+                document.getElementById('roleFilter').value = datasetLabel;
+              } else if (deptSubDim === 'risk') {
+                if (datasetLabel.includes('เสี่ยงสูง')) drillState.riskMode = 'ANY_FLAG';
+                else if (datasetLabel.includes('เฝ้าระวัง')) drillState.riskMode = 'CHRONIC_OVERDUE';
+              }
+              applyFilters();
+            }
+          }
+        }
+      });
+
+      // Dimension Switcher Event Listeners
+      document.querySelectorAll('#deptDimSwitcher .dim-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('#deptDimSwitcher .dim-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          deptSubDim = btn.dataset.dim;
+          
+          const hints = {
+            'role': 'แสดงสัดส่วนผู้ยืมตามบทบาทในแต่ละภาควิชา (อาจารย์/เจ้าหน้าที่/นิสิต)',
+            'category': 'แสดงสัดส่วนประเภทครุภัณฑ์ที่ถูกยืมในแต่ละภาควิชา',
+            'risk': 'แสดงการกระจายความเสี่ยง (ปกติ/เฝ้าระวัง/เสี่ยงสูง) ในแต่ละภาควิชา'
+          };
+          const hintEl = document.getElementById('deptSubDimHint');
+          if (hintEl) hintEl.textContent = hints[deptSubDim] || '';
+          
+          updateDeptCrossChart();
+        });
+      });
+
+      // -----------------------------------------------------------------------
+      // Chart 3: Behavior Correlation & Outlier Bubble Matrix (5 Dimensions)
+      // Dims: Duration (X) × Overdue (Y) × Items (Radius) × Risk Level (Color) × Drill-Through
+      // -----------------------------------------------------------------------
+      const bubbleCtx = document.getElementById('outlierBubbleChart').getContext('2d');
+      bubbleChartInst = new Chart(bubbleCtx, {
+        type: 'bubble',
+        data: {
+          datasets: [
+            {
+              label: 'ปกติ (Normal)',
+              data: [],
+              backgroundColor: 'rgba(0, 150, 136, 0.7)',
+              borderColor: '#009688',
+              borderWidth: 1
+            },
+            {
+              label: 'เฝ้าระวัง / คืนช้า (Watchlist / Overdue)',
+              data: [],
+              backgroundColor: 'rgba(255, 193, 7, 0.75)',
+              borderColor: '#FFC107',
+              borderWidth: 1
+            },
+            {
+              label: 'เสี่ยงสูง / ชำรุด / ยืมซ้ำ (High Risk)',
+              data: [],
+              backgroundColor: 'rgba(228, 63, 11, 0.85)',
+              borderColor: '#E43F0B',
+              borderWidth: 1.5
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'top',
+              labels: { color: textColor, boxWidth: 12, padding: 12, font: { size: 11 } }
+            },
+            tooltip: {
+              callbacks: {
+                label: (context) => {
+                  const raw = context.raw;
+                  return [
+                    `📄 Fact #${raw.fact_id} (คำขอ REQ #${raw.request_id})`,
+                    `👤 ผู้ยืม: ${raw.userName} (${raw.userRole})`,
+                    `🏢 สังกัด: ${raw.deptName}`,
+                    `📦 ครุภัณฑ์: ${raw.assetName}`,
+                    `⏳ ระยะเวลายืม: ${raw.x} วัน`,
+                    `⏰ เกินกำหนดส่งคืน: ${raw.y} วัน`,
+                    `📊 จำนวนในคำขอ: ${raw.items} ชิ้น (ฟองขนาด ${Math.round(raw.r)}px)`,
+                    raw.anomalyNote ? `🚨 สัญญาณเตือน: ${raw.anomalyNote}` : `สภาพตอนคืน: ${raw.condition}`
+                  ];
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: gridColor },
+              ticks: { color: textColor },
+              title: {
+                display: true,
+                text: 'ระยะเวลาการยืม (วัน / Duration Days)',
+                color: textColor,
+                font: { size: 11, weight: '500' }
+              }
+            },
+            y: {
+              grid: { color: gridColor },
+              ticks: { color: textColor },
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'จำนวนวันที่เกินกำหนดส่งคืน (วัน / Overdue Days)',
+                color: textColor,
+                font: { size: 11, weight: '500' }
+              }
+            }
+          },
+          onClick: (evt, elements) => {
+            if (elements.length > 0) {
+              const el = elements[0];
+              const raw = bubbleChartInst.data.datasets[el.datasetIndex].data[el.index];
+              if (raw && raw.fact_id) {
+                openInspector(raw.fact_id, 'tabRequest');
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // =========================================================================
+    // Chart Update Helpers
+    // =========================================================================
+    function updateCharts() {
+      updateMonthlyTrendChart();
+      updateDeptCrossChart();
+      updateBubbleMatrixChart();
+    }
+
+    function updateMonthlyTrendChart() {
+      const monthMap = {};
+      filteredData.forEach(r => {
+        if (r.borrow_date) {
+          const m = r.borrow_date.substring(0, 7);
+          if (!monthMap[m]) {
+            monthMap[m] = { good: 0, overdue: 0, damaged: 0, active: 0 };
+          }
+          if (r.return_condition === 'ชำรุด') {
+            monthMap[m].damaged++;
+          } else if (r.is_overdue === 1) {
+            monthMap[m].overdue++;
+          } else if (r.actual_return_date) {
+            monthMap[m].good++;
+          } else {
+            monthMap[m].active++;
+          }
+        }
+      });
+
+      const sortedMonths = Object.keys(monthMap).sort();
+      monthlyChartInst.data.labels = sortedMonths;
+
+      // Dataset 0: คืนตรงเวลา
+      monthlyChartInst.data.datasets[0].data = sortedMonths.map(m => monthMap[m].good + monthMap[m].active);
+      // Dataset 1: คืนล่าช้า
+      monthlyChartInst.data.datasets[1].data = sortedMonths.map(m => monthMap[m].overdue);
+      // Dataset 2: ส่งคืนชำรุด
+      monthlyChartInst.data.datasets[2].data = sortedMonths.map(m => monthMap[m].damaged);
+      // Dataset 3: Line % อัตราส่งคืนล่าช้า
+      monthlyChartInst.data.datasets[3].data = sortedMonths.map(m => {
+        const total = monthMap[m].good + monthMap[m].active + monthMap[m].overdue + monthMap[m].damaged;
+        return total > 0 ? parseFloat(((monthMap[m].overdue / total) * 100).toFixed(1)) : 0;
+      });
+
+      monthlyChartInst.update();
+    }
+
+    function updateDeptCrossChart() {
+      // 1. Get Department Totals to sort departments
+      const deptTotals = {};
+      filteredData.forEach(r => {
+        const d = r.dept_name || 'ไม่ระบุ';
+        deptTotals[d] = (deptTotals[d] || 0) + 1;
+      });
+      const sortedDepts = Object.entries(deptTotals).sort((a,b) => b[1] - a[1]).map(x => x[0]);
+      deptCrossChartInst.data.labels = sortedDepts;
+
+      let subCategories = [];
+      let palette = [];
+      let classifyFunc = null;
+
+      if (deptSubDim === 'role') {
+        subCategories = ['นิสิต', 'เจ้าหน้าที่', 'อาจารย์', 'ไม่ระบุ'];
+        palette = ['#0466C8', '#009688', '#FFC107', '#8C8881'];
+        classifyFunc = (r) => r.user?.role || 'ไม่ระบุ';
+      } else if (deptSubDim === 'category') {
+        subCategories = ['ครุภัณฑ์คอมพิวเตอร์', 'ครุภัณฑ์โสตทัศนูปกรณ์', 'วิทยาศาสตร์/ห้องปฏิบัติการ', 'ครุภัณฑ์สำนักงาน', 'อื่นๆ'];
+        palette = ['#0466C8', '#106BDA', '#009688', '#7C3AED', '#8C8881'];
+        classifyFunc = (r) => {
+          const cat = r.asset?.category_name || '';
+          if (cat.includes('คอมพิวเตอร์')) return 'ครุภัณฑ์คอมพิวเตอร์';
+          if (cat.includes('โสต')) return 'ครุภัณฑ์โสตทัศนูปกรณ์';
+          if (cat.includes('วิทยาศาสตร์') || cat.includes('แพทย์') || cat.includes('การเกษตร')) return 'วิทยาศาสตร์/ห้องปฏิบัติการ';
+          if (cat.includes('สำนักงาน')) return 'ครุภัณฑ์สำนักงาน';
+          return 'อื่นๆ';
+        };
+      } else if (deptSubDim === 'risk') {
+        subCategories = ['ปกติ (Normal)', 'เฝ้าระวัง (Watchlist)', 'เสี่ยงสูง (High Risk)'];
+        palette = ['#009688', '#FFC107', '#E43F0B'];
+        classifyFunc = (r) => {
+          if (r.risk_level === 'HIGH' || r.return_condition === 'ชำรุด') return 'เสี่ยงสูง (High Risk)';
+          if (r.risk_level === 'MEDIUM' || r.is_overdue === 1) return 'เฝ้าระวัง (Watchlist)';
+          return 'ปกติ (Normal)';
+        };
+      }
+
+      // Matrix: matrix[dept][subCategory]
+      const matrix = {};
+      sortedDepts.forEach(d => {
+        matrix[d] = {};
+        subCategories.forEach(sub => matrix[d][sub] = 0);
+      });
+
+      filteredData.forEach(r => {
+        const d = r.dept_name || 'ไม่ระบุ';
+        const sub = classifyFunc(r);
+        if (matrix[d]) {
+          if (matrix[d][sub] !== undefined) {
+            matrix[d][sub]++;
+          } else {
+            matrix[d]['อื่นๆ'] = (matrix[d]['อื่นๆ'] || 0) + 1;
+          }
+        }
+      });
+
+      deptCrossChartInst.data.datasets = subCategories.map((sub, idx) => ({
+        label: sub,
+        data: sortedDepts.map(d => matrix[d][sub] || 0),
+        backgroundColor: palette[idx % palette.length],
+        borderRadius: 2
+      }));
+
+      deptCrossChartInst.update();
+    }
+
+    function updateBubbleMatrixChart() {
+      const normalPts = [];
+      const watchlistPts = [];
+      const highRiskPts = [];
+
+      filteredData.forEach(r => {
+        const itemsCount = r.anomaly_metrics?.items_in_request || 1;
+        const pt = {
+          x: r.duration_days !== null ? r.duration_days : 0,
+          y: r.overdue_days || 0,
+          r: Math.min(18, Math.max(5, 4 + (itemsCount * 2.5))),
+          fact_id: r.fact_id,
+          request_id: r.request_id,
+          userName: r.user?.name || 'ไม่ระบุ',
+          userRole: r.user?.role || 'ไม่ระบุ',
+          deptName: r.dept_name || 'ไม่ระบุ',
+          assetName: r.asset?.name || 'ไม่ระบุ',
+          items: itemsCount,
+          condition: r.return_condition || 'รอตรวจคืน',
+          anomalyNote: r.anomalies?.map(a => a.title).join(', ') || ''
+        };
+
+        if (r.risk_level === 'HIGH' || r.return_condition === 'ชำรุด') {
+          highRiskPts.push(pt);
+        } else if (r.risk_level === 'MEDIUM' || r.is_overdue === 1) {
+          watchlistPts.push(pt);
+        } else {
+          normalPts.push(pt);
+        }
+      });
+
+      bubbleChartInst.data.datasets[0].data = normalPts;
+      bubbleChartInst.data.datasets[1].data = watchlistPts;
+      bubbleChartInst.data.datasets[2].data = highRiskPts;
+      bubbleChartInst.update();
+
+      // Render Top Outliers Chips
+      const chipsContainer = document.getElementById('outlierChipsList');
+      if (chipsContainer) {
+        // Find top 3 notable outliers
+        const sortedByOverdue = [...filteredData].sort((a,b) => (b.overdue_days||0) - (a.overdue_days||0));
+        const sortedByDuration = [...filteredData].sort((a,b) => (b.duration_days||0) - (a.duration_days||0));
+        const sortedByItems = [...filteredData].sort((a,b) => (b.anomaly_metrics?.items_in_request||0) - (a.anomaly_metrics?.items_in_request||0));
+
+        const chips = [];
+        if (sortedByOverdue[0] && (sortedByOverdue[0].overdue_days > 0)) {
+          const it = sortedByOverdue[0];
+          chips.push({
+            title: `⏰ คืนช้าสุด: ${it.user.name} (#${it.fact_id})`,
+            badge: `เกิน ${it.overdue_days} วัน`,
+            id: it.fact_id
+          });
+        }
+        if (sortedByDuration[0] && (sortedByDuration[0].duration_days > 25)) {
+          const it = sortedByDuration[0];
+          chips.push({
+            title: `⏳ ถือครองนานสุด: ${it.user.name} (#${it.fact_id})`,
+            badge: `ยืม ${it.duration_days} วัน`,
+            id: it.fact_id
+          });
+        }
+        if (sortedByItems[0] && (sortedByItems[0].anomaly_metrics?.items_in_request >= 3)) {
+          const it = sortedByItems[0];
+          chips.push({
+            title: `📦 กวาดเครื่องมากสุด: ${it.user.name} (#${it.fact_id})`,
+            badge: `${it.anomaly_metrics.items_in_request} ชิ้น`,
+            id: it.fact_id
+          });
+        }
+
+        if (chips.length > 0) {
+          chipsContainer.innerHTML = chips.map(c => `
+            <div class="outlier-chip" onclick="openInspector(${c.id}, 'tabRequest');">
+              <span>${c.title}</span>
+              <strong>${c.badge}</strong>
+            </div>
+          `).join('');
+        } else {
+          chipsContainer.innerHTML = `<span style="color:var(--cpe-text-dim);">ไม่พบ Outlier ที่เกินเกณฑ์ในชุดข้อมูลที่กรอง</span>`;
+        }
+      }
+    }
+
+    // =========================================================================
+    // 7. Drill-Through Modal Inspector Logic (with Anomaly Assessment)
+    // =========================================================================
+    function openInspector(factId, initialTab = 'tabRequest') {
+      const record = allData.find(r => r.fact_id === factId);
+      if (!record) return;
+
+      document.getElementById('modalHeaderFactId').textContent = `Fact #${record.fact_id} (คำขอ REQ #${record.request_id})`;
+
+      // Anomaly & Risk Box Evaluation
+      const riskBox = document.getElementById('mRiskAssessmentBox');
+      const riskTitle = document.getElementById('mRiskBoxTitle');
+      const riskDesc = document.getElementById('mRiskBoxDesc');
+      const evidenceList = document.getElementById('mRiskEvidenceList');
+
+      riskBox.className = 'risk-assessment-box';
+      evidenceList.innerHTML = '';
+
+      if (record.risk_level === 'HIGH') {
+        riskBox.classList.add('risk-box-high');
+        riskTitle.innerHTML = '🚨 การประเมินความเสี่ยง: ระดับสูง (High Risk Detected)';
+        riskDesc.innerHTML = 'ระบบตรวจพบพฤติกรรมที่มีความเสี่ยงสูงต่อการสูญหาย ชำรุด หรือผิดวินัยการใช้งาน:';
+      } else if (record.risk_level === 'MEDIUM') {
+        riskBox.classList.add('risk-box-medium');
+        riskTitle.innerHTML = '⚠️ การประเมินความเสี่ยง: ระดับเฝ้าระวัง (Watchlist / Anomaly Detected)';
+        riskDesc.innerHTML = 'พบพฤติกรรมการยืมที่มีลักษณะผิดปกติจากค่าเฉลี่ยทั่วไป:';
+      } else if (record.risk_level === 'LOW') {
+        riskBox.classList.add('risk-box-low');
+        riskTitle.innerHTML = 'ℹ️ การประเมินความเสี่ยง: มีข้อสังเกต (Operational Note)';
+        riskDesc.innerHTML = 'มีหมายเหตุทางปฏิบัติการที่ควรรับทราบ:';
+      } else {
+        riskBox.classList.add('risk-box-normal');
+        riskTitle.innerHTML = '🛡️ การประเมินความเสี่ยง: ปกติ (No Anomaly)';
+        riskDesc.innerHTML = 'ไม่พบพฤติกรรมน่าสงสัยหรือผิดปกติในรายการนี้ เป็นการยืม-คืนตามรอบปกติ';
+      }
+
+      if (record.anomalies && record.anomalies.length > 0) {
+        evidenceList.innerHTML = record.anomalies.map(a => `
+          <li>
+            <strong>${a.title}</strong>: ${a.detail}
+          </li>
+        `).join('');
+      }
+
+      // Tab 1: Request info
+      document.getElementById('mReqId').textContent = `#${record.request_id}`;
+      document.getElementById('mBorrowDate').textContent = record.borrow_date || '-';
+      document.getElementById('mDueDate').textContent = record.return_date || '-';
+      document.getElementById('mActualDate').textContent = record.actual_return_date || 'ยังไม่คืน';
+      document.getElementById('mDuration').textContent = record.duration_days !== null ? `${record.duration_days} วัน` : 'อยู่ระหว่างยืม';
+      document.getElementById('mCondition').innerHTML = record.return_condition === 'ปกติ' ?
+        '<span class="badge-status status-ready">สภาพปกติ</span>' :
+        (record.return_condition === 'ชำรุด' ? '<span class="badge-status status-damaged">ชำรุด</span>' : '<span style="color:var(--cpe-text-dim)">รอตรวจคืน</span>');
+      document.getElementById('mApprover').textContent = record.approver.name || 'ไม่ระบุ';
+      document.getElementById('mReason').textContent = record.reason || '-';
+
+      if (record.is_overdue === 1) {
+        document.getElementById('mStatusBadge').innerHTML = `<span class="badge-status status-overdue">เกินกำหนดส่งคืน ${record.overdue_days} วัน</span>`;
+      } else if (record.actual_return_date) {
+        document.getElementById('mStatusBadge').innerHTML = `<span class="badge-status status-ready">ส่งคืนตรงเวลา</span>`;
+      } else {
+        document.getElementById('mStatusBadge').innerHTML = `<span class="badge-status status-active">อยู่ระหว่างใช้งาน</span>`;
+      }
+
+      // Tab 2: User profile & history
+      document.getElementById('mUserName').textContent = record.user.name;
+      document.getElementById('mUserRole').textContent = record.user.role;
+      document.getElementById('mUserDept').textContent = record.dept_name;
+
+      const userHistory = allData.filter(r => r.user.key === record.user.key);
+      const userOverdues = userHistory.filter(r => r.is_overdue === 1).length;
+      const userDamaged = userHistory.filter(r => r.return_condition === 'ชำรุด').length;
+      document.getElementById('mUserStatSummary').innerHTML = `ยืมทั้งหมด <strong>${userHistory.length} ครั้ง</strong> (เกินกำหนด ${userOverdues} ครั้ง, ชำรุด ${userDamaged} ครั้ง)`;
+
+      document.getElementById('mUserHistoryTable').innerHTML = userHistory.map(h => `
+        <tr>
+          <td>${h.borrow_date || '-'}</td>
+          <td><strong>${h.asset.name}</strong><br><span style="font-size:11px; color:var(--cpe-text-dim);">${h.asset.code}</span></td>
+          <td>${h.return_date || '-'}</td>
+          <td>${h.return_condition === 'ปกติ' ? '<span style="color:var(--cpe-success)">ปกติ</span>' : (h.return_condition === 'ชำรุด' ? '<span style="color:var(--cpe-danger)">ชำรุด</span>' : '-')}</td>
+          <td>${h.is_overdue ? '<span style="color:var(--cpe-warning)">ล่าช้า</span>' : '<span style="color:var(--cpe-success)">ตรงเวลา</span>'}</td>
+        </tr>
+      `).join('');
+
+      // Tab 3: Asset profile & history
+      document.getElementById('mAssetCode').textContent = record.asset.code;
+      document.getElementById('mAssetName').textContent = record.asset.name;
+      document.getElementById('mAssetType').textContent = record.asset.type_name;
+      document.getElementById('mAssetCat').textContent = record.asset.category_name;
+      document.getElementById('mAssetBrand').textContent = record.asset.brand || '-';
+
+      const assetHistory = allData.filter(r => r.asset.key === record.asset.key);
+      const assetDamaged = assetHistory.filter(r => r.return_condition === 'ชำรุด').length;
+      document.getElementById('mAssetStatSummary').innerHTML = `ถูกยืมใช้งาน <strong>${assetHistory.length} ครั้ง</strong> (พบชำรุด ${assetDamaged} ครั้ง)`;
+
+      document.getElementById('mAssetHistoryTable').innerHTML = assetHistory.map(ah => `
+        <tr>
+          <td>${ah.borrow_date || '-'}</td>
+          <td><strong>${ah.user.name}</strong> (${ah.user.role})</td>
+          <td>${ah.dept_name}</td>
+          <td>${ah.return_condition === 'ปกติ' ? '<span style="color:var(--cpe-success)">ปกติ</span>' : (ah.return_condition === 'ชำรุด' ? '<span style="color:var(--cpe-danger)">ชำรุด</span>' : '-')}</td>
+          <td>${ah.is_overdue ? '<span style="color:var(--cpe-warning)">ล่าช้า</span>' : '<span style="color:var(--cpe-success)">ตรงเวลา</span>'}</td>
+        </tr>
+      `).join('');
+
+      // Switch to initial tab
+      switchTab(initialTab);
+
+      // Show modal
+      document.getElementById('inspectorModal').classList.add('open');
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.modal-tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tabId);
+      });
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.toggle('active', content.id === tabId);
+      });
+    }
+
+    document.querySelectorAll('.modal-tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+    });
+
+    document.getElementById('btnCloseModal').addEventListener('click', () => {
+      document.getElementById('inspectorModal').classList.remove('open');
+    });
+
+    document.getElementById('inspectorModal').addEventListener('click', (e) => {
+      if (e.target.id === 'inspectorModal') {
+        document.getElementById('inspectorModal').classList.remove('open');
+      }
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        document.getElementById('inspectorModal').classList.remove('open');
+      }
+    });
+
+    // =========================================================================
+    // 8. Event Listeners for Toolbar
+    // =========================================================================
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+      drillState.search = e.target.value.trim();
+      applyFilters();
+    });
+
+    document.getElementById('deptFilter').addEventListener('change', (e) => {
+      drillState.dept = e.target.value;
+      applyFilters();
+    });
+
+    document.getElementById('roleFilter').addEventListener('change', (e) => {
+      drillState.role = e.target.value;
+      applyFilters();
+    });
+
+    document.getElementById('statusFilter').addEventListener('change', (e) => {
+      drillState.status = e.target.value;
+      applyFilters();
+    });
+
+    document.getElementById('prevBtn').addEventListener('click', () => {
+      if (currentPage > 1) {
+        currentPage--;
+        renderTable();
+      }
+    });
+
+    document.getElementById('nextBtn').addEventListener('click', () => {
+      const totalPages = Math.ceil(filteredData.length / pageSize);
+      if (currentPage < totalPages) {
+        currentPage++;
+        renderTable();
+      }
+    });
+
+    // =========================================================================
+    // 9. Fetch Live Data from PHP API
+    // =========================================================================
+    const API_URL = 'http://localhost/assets_api/dw_borrow.php';
+
+    async function fetchWarehouseData() {
+      const statusEl = document.getElementById('apiStatusBadge');
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding: 30px; color: var(--cpe-text-dim)">
+        🔄 กำลังดึงข้อมูลจาก PHP API (${API_URL})...
+      </td></tr>`;
+
+      try {
+        const res = await fetch(API_URL);
+        if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        const json = await res.json();
+        if (!json.success) throw new Error(json.message || 'API error');
+        
+        allData = json.data || [];
+        filteredData = [...allData];
+        
+        if (statusEl) {
+          statusEl.className = 'badge-status status-ready';
+          statusEl.innerHTML = '🟢 เชื่อมต่อสด: PHP API (localhost)';
+        }
+
+        populateFilterOptions();
+        updateRadarCounters();
+        initCharts();
+        highlightKpiCard('ALL');
+        applyFilters();
+      } catch (err) {
+        console.error('Failed to load from API:', err);
+        if (statusEl) {
+          statusEl.className = 'badge-status status-damaged';
+          statusEl.innerHTML = `⚠️ ดึง API ไม่สำเร็จ: ${err.message}`;
+        }
+        if (tbody) {
+          tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding: 40px; color: var(--cpe-danger)">
+            <strong>❌ ไม่สามารถเชื่อมต่อ API ที่ ${API_URL} ได้</strong><br>
+            <span style="font-size:12px; color:var(--cpe-text-dim); margin-top:6px; display:inline-block;">
+              กรุณาตรวจสอบว่า Apache และ MySQL ใน XAMPP กำลังทำงานอยู่ (${err.message})
+            </span>
+          </td></tr>`;
+        }
+      }
+    }
+
+    fetchWarehouseData();
+  </script>
+</body>
+</html>
