@@ -130,6 +130,29 @@ services:
       warehouse-db:
         condition: service_healthy
 
+  # dashboard_report.html + assets_api/ วางแบบเดียวกับ XAMPP (http://localhost:8090/dashboard_report.html)
+  # report_*.php อ่าน warehouse ด้วย WAREHOUSE_DB_* ; endpoint อื่นของ assets_api ยังชี้ฐานข้อมูลต้นทางด้วย DB_*
+  report-web:
+    <<: *php-image
+    environment:
+      WAREHOUSE_DB_HOST: warehouse-db
+      WAREHOUSE_DB_NAME: warehouse
+      WAREHOUSE_DB_USER: ${DB_USER:-dashboard}
+      WAREHOUSE_DB_PASS: ${DB_PASSWORD:-dashboard}
+      DB_HOST: source-db
+      DB_NAME: cpeasset
+      DB_USER: root
+      DB_PASS: ${SOURCE_DB_ROOT_PASSWORD:-root}
+    volumes:
+      - ./dashboard_report.html:/var/www/html/dashboard_report.html:ro
+      - ./dashboard_borrow.html:/var/www/html/dashboard_borrow.html:ro
+      - ./assets_api:/var/www/html/assets_api:ro
+    ports:
+      - "${REPORT_WEB_PORT:-8090}:80"
+    depends_on:
+      warehouse-db:
+        condition: service_healthy
+
   # frontend: ไฟล์ static + ส่งต่อ /api/ ไปที่ warehouse-api
   frontend:
     image: nginx:1.27-alpine
