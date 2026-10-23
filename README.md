@@ -389,7 +389,7 @@ source-db ──► source-api ──► etl ──► warehouse-db ──► wa
 | `source-seed` | เติมข้อมูลครั้งแรก: `asset` จาก `data/assets_real.json` (จริง) ตารางอื่นจาก `mock_api/` (จำลอง) แล้วจบ | – |
 | `source-api` | PHP ของทีมใน `assets_api/` | 8089 |
 | `etl` | ดึง**ทุก endpoint** จาก `source-api` (`--all-api`) → `output/warehouse_load.sql` → โหลดเข้า warehouse แล้วจบ | – |
-| `warehouse-db` | MySQL ของ warehouse สร้างตารางจาก `warehouse schema.sql` | 3307 |
+| `warehouse-db` | MySQL ของ warehouse (ฐานข้อมูล `cpe_warehouse` ชื่อเดียวกับที่ทีมใช้ใน XAMPP) สร้างตารางจาก `warehouse schema.sql` | 3307 |
 | `warehouse-api` | backend ของ dashboard (`web/public/api/*.php`) อ่าน warehouse อย่างเดียว | ผ่าน frontend |
 | `frontend` | Nginx ส่งหน้าเว็บ `web/public` และส่งต่อ `/api/` ไปที่ `warehouse-api` | **8088** |
 | `report-web` | PHP วาง `dashboard_report.html`, `dashboard_borrow.html` และ `assets_api/` แบบเดียวกับ XAMPP | **8090** |
@@ -481,7 +481,7 @@ docker/
 | `assets_api/report_annual.php`, `report_invest.php`, `report_inventory.php`, `report_facility.php`, `report_repair.php`, `report_borrow.php` | ข้อมูลของแต่ละหน้า |
 
 - **XAMPP**: วาง repo ไว้ใน `htdocs` แล้วเปิด `http://localhost/<โฟลเดอร์>/dashboard_report.html` ตัวหน้าเรียก `assets_api/` ที่อยู่ข้างไฟล์ ถ้า API อยู่ที่อื่นให้เติม `?api=http://localhost/assets_api/` ท้าย URL
-- **ฐานข้อมูล**: `report_*.php` ใช้ `WAREHOUSE_DB_HOST` / `WAREHOUSE_DB_PORT` / `WAREHOUSE_DB_NAME` / `WAREHOUSE_DB_USER` / `WAREHOUSE_DB_PASS` ค่าเริ่มต้นคือ `localhost`, `3306`, `cpeasset_warehouse`, `root`, ไม่มีรหัสผ่าน (เหมือน `warehouse_db.php`)
+- **ฐานข้อมูล**: `report_*.php` ใช้ `WAREHOUSE_DB_HOST` / `WAREHOUSE_DB_PORT` / `WAREHOUSE_DB_NAME` / `WAREHOUSE_DB_USER` / `WAREHOUSE_DB_PASS` ค่าเริ่มต้นคือ `localhost`, `3306`, `cpe_warehouse`, `root`, ไม่มีรหัสผ่าน (ชื่อฐานข้อมูลเดียวกับ `dw_borrow.php` ของหน้ายืม-คืน)
 - **Docker**: เปิด <http://localhost:8090/dashboard_report.html> (service `report-web`)
 - เนื้อหาเหมือนหน้าใน `web/public` แต่เป็นไฟล์แยก แก้หน้าใดหน้าหนึ่งแล้วอีกหน้าจะไม่เปลี่ยนตาม
 

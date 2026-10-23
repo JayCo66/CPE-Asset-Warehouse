@@ -25,7 +25,7 @@ function db(): PDO
         return $pdo;
     }
     $dsn = sprintf('mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4',
-        getenv('DB_HOST') ?: '127.0.0.1', getenv('DB_PORT') ?: '3306', getenv('DB_NAME') ?: 'warehouse');
+        getenv('DB_HOST') ?: '127.0.0.1', getenv('DB_PORT') ?: '3306', getenv('DB_NAME') ?: 'cpe_warehouse');
     try {
         $pdo = new PDO($dsn, getenv('DB_USER') ?: 'dashboard', getenv('DB_PASS') ?: 'dashboard', [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,

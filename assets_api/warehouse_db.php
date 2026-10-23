@@ -20,7 +20,7 @@ if ($warehouseDbPass === false) {
 }
 
 $warehouseDsn = sprintf(
-    'mysql:host=%s;port=%s;dbname=cpeasset_warehouse;charset=utf8mb4',
+    'mysql:host=%s;port=%s;dbname=cpe_warehouse;charset=utf8mb4',
     $warehouseDbHost,
     $warehouseDbPort
 );
