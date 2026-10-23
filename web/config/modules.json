@@ -1,0 +1,74 @@
+{
+  "app": {
+    "name": "CPE Asset Warehouse",
+    "subtitle": "คณะวิศวกรรมศาสตร์ กำแพงแสน"
+  },
+  "settings": {
+    "_note": "เกณฑ์ที่หน่วยงานกำหนดเอง ปรับได้โดยไม่ต้องแก้โค้ด",
+    "sla_facility_workdays": 3,
+    "sla_repair_workdays": 15,
+    "repair_cost_ratio_dispose": 0.5,
+    "repair_cost_ratio_watch": 0.3,
+    "holidays_note": "วันหยุดราชการ/วันหยุดมหาวิทยาลัย (YYYY-MM-DD) ไม่นับเป็นวันทำการ เติมตามประกาศของแต่ละปี",
+    "holidays": []
+  },
+  "modules": [
+    {
+      "id": "annual",
+      "label": "รายงานประจำปี",
+      "path": "/annual",
+      "description": "สรุปผลการดำเนินงานรายปีงบประมาณ (1 ต.ค. – 30 ก.ย.) เทียบปีก่อน และย้อนหลังทุกปีที่มีข้อมูล",
+      "data_source": "mixed",
+      "data_note": "ครุภัณฑ์และใบแจ้งซ่อมเดิมเป็นข้อมูลจริง ซ่อมครุภัณฑ์ ยืม-คืน และแจ้งซ่อมระบบใหม่ยังเป็นข้อมูลจำลอง",
+      "views": [
+        { "id": "summary", "label": "สรุปปีงบประมาณ", "component": "annual-summary" },
+        { "id": "history", "label": "ย้อนหลังทุกปีงบ", "component": "annual-history" }
+      ]
+    },
+    {
+      "id": "inventory",
+      "label": "ครุภัณฑ์",
+      "path": "/inventory",
+      "description": "ครุภัณฑ์ที่ได้มาในแต่ละปีงบ อายุการใช้งาน และการเปลี่ยนแปลงตาม snapshot ที่ ETL เก็บไว้แต่ละรอบ",
+      "data_source": "real",
+      "data_note": "ข้อมูลจริงจากระบบครุภัณฑ์ (assets API)",
+      "views": [
+        { "id": "overview", "label": "ภาพรวม", "component": "inventory-overview" }
+      ]
+    },
+    {
+      "id": "facility",
+      "label": "แจ้งซ่อมอาคาร",
+      "path": "/facility",
+      "description": "งานแจ้งซ่อมอาคารและสถานที่ ตั้งแต่ฟอร์มเดิมจนถึงระบบใหม่",
+      "data_source": "mixed",
+      "data_note": "ใบแจ้งซ่อมจริงถึง 14 ก.ค. 2569 หลังจากนั้นเป็นข้อมูลจำลองของระบบใหม่",
+      "views": [
+        { "id": "overview", "label": "ภาพรวม", "component": "facility-overview" }
+      ]
+    },
+    {
+      "id": "repair",
+      "label": "ซ่อมครุภัณฑ์",
+      "path": "/repair",
+      "description": "ค่าซ่อม ระยะเวลาซ่อม และครุภัณฑ์ที่ค่าซ่อมสะสมสูงจนไม่คุ้มซ่อมต่อ",
+      "data_source": "sample",
+      "data_note": "ข้อมูลจำลอง ทั้งงานซ่อม ค่าซ่อม และราคาซื้อ (ระบบครุภัณฑ์ยังไม่มีราคา)",
+      "views": [
+        { "id": "overview", "label": "ภาพรวม", "component": "repair-overview" },
+        { "id": "worth", "label": "คุ้มซ่อมไหม", "component": "repair-worth" }
+      ]
+    },
+    {
+      "id": "borrow",
+      "label": "ยืม-คืน",
+      "path": "/borrow",
+      "description": "ปริมาณการยืมตามช่วงเวลา และการคืนเกินกำหนด",
+      "data_source": "sample",
+      "data_note": "ข้อมูลจำลอง ระบบจริงยังไม่มีข้อมูลการยืม",
+      "views": [
+        { "id": "overview", "label": "ภาพรวม", "component": "borrow-overview" }
+      ]
+    }
+  ]
+}

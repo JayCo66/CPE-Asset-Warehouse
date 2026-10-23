@@ -610,7 +610,9 @@ def style_sheet(ws, widths, wrap_cols=(), date_cols=(), autofilter=False):
 # =====================================================================
 API_BASE = "http://localhost/assets_api/"
 # endpoint -> "api" (เรียก API จริง) | "mock" (อ่าน mock_api/<endpoint>.json)
+#           | "file:<path>" (ไฟล์ข้อมูลจริงที่ export ไว้ใน repo, path นับจากโฟลเดอร์สคริปต์; JSON เป็น list หรือ {data: [...]})
 # เมื่อระบบจริงเปิด endpoint ไหนแล้ว ให้เปลี่ยนเป็น "api" ได้เลย รูปแบบ JSON เหมือนกัน
+HERE = os.path.dirname(os.path.abspath(__file__))
 SOURCES = {
     "assets": "api",
     "asset_types": "api",
@@ -624,6 +626,9 @@ SOURCES = {
     "borrow": "api",
     "borrow_request_items": "api",
 }
+# endpoint ที่เป็น "api": ถ้าเรียกไม่ได้ (เน็ตหลุด / server ล่ม / ตอบ success=false) ใช้ไฟล์ export นี้แทน
+FALLBACK_FILES = {"assets": "data/assets_real.json"}
+USED = {}   # endpoint -> แหล่งที่ใช้จริงรอบนี้: "api" | "cache" (--offline) | "file:<path>" | "mock"
 
 # ชื่อสังกัดในฟอร์ม Excel -> ชื่อใน departments ของระบบครุภัณฑ์ (ที่เหลือชื่อตรงกันอยู่แล้ว)
 EXCEL_DEPT_ALIAS = {
@@ -638,15 +643,14 @@ SOURCE_GROUP = {
     "โครงการภาคพิเศษ": "โครงการภาคพิเศษ", "บริจาค": "บริจาค",
 }
 
-def fetch(endpoint, mock_dir, raw_dir, offline=False):
-    """ดึงทุกหน้าของ endpoint -> list ของ record; เก็บ raw ไว้ที่ raw_dir/<endpoint>.json"""
-    if SOURCES[endpoint] == "mock":
-        with open(os.path.join(mock_dir, f"{endpoint}.json"), encoding="utf-8") as f:
-            return json.load(f)["data"]
-    cache = os.path.join(raw_dir, f"{endpoint}.json")
-    if offline:
-        with open(cache, encoding="utf-8") as f:
-            return json.load(f)["data"]
+def read_file(path):
+    """ไฟล์ข้อมูลใน repo (path นับจากโฟลเดอร์สคริปต์): JSON เป็น list หรือ {data: [...]}"""
+    with open(os.path.join(HERE, path), encoding="utf-8") as f:
+        body = json.load(f)
+    return body["data"] if isinstance(body, dict) else body
+
+
+def fetch_api(endpoint):
     rows, page, total = [], 1, None
     while True:
         url = f"{API_BASE}{endpoint}.php?limit=100&page={page}"
@@ -658,11 +662,39 @@ def fetch(endpoint, mock_dir, raw_dir, offline=False):
         total = body.get("total", total)
         rows += body["data"]
         if not body["data"] or (total is not None and len(rows) >= total):
-            break
+            return rows
         page += 1
+
+
+def fetch(endpoint, mock_dir, raw_dir, offline=False):
+    """ดึงทุกหน้าของ endpoint -> list ของ record; เก็บ raw ไว้ที่ raw_dir/<endpoint>.json
+    endpoint ที่มีใน FALLBACK_FILES: ถ้าเรียก API (หรือ raw ตอน --offline) ไม่ได้ ใช้ไฟล์นั้นแทน"""
+    src = SOURCES[endpoint]
+    if src == "mock":
+        USED[endpoint] = "mock"
+        with open(os.path.join(mock_dir, f"{endpoint}.json"), encoding="utf-8") as f:
+            return json.load(f)["data"]
+    if src.startswith("file:"):
+        USED[endpoint] = src
+        return read_file(src[len("file:"):])
+    cache = os.path.join(raw_dir, f"{endpoint}.json")
+    try:
+        if offline:
+            with open(cache, encoding="utf-8") as f:
+                USED[endpoint] = "cache"
+                return json.load(f)["data"]
+        rows = fetch_api(endpoint)
+    except (OSError, ValueError, RuntimeError) as e:      # URLError/timeout เป็น OSError, JSON เสียเป็น ValueError
+        fallback = FALLBACK_FILES.get(endpoint)
+        if not fallback:
+            raise
+        print(f"[warn] {endpoint}: {'อ่าน raw' if offline else 'เรียก API'} ไม่ได้ ({e}) -> ใช้ {fallback} แทน")
+        USED[endpoint] = "file:" + fallback
+        return read_file(fallback)
     with open(cache, "w", encoding="utf-8") as f:
         json.dump({"success": True, "total": len(rows), "fetched_at": datetime.now().isoformat(timespec="seconds"),
                    "data": rows}, f, ensure_ascii=False)
+    USED[endpoint] = "api"
     return rows
 
 
@@ -1020,7 +1052,7 @@ def main(args):
     api = {}
     for ep in SOURCES:
         api[ep] = fetch(ep, args.mock_dir, raw_dir, offline=args.offline)
-        print(f"[api] {ep:<22} {SOURCES[ep]:<4} {len(api[ep]):>5} แถว")
+        print(f"[api] {ep:<22} {USED[ep]:<28} {len(api[ep]):>5} แถว")
 
     as_of = datetime.strptime(args.as_of, "%Y-%m-%d") if args.as_of else datetime.now()
 
@@ -1030,7 +1062,9 @@ def main(args):
     os.makedirs(history_dir, exist_ok=True)
     if args.snapshot_date:
         snap = datetime.strptime(args.snapshot_date, "%Y-%m-%d")
-    elif SOURCES["assets"] == "api":
+    elif USED["assets"].startswith("file:"):            # ไฟล์ export: ใช้วันที่ไฟล์ถูกแก้ล่าสุด
+        snap = datetime.fromtimestamp(os.path.getmtime(os.path.join(HERE, USED["assets"][len("file:"):])))
+    elif USED["assets"] in ("api", "cache"):              # API: วันที่ดึง (ตอน --offline คือวันที่ของ raw ที่ดึงไว้)
         with open(os.path.join(raw_dir, "assets.json"), encoding="utf-8") as f:
             snap = datetime.fromisoformat(json.load(f).get("fetched_at") or as_of.isoformat())
     else:
@@ -1042,8 +1076,15 @@ def main(args):
 
     tables, notes, src_count = build_warehouse(excel, api, snapshots, as_of)
 
-    mocked = [ep for ep, s in SOURCES.items() if s == "mock"]
-    header = [f"แหล่งข้อมูล: Excel ({src_count.get('excel', 0)} ใบแจ้งซ่อม) + API {API_BASE}",
+    mocked = [ep for ep, s in USED.items() if s == "mock"]
+    files = [f"{ep} ({s[len('file:'):]})" for ep, s in USED.items() if s.startswith("file:")]
+    live = [ep + (" (raw ที่ดึงไว้)" if s == "cache" else "") for ep, s in USED.items() if s in ("api", "cache")]
+    fell_back = [ep for ep, s in USED.items() if SOURCES[ep] == "api" and s.startswith("file:")]
+    if fell_back:
+        notes.insert(0, f"เรียก API ไม่ได้: {', '.join(fell_back)} ใช้ไฟล์ใน repo แทน (snapshot ครุภัณฑ์ลงวันที่ {snap:%Y-%m-%d})")
+    header = [f"แหล่งข้อมูล: Excel {os.path.basename(args.excel)} ({src_count.get('excel', 0)} ใบแจ้งซ่อม)",
+              f"API {API_BASE}: {', '.join(live) or '-'}",
+              f"ไฟล์ข้อมูลจริงใน repo: {', '.join(files) or '-'}",
               f"endpoint จาก MOCK (ไม่ใช่ข้อมูลจริง): {', '.join(mocked)}",
               f"as-of (คำนวณวันเกินกำหนดของรายการยืมที่ยังไม่คืน): {as_of:%Y-%m-%d}",
               "รันซ้ำได้: TRUNCATE ทุกตารางก่อน INSERT (full refresh)",
@@ -1064,17 +1105,28 @@ if __name__ == "__main__":
         sys.stdout.reconfigure(encoding="utf-8")
     here = os.path.dirname(os.path.abspath(__file__))
     ap = argparse.ArgumentParser(description="ETL 2 แหล่ง (Excel ใบแจ้งซ่อม + API ระบบครุภัณฑ์) -> warehouse_load.sql")
-    ap.add_argument("excel", help="ไฟล์ .xlsx ใบแจ้งซ่อม (sheet 'การตอบแบบฟอร์ม 1', '... 3', '... 4')")
+    ap.add_argument("excel", nargs="?", help="ไฟล์ .xlsx ใบแจ้งซ่อม (sheet 'การตอบแบบฟอร์ม 1', '... 3', '... 4') "
+                                         "default: ไฟล์ .xlsx ในโฟลเดอร์ data/ ของ repo")
     ap.add_argument("-o", "--out-dir", default="output", help="โฟลเดอร์ผลลัพธ์ (default: ./output)")
     ap.add_argument("--mock-dir", default=os.path.join(here, "mock_api"), help="โฟลเดอร์ mock API JSON (default: mock_api ข้างสคริปต์)")
     ap.add_argument("--api-base", default=API_BASE, help="URL ของ API ระบบครุภัณฑ์")
+    ap.add_argument("--all-api", action="store_true",
+                    help="ดึงทุก endpoint จาก API (ไม่ใช้ mock) เช่น ตอนรันกับ source-api ใน docker compose")
     ap.add_argument("--offline", action="store_true", help="ไม่เรียก API จริง ใช้ raw ที่ดึงไว้ใน <out-dir>/raw/")
     ap.add_argument("--as-of", help="วันที่อ้างอิงคำนวณวันเกินกำหนดของรายการยืมที่ยังไม่คืน YYYY-MM-DD (default: วันนี้)")
-    ap.add_argument("--snapshot-date", help="วันที่ของ snapshot ครุภัณฑ์รอบนี้ YYYY-MM-DD (default: วันที่ดึง assets API)")
+    ap.add_argument("--snapshot-date", help="วันที่ของ snapshot ครุภัณฑ์รอบนี้ YYYY-MM-DD "
+                                            "(default: วันที่ดึง assets API หรือวันที่แก้ไขไฟล์ assets ล่าสุด)")
     ap.add_argument("--keep-invalid-place", action="store_true",
                     help="เก็บแถวที่สถานที่ใช้ไม่ได้ไว้ (เว้นสถานที่ว่าง) แทนการลบแถว")
     args = ap.parse_args()
+    if not args.excel:
+        found = sorted(f for f in os.listdir(os.path.join(here, "data")) if f.lower().endswith(".xlsx") and not f.startswith("~$"))
+        if not found:
+            ap.error("ไม่พบไฟล์ .xlsx ในโฟลเดอร์ data/ ระบุ path ของไฟล์ใบแจ้งซ่อมเอง")
+        args.excel = os.path.join(here, "data", found[0])
     API_BASE = args.api_base.rstrip("/") + "/"
+    if args.all_api:
+        SOURCES.update({ep: "api" for ep in SOURCES})
     if args.keep_invalid_place:
         DROP_INVALID_PLACE = False
     main(args)

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CPE Asset Warehouse</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">ข้ามไปเนื้อหา</a>
+  <header class="app-header">
+    <div class="app-brand">
+      <span class="app-name" id="app-name">CPE Asset Warehouse</span>
+      <span class="app-sub" id="app-sub"></span>
+    </div>
+    <div class="app-meta" id="app-meta" aria-live="polite"></div>
+  </header>
+
+  <nav class="module-nav" id="module-nav" aria-label="โมดูลหลัก">
+    <ul class="module-nav-list" id="module-nav-list"></ul>
+  </nav>
+
+  <main id="main" class="app-main" tabindex="-1">
+    <section class="module-head" id="module-head" hidden>
+      <div class="module-title-row">
+        <h1 id="module-title"></h1>
+        <span class="source-badge" id="module-source"></span>
+        <div class="module-actions">
+          <button type="button" class="btn" id="print-btn">พิมพ์ / บันทึก PDF</button>
+        </div>
+      </div>
+      <p class="print-meta" id="print-meta"></p>
+    </section>
+    <nav class="local-nav" id="local-nav" aria-label="มุมมองในโมดูล" hidden>
+      <ul id="local-nav-list"></ul>
+    </nav>
+    <div id="view" class="view"></div>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+  <script src="assets/format.js"></script>
+  <script src="assets/charts.js"></script>
+  <script src="assets/views.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>

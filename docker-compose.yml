@@ -1,0 +1,146 @@
+# ระบบครบทั้งสายบนเครื่อง:
+#   source-db (ฐานข้อมูลระบบครุภัณฑ์) -> source-api (assets_api/*.php) -> etl -> warehouse-db -> warehouse-api -> frontend
+# รัน:  docker compose up -d --build   แล้วเปิด http://localhost:8088
+# ETL รันทุกครั้งที่ up ; รันซ้ำเอง: docker compose run --rm etl
+
+x-mysql-command: &mysql-command
+  - --character-set-server=utf8mb4
+  - --collation-server=utf8mb4_0900_ai_ci
+  # ข้อมูลมีไม่กี่ MB ตั้งค่าให้ใช้ RAM น้อย (~180 MB ต่อ instance)
+  - --performance-schema=OFF
+  - --innodb-buffer-pool-size=64M
+  - --max-connections=30
+
+x-php-image: &php-image
+  build: ./docker/php        # build 2 ครั้งจาก Dockerfile เดียวกัน (ครั้งที่ 2 ใช้ cache)
+
+services:
+  # ---------------- ระบบต้นทาง (ระบบครุภัณฑ์ CPEAssets จำลอง) ----------------
+  source-db:
+    image: mysql:8.0
+    command: *mysql-command
+    environment:
+      MYSQL_ROOT_PASSWORD: ${SOURCE_DB_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: cpeasset
+    volumes:
+      - source_db_data:/var/lib/mysql
+      - "./DB warehouse project schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro"
+      - ./docker/source-db/02-extend.sql:/docker-entrypoint-initdb.d/02-extend.sql:ro
+    ports:
+      - "3308:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${SOURCE_DB_ROOT_PASSWORD:-root}"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  # เติมข้อมูลครั้งแรก: asset จริงจาก data/assets_real.json + ตารางอื่นจาก mock_api/ (ครั้งต่อไปข้าม)
+  source-seed:
+    build:
+      context: .
+      dockerfile: docker/etl/Dockerfile
+    image: cpe-warehouse-etl:local
+    command: ["python", "docker/etl/seed_source.py"]
+    environment:
+      DB_HOST: source-db
+      DB_NAME: cpeasset
+      DB_USER: root
+      DB_PASS: ${SOURCE_DB_ROOT_PASSWORD:-root}
+    volumes:
+      - ./:/app:ro
+    depends_on:
+      source-db:
+        condition: service_healthy
+    restart: "no"
+
+  source-api:
+    <<: *php-image
+    environment:
+      DB_HOST: source-db
+      DB_NAME: cpeasset
+      DB_USER: root
+      DB_PASS: ${SOURCE_DB_ROOT_PASSWORD:-root}
+    volumes:
+      - ./assets_api:/var/www/html:ro
+    ports:
+      - "${SOURCE_API_PORT:-8089}:80"
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(strpos((string)@file_get_contents('http://127.0.0.1/maintenance_type.php?limit=1'), '\"success\": true') === false ? 1 : 0);"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    depends_on:
+      source-db:
+        condition: service_healthy
+
+  # ---------------- ETL ----------------
+  etl:
+    image: cpe-warehouse-etl:local
+    command: ["sh", "docker/etl/run.sh"]
+    environment:
+      SOURCE_API: http://source-api/
+      WH_HOST: warehouse-db
+      WH_NAME: warehouse
+      WH_USER: root
+      WH_PASS: ${DB_ROOT_PASSWORD:-root}
+    volumes:
+      - ./:/app:ro
+      - ./output:/app/output          # ผลลัพธ์ + history ของ snapshot ครุภัณฑ์ (ห้ามลบ)
+    depends_on:
+      source-seed:
+        condition: service_completed_successfully
+      source-api:
+        condition: service_healthy
+      warehouse-db:
+        condition: service_healthy
+    restart: "no"
+
+  # ---------------- Warehouse + Dashboard ----------------
+  warehouse-db:
+    image: mysql:8.0
+    command: *mysql-command
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: warehouse
+      MYSQL_USER: ${DB_USER:-dashboard}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-dashboard}
+    volumes:
+      - warehouse_db_data:/var/lib/mysql
+      - "./warehouse schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro"
+    ports:
+      - "3307:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${DB_ROOT_PASSWORD:-root}"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  # backend ของ dashboard: อ่าน warehouse อย่างเดียว ส่ง JSON
+  warehouse-api:
+    <<: *php-image
+    environment:
+      DB_HOST: warehouse-db
+      DB_NAME: warehouse
+      DB_USER: ${DB_USER:-dashboard}
+      DB_PASS: ${DB_PASSWORD:-dashboard}
+    volumes:
+      - ./web/public/api:/var/www/html/api:ro
+      - ./web/config:/var/www/config:ro
+    depends_on:
+      warehouse-db:
+        condition: service_healthy
+
+  # frontend: ไฟล์ static + ส่งต่อ /api/ ไปที่ warehouse-api
+  frontend:
+    image: nginx:1.27-alpine
+    volumes:
+      - ./web/public:/usr/share/nginx/html:ro
+      - ./docker/frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "${WEB_PORT:-8088}:80"
+    depends_on:
+      - warehouse-api
+
+volumes:
+  source_db_data:
+  warehouse_db_data:

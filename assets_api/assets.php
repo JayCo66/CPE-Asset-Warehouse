@@ -14,14 +14,14 @@ try {
     $countStmt = $pdo->query("SELECT COUNT(*) FROM `asset` WHERE `is_deleted` IS NULL OR `is_deleted` = 0");
     $total = (int)$countStmt->fetchColumn();
 
-    // ดึงข้อมูลตาม pagination พร้อมชื่อหน่วยงาน
+    // ดึงข้อมูลตาม pagination พร้อมชื่อหน่วยงาน และชื่อประเภท (ตาราง asset ไม่มี type_name ต้อง join asset_types)
     $stmt = $pdo->prepare("
-        SELECT 
+        SELECT
             a.`asset_id`,
             a.`asset_code`,
             a.`asset_name`,
             a.`type_id`,
-            a.`type_name`,
+            t.`type_name`,
             a.`type_code`,
             a.`category_id`,
             a.`brand`,
@@ -35,6 +35,7 @@ try {
             a.`update_date`
         FROM `asset` a
         LEFT JOIN `departments` d ON a.`department_id` = d.`department_id`
+        LEFT JOIN `asset_types` t ON a.`type_id` = t.`type_id`
         WHERE a.`is_deleted` IS NULL OR a.`is_deleted` = 0
         ORDER BY a.`asset_id` ASC
         LIMIT :limit OFFSET :offset
