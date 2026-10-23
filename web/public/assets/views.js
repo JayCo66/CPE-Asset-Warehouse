@@ -371,16 +371,18 @@
   Views["repair-worth"] = async (root) => {
     const d = await api("repair.php?view=worth");
     const T = d.thresholds, all = d.assets;
-    const groups = { dispose: all.filter((a) => a.verdict === "dispose"), watch: all.filter((a) => a.verdict === "watch"), ok: all.filter((a) => a.verdict === "ok") };
+    const LABEL = { dispose: "ไม่คุ้มซ่อม", review: "ค่าซ่อมสูงแต่ยังใหม่", watch: "เฝ้าระวัง", ok: "ซ่อมต่อได้" };
+    const CLS = { dispose: "bad", review: "warn", watch: "warn", ok: "ok" };
+    const groups = Object.fromEntries(Object.keys(LABEL).map((k) => [k, all.filter((a) => a.verdict === k)]));
     stats(root, [
       { label: "ไม่คุ้มซ่อม ควรเสนอจำหน่าย", value: num(groups.dispose.length), unit: "ชิ้น",
-        sub: `ค่าซ่อม ≥ ${pct(T.dispose, 0)} ของราคาซื้อ`, subCls: "delta-bad" },
+        sub: `ค่าซ่อม ≥ ${pct(T.dispose, 0)} ของราคาซื้อ และใช้งานเกิน ${pct(T.life_share, 0)} ของอายุ`, subCls: "delta-bad" },
       { label: "ค่าซ่อมที่จ่ายไปกับกลุ่มนี้", value: num(d3.sum(groups.dispose, (a) => a.repair_cost)), unit: "บาท",
         sub: `ราคาซื้อรวม ${num(d3.sum(groups.dispose, (a) => a.price))} บาท` },
+      { label: "ค่าซ่อมสูงแต่ยังใหม่", value: num(groups.review.length), unit: "ชิ้น", sub: "ตรวจสาเหตุ/ประกันก่อนตัดสิน" },
       { label: "เฝ้าระวัง", value: num(groups.watch.length), unit: "ชิ้น", sub: `${pct(T.watch, 0)}–${pct(T.dispose, 0)} ของราคาซื้อ` },
     ], "สรุปความคุ้มค่าการซ่อม");
 
-    const LABEL = { dispose: "ไม่คุ้มซ่อม", watch: "เฝ้าระวัง", ok: "ซ่อมต่อได้" };
     let pick = "dispose";
     const sec = section(root, { id: "rep-worth", title: "ค่าซ่อมสะสมเทียบราคาซื้อ" });
     const seg = document.createElement("div");
@@ -398,11 +400,11 @@
       seg.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === pick)));
       const rows = groups[pick];
       if (!rows.length) { list.innerHTML = `<li class="state">ไม่มีครุภัณฑ์ในกลุ่มนี้</li>`; return; }
-      const cls = pick === "dispose" ? "bad" : pick === "watch" ? "warn" : "ok";
+      const cls = CLS[pick];
       list.innerHTML = rows.map((r) => html`
         <li>
           <div class="worth-name">${esc(r.asset_name)}
-            <span>${esc(r.category_name)} · ซ่อม ${num(r.repairs)} ครั้ง${r.age_years !== null ? ` · อายุ ${num(r.age_years)} ปี` : ""} · ${esc(r.asset_code)}</span></div>
+            <span>${esc(r.category_name)} · ซ่อม ${num(r.repairs)} ครั้ง${r.age_years !== null ? ` · อายุ ${num(r.age_years)}/${num(r.life_years)} ปี` : ""} · ${esc(r.asset_code)}</span></div>
           <div class="worth-bar" role="img" aria-label="ค่าซ่อม ${pct(r.ratio, 0)} ของราคาซื้อ">
             <span class="fill is-${cls}" style="width:${Math.min(100, r.ratio * 100)}%"></span>
             <i style="left:${T.watch * 100}%"></i><i style="left:${T.dispose * 100}%"></i>
@@ -413,6 +415,77 @@
     };
     seg.addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { pick = b.dataset.k; draw(); } });
     draw();
+  };
+
+  // ขอเงินลงทุน: อายุเทียบอายุการใช้งาน, ถ้าไม่ลงทุนเทียบทำตามแผน, แผนทดแทนรายปี, รายการที่ควรทดแทนทันที
+  Views["invest-overview"] = async (root) => {
+    const d = await api("invest.php");
+    if (d.empty) return emptyState(root, "ยังไม่มี snapshot ครุภัณฑ์", "รัน ETL อย่างน้อย 1 ครั้ง");
+    const cur = d.current_fiscal_year, [y0, y1] = d.plan_years, T = d.thresholds;
+    const mb = (v) => dec(v / 1e6);
+    const GREEN = "var(--cpe-success)";
+    const now = d.history[d.history.length - 1], prev = d.history[d.history.length - 2];
+    const cost = (p) => p.immediate_cost + p.backlog_cost + p.eol_cost;
+    const total = d3.sum(d.plan, cost);
+    stats(root, [
+      { label: `เกินอายุการใช้งาน ปีงบ ${cur}`, value: pct(now.share, 0), sub: `${num(now.past)} จาก ${num(now.n)} ชิ้น`,
+        ...vsPrev(now.share, prev.share, prev.fiscal_year, { better: "down", kind: "rate" }) },
+      { label: `งบทดแทน ปีงบ ${y0}–${y1}`, value: mb(total), unit: "ล้านบาท", sub: `เฉลี่ย ${mb(total / d.plan.length)} ล้านบาทต่อปี` },
+      { label: "งบที่ควรตั้งทุกปี", value: mb(d.keep_up_per_year), unit: "ล้านบาท", sub: "เพื่อไม่ให้เกินอายุสะสมเพิ่ม" },
+      { label: "ควรทดแทนทันที", value: num(d.immediate.length), unit: "ชิ้น",
+        sub: `ค่าซ่อม ≥ ${pct(T.repair_ratio, 0)} ของราคาซื้อ และใช้งานเกิน ${pct(T.life_share, 0)} ของอายุ`, subCls: "delta-bad" },
+    ], "สรุปคำขอเงินลงทุน");
+
+    // ที่ผ่านมา -> ปีงบปัจจุบัน -> คาดการณ์ (เส้นทั้งสามต่อกันที่ปีงบปัจจุบัน)
+    const rows = [
+      ...d.history.map((h) => ({ key: String(h.fiscal_year), actual: h.share, no_invest: h.fiscal_year === cur ? h.share : null, with_plan: h.fiscal_year === cur ? h.share : null })),
+      ...d.projection.map((p) => ({ key: String(p.fiscal_year), actual: null, no_invest: p.no_invest, with_plan: p.with_plan })),
+    ];
+    const s1 = section(root, { id: "inv-past-life", title: "ครุภัณฑ์ที่เกินอายุการใช้งาน: ไม่ลงทุน กับ ทำตามแผน" });
+    const b1 = chartBox(s1);
+    responsive(b1, () => Charts.lines(b1, rows, { label: "สัดส่วนครุภัณฑ์ที่เกินอายุการใช้งาน", xKey: "key", xLabel: (r) => r.key, yMax: 1,
+      series: [{ key: "actual", label: "ที่ผ่านมา", color: BLUE }, { key: "no_invest", label: "ไม่ลงทุน", color: RED },
+        { key: "with_plan", label: "ตามแผน", color: GREEN }],
+      yFmt: (v) => pct(v, 0), tipTitle: (r) => `ปีงบ ${r.key}` }));
+
+    const s2 = section(root, { id: "inv-plan", title: `แผนทดแทนรายปี (ล้านบาท)` });
+    toolbar(s2, "", [["คัดลอกแผนรายปี", () => tsv(
+      ["ปีงบประมาณ", "ทดแทนทันที (ชิ้น)", "ทดแทนทันที (บาท)", "เกินอายุค้างสะสม (ชิ้น)", "เกินอายุค้างสะสม (บาท)", "ครบอายุในปี (ชิ้น)", "ครบอายุในปี (บาท)", "รวม (บาท)"],
+      d.plan.map((p) => [p.fiscal_year, p.immediate_n, p.immediate_cost, p.backlog_n, p.backlog_cost, p.eol_n, p.eol_cost, cost(p)]))]]);
+    const b2 = chartBox(s2, [["ทดแทนทันที", RED], ["เกินอายุค้างสะสม", BLUE], ["ครบอายุในปีนั้น", MUTED]]);
+    const plan = d.plan.map((p) => ({ ...p, key: String(p.fiscal_year) }));
+    responsive(b2, () => Charts.bars(b2, plan, { label: "แผนทดแทนรายปี",
+      series: [{ key: "immediate_cost", color: RED }, { key: "backlog_cost", color: BLUE }, { key: "eol_cost", color: MUTED }],
+      yFmt: mb, xLabel: (r) => r.key, tipTitle: (r) => `ปีงบ ${r.key} · รวม ${mb(cost(r))} ล้านบาท`,
+      tipLines: (r) => [["ทดแทนทันที", `${num(r.immediate_n)} ชิ้น · ${num(r.immediate_cost)} บาท`, RED],
+        ["ค้างสะสม", `${num(r.backlog_n)} ชิ้น · ${num(r.backlog_cost)} บาท`, BLUE],
+        ["ครบอายุ", `${num(r.eol_n)} ชิ้น · ${num(r.eol_cost)} บาท`, MUTED]] }));
+
+    const s3 = section(root, { id: "inv-category", title: "แยกตามหมวด" });
+    table(s3, {
+      caption: "แผนทดแทนแยกตามหมวด", rows: d.categories, columns: [
+        { key: "name", label: "หมวด", align: "l", cls: "wrap" },
+        { label: "เกินอายุแล้ว", render: (r) => `<span class="big-cell">${pct(ratio(r.past, r.assets), 0)}</span>` },
+        { label: "อายุใช้งาน", render: (r) => `${num(r.life)} ปี` },
+        { label: "ทั้งหมด", render: (r) => num(r.assets) },
+        { label: "เกินอายุ", render: (r) => num(r.past) },
+        { label: `ครบอายุภายใน ${y1}`, render: (r) => num(r.due) },
+        { label: "งบทดแทน (บาท)", render: (r) => num(r.cost) },
+      ],
+    });
+
+    const s4 = section(root, { id: "inv-now", title: "ควรทดแทนทันที" });
+    if (!d.immediate.length) emptyState(s4, "ไม่มีรายการ", "");
+    else table(s4, {
+      caption: "ครุภัณฑ์ที่ควรทดแทนทันที", rows: d.immediate, columns: [
+        { key: "asset_name", label: "ครุภัณฑ์", align: "l", cls: "wrap" },
+        { label: "ค่าซ่อม / ราคาซื้อ", render: (r) => `<span class="big-cell is-bad">${pct(r.ratio, 0)}</span>` },
+        { label: "บาท", render: (r) => `${num(r.repair_cost)} / ${num(r.price)}` },
+        { label: "อายุ / อายุใช้งาน", render: (r) => `${num(r.age_years)} / ${num(r.life_years)} ปี` },
+        { key: "category_name", label: "หมวด", align: "l", cls: "wrap" },
+        { key: "asset_code", label: "เลขครุภัณฑ์", align: "l" },
+      ],
+    });
   };
 
   Views["borrow-overview"] = async (root) => {
