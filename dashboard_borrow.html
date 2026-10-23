@@ -1704,9 +1704,9 @@
           labels: [],
           datasets: [
             {
-              label: 'ตรงเวลา',
+              label: 'ชำรุด',
               data: [],
-              backgroundColor: '#009688',
+              backgroundColor: '#E43F0B',
               stack: 'borrow_status',
               borderRadius: 3
             },
@@ -1718,9 +1718,9 @@
               borderRadius: 3
             },
             {
-              label: 'ชำรุด',
+              label: 'ตรงเวลา',
               data: [],
-              backgroundColor: '#E43F0B',
+              backgroundColor: '#009688',
               stack: 'borrow_status',
               borderRadius: 3
             }
@@ -1976,12 +1976,12 @@
       const sortedMonths = Object.keys(monthMap).sort();
       monthlyChartInst.data.labels = sortedMonths;
 
-      // Dataset 0: คืนตรงเวลา
-      monthlyChartInst.data.datasets[0].data = sortedMonths.map(m => monthMap[m].good + monthMap[m].active);
-      // Dataset 1: คืนล่าช้า
+      // Dataset 0: ส่งคืนชำรุด (ล่างสุด)
+      monthlyChartInst.data.datasets[0].data = sortedMonths.map(m => monthMap[m].damaged);
+      // Dataset 1: คืนล่าช้า (ตรงกลาง)
       monthlyChartInst.data.datasets[1].data = sortedMonths.map(m => monthMap[m].overdue);
-      // Dataset 2: ส่งคืนชำรุด
-      monthlyChartInst.data.datasets[2].data = sortedMonths.map(m => monthMap[m].damaged);
+      // Dataset 2: คืนตรงเวลา (บนสุด)
+      monthlyChartInst.data.datasets[2].data = sortedMonths.map(m => monthMap[m].good + monthMap[m].active);
 
       monthlyChartInst.update();
     }
