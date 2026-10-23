@@ -35,7 +35,7 @@
     // เปลี่ยนน้อยจนปัดแล้วเป็น 0 (เช่น −0.0 จุด) ให้แสดงว่าเท่าเดิม
     if (Math.abs(diff) < (kind === "rate" ? 0.0005 : 1e-9) || (kind !== "rate" && prev && Math.abs(diff / prev) < 0.0005)) text = "เท่าเดิม";
     let cls = "delta-flat";
-    if (better && Math.abs(diff) > 1e-9) cls = (diff < 0) === (better === "down") ? "delta-good" : "delta-bad";
+    if (better && text !== "เท่าเดิม") cls = (diff < 0) === (better === "down") ? "delta-good" : "delta-bad";
     return { text: label ? `${text} ${label}` : text, cls };
   }
 

@@ -143,7 +143,8 @@ a { color: var(--cpe-info); }
 .stat { padding: var(--sp-4) var(--sp-5); display: grid; gap: var(--sp-1); align-content: start; border-right: 1px solid var(--line); min-width: 0; }
 .stat:last-child { border-right: 0; }
 .stat-label { font-size: var(--fs-md); color: var(--cpe-text-muted); }
-.stat-value { color: var(--cpe-text); font-size: var(--fs-num); font-weight: 500; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.stat-value { color: var(--cpe-text); font-size: var(--fs-num); font-weight: 500; font-variant-numeric: tabular-nums; line-height: 1.2;
+  display: flex; flex-wrap: wrap; align-items: baseline; }   /* หน่วยขึ้นบรรทัดใหม่ได้ ตัวเลขยาวไม่ล้นไปช่องข้าง ๆ */
 .stat-value small { font-size: var(--fs-md); font-weight: 400; color: var(--cpe-text-muted); margin-left: 2px; }
 .stat-sub { font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
 a.stat.is-link { text-decoration: none; }
@@ -287,6 +288,10 @@ tr.is-partial td { color: var(--text-faint); }
   :root { --cpe-text: #000; --cpe-text-muted: #222; --cpe-surface: #fff; --line: #bbb; --line-strong: #888;
           --text-faint: #444; --fill-hover: #eee; --series-muted: #999; color-scheme: light; }
   body { background: #fff !important; font-size: 11pt; }
+  /* แถบเทียบ แถบค่าซ่อม ช่อง heat และจุดสี เป็น background: Chrome ไม่พิมพ์ background ถ้าไม่ได้ติ๊ก
+     "Background graphics" จึงบังคับให้พิมพ์สีตามจริง (พื้นผิวอื่นเป็นสีขาวจาก token ข้างบนอยู่แล้ว) */
+  *, *::before, *::after { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  :root { --fs-num: 1.875rem; }
   .app-header, .module-nav, .local-nav, .skip-link, .module-actions, .action-bar .btn, .more-link, .tip { display: none !important; }
   .highlights li { break-inside: avoid; }
   .print-meta { display: block; margin: 0; font-size: 9pt; color: #444; }
@@ -294,7 +299,9 @@ tr.is-partial td { color: var(--text-faint); }
   .table-wrap, .table-wrap.is-tall, .worth-list { max-height: none; overflow: visible; }
   .worth-list li { break-inside: avoid; }
   th { position: static; }
-  .section, .stats, tr { break-inside: avoid; }
+  /* ไม่ห้ามตัดหน้ากลาง section ทั้งก้อน (รายการยาวจะดันไปหน้าใหม่ทิ้งหน้าว่าง) ห้ามแค่กลางกราฟ/แถว และไม่ให้หัวข้อค้างท้ายหน้า */
+  .stats, tr, .chart, .hrow { break-inside: avoid; }
+  .section-head, .legend { break-after: avoid; }
   .stats { border-color: #888; }
   a { color: #000; text-decoration: none; }
 }
