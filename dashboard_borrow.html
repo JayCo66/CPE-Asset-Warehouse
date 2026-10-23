@@ -996,7 +996,7 @@
             <div class="panel-title">
               <span>แนวโน้มการยืมและสภาพการคืนรายเดือน</span>
             </div>
-            <span class="panel-hint">ปริมาณชิ้นตามสภาพคืน และ % คืนล่าช้า</span>
+            <span class="panel-hint">ปริมาณชิ้นตามสภาพการส่งคืน</span>
           </div>
         </div>
         <div class="chart-container">
@@ -1309,10 +1309,7 @@
         monthlyChartInst.options.scales.x.ticks.color = textColor;
         monthlyChartInst.options.scales.y.grid.color = gridColor;
         monthlyChartInst.options.scales.y.ticks.color = textColor;
-        if (monthlyChartInst.options.scales.y1) {
-          monthlyChartInst.options.scales.y1.ticks.color = textColor;
-          if (monthlyChartInst.options.scales.y1.title) monthlyChartInst.options.scales.y1.title.color = textColor;
-        }
+
         if (monthlyChartInst.options.scales.y.title) monthlyChartInst.options.scales.y.title.color = textColor;
         if (monthlyChartInst.options.plugins.legend) monthlyChartInst.options.plugins.legend.labels.color = textColor;
         monthlyChartInst.update();
@@ -1702,11 +1699,11 @@
       // -----------------------------------------------------------------------
       const monthlyCtx = document.getElementById('monthlyTrendChart').getContext('2d');
       monthlyChartInst = new Chart(monthlyCtx, {
+        type: 'bar',
         data: {
           labels: [],
           datasets: [
             {
-              type: 'bar',
               label: 'ตรงเวลา',
               data: [],
               backgroundColor: '#009688',
@@ -1714,7 +1711,6 @@
               borderRadius: 3
             },
             {
-              type: 'bar',
               label: 'คืนล่าช้า',
               data: [],
               backgroundColor: '#FFC107',
@@ -1722,24 +1718,11 @@
               borderRadius: 3
             },
             {
-              type: 'bar',
               label: 'ชำรุด',
               data: [],
               backgroundColor: '#E43F0B',
               stack: 'borrow_status',
               borderRadius: 3
-            },
-            {
-              type: 'line',
-              label: '% คืนล่าช้า',
-              data: [],
-              borderColor: '#0466C8',
-              backgroundColor: '#0466C8',
-              yAxisID: 'y1',
-              tension: 0.3,
-              pointRadius: 4,
-              pointHoverRadius: 6,
-              borderWidth: 2.5
             }
           ]
         },
@@ -1755,9 +1738,7 @@
               callbacks: {
                 footer: (items) => {
                   let total = 0;
-                  items.forEach(it => {
-                    if (it.dataset.type === 'bar') total += it.parsed.y;
-                  });
+                  items.forEach(it => { total += it.parsed.y; });
                   return `รวมในเดือนนี้: ${total} ชิ้น`;
                 }
               }
@@ -1775,15 +1756,6 @@
               ticks: { color: textColor },
               beginAtZero: true,
               title: { display: true, text: 'จำนวน (ชิ้น)', color: textColor, font: { size: 10 } }
-            },
-            y1: {
-              type: 'linear',
-              position: 'right',
-              min: 0,
-              max: 100,
-              grid: { drawOnChartArea: false },
-              ticks: { color: textColor, callback: v => v + '%' },
-              title: { display: true, text: '% ล่าช้า', color: textColor, font: { size: 10 } }
             }
           },
           onClick: (evt, elements) => {
@@ -2010,11 +1982,6 @@
       monthlyChartInst.data.datasets[1].data = sortedMonths.map(m => monthMap[m].overdue);
       // Dataset 2: ส่งคืนชำรุด
       monthlyChartInst.data.datasets[2].data = sortedMonths.map(m => monthMap[m].damaged);
-      // Dataset 3: Line % อัตราส่งคืนล่าช้า
-      monthlyChartInst.data.datasets[3].data = sortedMonths.map(m => {
-        const total = monthMap[m].good + monthMap[m].active + monthMap[m].overdue + monthMap[m].damaged;
-        return total > 0 ? parseFloat(((monthMap[m].overdue / total) * 100).toFixed(1)) : 0;
-      });
 
       monthlyChartInst.update();
     }
