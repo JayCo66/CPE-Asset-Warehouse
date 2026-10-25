@@ -1,9 +1,57 @@
 <?php
 // โมดูลแจ้งซ่อมอาคาร: fact_general_maintenance
 // แถวที่ job_status เป็น NULL มาจากใบแจ้งซ่อม Excel เดิม (ETL ไม่มีสถานะงานให้) ที่เหลือมาจากระบบใหม่
+//   ?view=jobs     ทุกงานแจ้งซ่อม + สัญญาณ (แอร์, แจ้งซ้ำที่เดิมภายใน 30 วัน, ปิดงานเกินเกณฑ์, ไม่ระบุอาคาร)
+//   ?view=badges   ตัวเลขบนแท็บของโมดูล
 require __DIR__ . '/db.php';
 
+/** งานแจ้งซ่อมทั้งหมดเรียงตามวันที่ พร้อมสัญญาณ ; แจ้งซ้ำ = สถานที่เดียวกัน ประเภทเดียวกัน ภายใน 30 วันหลังครั้งก่อน */
+function facility_jobs(): array
+{
+    $sla = (int)setting('sla_facility_workdays', 3);
+    $rows = rows("SELECT f.maint_gen_fact_id AS id, d.full_date AS reported, cd.full_date AS completed, d.fiscal_year,
+                         mt.type_name, f.location_key, l.building, l.floor, l.room, l.area_name,
+                         COALESCE(dp.department_name, 'ไม่ระบุหน่วยงาน') AS department, f.reporter_status, f.job_status,
+                         u.fullname AS staff
+                  FROM fact_general_maintenance f
+                  JOIN dim_date d ON d.date_key = f.reported_date_key
+                  LEFT JOIN dim_date cd ON cd.date_key = f.completed_date_key
+                  JOIN dim_maintenance_type mt ON mt.maintenance_type_key = f.maintenance_type_key
+                  LEFT JOIN dim_location l ON l.location_key = f.location_key
+                  LEFT JOIN dim_department dp ON dp.department_key = f.department_key
+                  LEFT JOIN dim_user u ON u.user_key = f.staff_user_key
+                  ORDER BY d.full_date, f.maint_gen_fact_id");
+    $last = [];
+    foreach ($rows as &$r) {
+        $r['place'] = place_text($r);
+        $r['building'] ??= 'ไม่ระบุอาคาร';
+        $r['source'] = $r['job_status'] === null ? 'ฟอร์มเดิม' : 'ระบบใหม่';
+        $r['workdays'] = $r['completed'] ? workdays($r['reported'], $r['completed']) : null;
+        $flags = [];
+        if ($r['type_name'] === 'งานระบบปรับอากาศ') $flags[] = 'aircon';
+        if ($r['location_key'] !== null) {
+            $key = $r['location_key'] . '|' . $r['type_name'];
+            if (isset($last[$key]) && (strtotime($r['reported']) - strtotime($last[$key])) <= 30 * 86400) $flags[] = 'repeat';
+            $last[$key] = $r['reported'];
+        }
+        if ($r['workdays'] !== null && $r['workdays'] > $sla) $flags[] = 'slow';
+        if ($r['building'] === 'ไม่ระบุอาคาร') $flags[] = 'noplace';
+        $r['flags'] = $flags;
+    }
+    unset($r);
+    return ['sla_workdays' => $sla, 'rows' => array_reverse($rows)];
+}
+
 run(function () {
+    $view = $_GET['view'] ?? 'overview';
+    if ($view === 'jobs') {
+        return facility_jobs();
+    }
+    if ($view === 'badges') {
+        $jobs = facility_jobs()['rows'];
+        return ['overview' => number_format(count($jobs)),
+                'jobs' => number_format(count(array_filter($jobs, fn($r) => array_intersect($r['flags'], ['repeat', 'slow']))))];
+    }
     $cur = current_fiscal_year();
     $y1 = $cur - 1;        // ปีงบที่ครบล่าสุด
     $y0 = $cur - 2;

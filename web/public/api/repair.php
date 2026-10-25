@@ -2,7 +2,45 @@
 // โมดูลซ่อมครุภัณฑ์: fact_asset_maintenance
 //   ?view=overview   ปริมาณงาน ค่าซ่อม ระยะเวลาซ่อม (วันทำการ) ตามช่วงเวลา
 //   ?view=worth      ค่าซ่อมสะสมเทียบราคาซื้อ (จำลอง): ชิ้นไหนไม่คุ้มซ่อม ควรเสนอจำหน่าย
+//   ?view=jobs       ทุกงานซ่อม + สัญญาณ (ซ่อมซ้ำ, เกินเกณฑ์วันทำการ, ครุภัณฑ์ไม่คุ้มซ่อม, ส่งร้าน) + ข้อมูลความคุ้มของครุภัณฑ์ชิ้นนั้น
+//   ?view=badges     ตัวเลขบนแท็บของโมดูล
 require __DIR__ . '/db.php';
+
+/** งานซ่อมทั้งหมด (ใหม่สุดก่อน) ; ข้อมูลระดับครุภัณฑ์ (ราคา, ค่าซ่อมสะสม, ผลประเมิน) มาจาก repair_vs_price() */
+function repair_jobs(): array
+{
+    $sla = (int)setting('sla_repair_workdays', 15);
+    $worth = repair_vs_price();
+    $assets = array_column($worth['assets'], null, 'asset_code');
+    $rows = rows("SELECT f.maint_asset_fact_id AS id, d.full_date AS repair_date, cd.full_date AS complete_date, d.fiscal_year,
+                         a.asset_code, a.asset_name, COALESCE(c.category_name, 'ไม่ระบุหมวด') AS category,
+                         COALESCE(dp.department_name, 'ไม่ระบุหน่วยงาน') AS department, f.vendor_name, f.repair_status,
+                         COALESCE(f.total_repair_cost, 0) AS cost, f.is_followup_flag, f.followup_no, u.fullname AS approver
+                  FROM fact_asset_maintenance f
+                  JOIN dim_date d ON d.date_key = f.repair_date_key
+                  LEFT JOIN dim_date cd ON cd.date_key = f.complete_date_key
+                  JOIN dim_asset a ON a.asset_key = f.asset_key
+                  LEFT JOIN dim_asset_category c ON c.category_key = a.category_key
+                  LEFT JOIN dim_department dp ON dp.department_key = f.department_key
+                  LEFT JOIN dim_user u ON u.user_key = f.approved_by_user_key
+                  ORDER BY d.full_date DESC, f.maint_asset_fact_id DESC");
+    foreach ($rows as &$r) {
+        $a = $assets[$r['asset_code']] ?? [];
+        $r['workdays'] = $r['complete_date'] ? workdays($r['repair_date'], $r['complete_date']) : null;
+        $r['handled_by'] = $r['vendor_name'] ? 'ส่งร้าน' : 'ซ่อมเอง';
+        foreach (['price', 'repair_cost', 'ratio', 'verdict', 'age_years', 'life_years', 'repairs'] as $k) {
+            $r['asset_' . $k] = $a[$k] ?? null;
+        }
+        $flags = [];
+        if ($r['is_followup_flag']) $flags[] = 'followup';
+        if ($r['workdays'] !== null && $r['workdays'] > $sla) $flags[] = 'slow';
+        if (($a['verdict'] ?? null) === 'dispose') $flags[] = 'dispose';
+        if ($r['vendor_name']) $flags[] = 'vendor';
+        $r['flags'] = $flags;
+    }
+    unset($r);
+    return ['sla_workdays' => $sla, 'thresholds' => $worth['thresholds'], 'rows' => $rows];
+}
 
 run(function () {
     $cur = current_fiscal_year();
@@ -13,6 +51,16 @@ run(function () {
 
     if ($view === 'worth') {
         return repair_vs_price();
+    }
+    if ($view === 'jobs') {
+        return repair_jobs();
+    }
+    if ($view === 'badges') {
+        $jobs = repair_jobs()['rows'];
+        $dispose = count(array_filter(repair_vs_price()['assets'], fn($a) => $a['verdict'] === 'dispose'));
+        return ['overview' => number_format(count($jobs)),
+                'jobs' => number_format(count(array_filter($jobs, fn($r) => array_intersect($r['flags'], ['followup', 'slow', 'dispose'])))),
+                'worth' => number_format($dispose)];
     }
 
     // ทุกงาน: คิดวันทำการที่ใช้ซ่อมจากวันแจ้งถึงวันเสร็จ
