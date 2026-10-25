@@ -1956,16 +1956,35 @@
         },
         options: {
           indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+          interaction: {
+            mode: 'index',
+            axis: 'y',
+            intersect: false
+          },
           plugins: {
             legend: { position: 'top', labels: { color: textColor, boxWidth: 10 } },
             tooltip: {
               callbacks: {
+                title: (tooltipItems) => {
+                  if (!tooltipItems || tooltipItems.length === 0) return '';
+                  const idx = tooltipItems[0].dataIndex;
+                  return topList[idx] ? topList[idx].name : tooltipItems[0].label;
+                },
                 footer: () => '👆 คลิกเพื่อดูประวัติการยืมของครุภัณฑ์ชิ้นนี้'
               }
             }
           },
           onHover: (event, chartElement) => {
-            event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
+            const canvas = event.native.target;
+            canvas.style.cursor = chartElement[0] ? 'pointer' : 'default';
+            if (chartElement && chartElement.length > 0) {
+              const idx = chartElement[0].index;
+              if (topList[idx]) {
+                canvas.title = topList[idx].name;
+              }
+            } else {
+              canvas.removeAttribute('title');
+            }
           },
           onClick: (event, elements, chart) => {
             if (elements && elements.length > 0) {
@@ -2767,16 +2786,35 @@
             indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
+            interaction: {
+              mode: 'index',
+              axis: 'y',
+              intersect: false
+            },
             plugins: {
               legend: { display: false },
               tooltip: {
                 callbacks: {
+                  title: (tooltipItems) => {
+                    if (!tooltipItems || tooltipItems.length === 0) return '';
+                    const idx = tooltipItems[0].dataIndex;
+                    return lowItems[idx] ? lowItems[idx].name : tooltipItems[0].label;
+                  },
                   footer: () => '👆 คลิกเพื่อดูรายละเอียดและประวัติครุภัณฑ์'
                 }
               }
             },
             onHover: (event, chartElement) => {
-              event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
+              const canvas = event.native.target;
+              canvas.style.cursor = chartElement[0] ? 'pointer' : 'default';
+              if (chartElement && chartElement.length > 0) {
+                const idx = chartElement[0].index;
+                if (lowItems[idx]) {
+                  canvas.title = lowItems[idx].name;
+                }
+              } else {
+                canvas.removeAttribute('title');
+              }
             },
             onClick: (event, elements, chart) => {
               if (elements && elements.length > 0) {
