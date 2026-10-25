@@ -915,11 +915,13 @@
       body.replaceChildren();
       if (!list.length) return emptyState(body, "ไม่มีรายการ", "");
       stats(body, data.cfg.kpis(list), "ตัวเลขของรายการนี้");
-      const w = table(body, { caption: title, tall: true, rows: list, columns: [...data.cfg.columns,
-        { label: "", render: (r) => `<button type="button" class="btn btn-sm" data-i="${list.indexOf(r)}">ดูข้อมูล</button>` }] });
-      // คลิกตรงไหนของแถวก็ได้ (ปุ่มท้ายแถวไว้ใช้กับคีย์บอร์ด ตารางกว้างอาจต้องเลื่อนไปถึง)
+      const w = table(body, { caption: title, rows: list, columns: data.cfg.columns });
+      // คลิกแถว หรือกด Tab มาที่แถวแล้ว Enter = ดูรายละเอียด (ไม่มีคอลัมน์ปุ่ม ตารางจะได้ไม่กว้างเกินหน้าต่าง)
       w.classList.add("is-pickable");
-      w.addEventListener("click", (e) => { const b = e.target.closest("tr")?.querySelector("[data-i]"); if (b) showDetail(list[+b.dataset.i]); });
+      w.querySelectorAll("tbody tr").forEach((tr, i) => { tr.tabIndex = 0; tr.dataset.i = i; });
+      const pickRow = (e) => { const tr = e.target.closest("tr[data-i]"); if (tr) showDetail(list[+tr.dataset.i]); };
+      w.addEventListener("click", pickRow);
+      w.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pickRow(e); } });
     }
 
     function showDetail(r) {

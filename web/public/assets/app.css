@@ -345,7 +345,14 @@ dialog.detail::backdrop { background: color-mix(in srgb, var(--cpe-page-start) 7
 .detail-tabs { display: flex; gap: var(--sp-5); padding: 0 var(--sp-5); border-bottom: 1px solid var(--line); }
 .detail-nav { padding: var(--sp-3) var(--sp-5) 0; }
 .is-pickable tbody tr { cursor: pointer; }
-.is-pickable tbody tr:hover td { background: var(--fill-hover); }
+.is-pickable tbody tr:hover td, .is-pickable tbody tr:focus-visible td { background: var(--fill-hover); }
+.is-pickable tbody tr:focus-visible { outline: 2px solid var(--cpe-info); outline-offset: -2px; }
+/* หน้าต่างรายละเอียด: เลื่อนทั้งหน้าต่างด้วยแถบเดียว ตารางยาวเต็มไม่มีแถบเลื่อนของตัวเอง และไม่แสดงแถบเลื่อน (ยังเลื่อนด้วยล้อ/นิ้ว/คีย์บอร์ดได้) */
+dialog.detail[open] { display: flex; flex-direction: column; overflow: hidden; }
+dialog.detail .detail-body { flex: 1; min-height: 0; max-height: none; grid-auto-rows: max-content; }
+dialog.detail .table-wrap.is-tall { max-height: none; }
+dialog.detail .detail-body, dialog.detail .table-wrap { scrollbar-width: none; }
+dialog.detail .detail-body::-webkit-scrollbar, dialog.detail .table-wrap::-webkit-scrollbar { display: none; }
 /* ตัวเลข/ชื่อในตารางที่กดดูรายการได้ */
 .cell-btn { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: inherit; }
 .cell-btn:hover { text-decoration: underline; text-underline-offset: 3px; }
