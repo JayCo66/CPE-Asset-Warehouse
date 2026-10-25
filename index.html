@@ -74,9 +74,9 @@
     .app-name {
       color: var(--cpe-text); font-weight: 600; font-size: var(--fs-lg); letter-spacing: 0.01em;
       text-decoration: none; white-space: nowrap; border-radius: 4px;
-      display: inline-flex; align-items: center; gap: 8px;
+      cursor: pointer; transition: color .15s ease, opacity .15s ease;
     }
-    .app-name:hover { color: var(--cpe-text); }
+    .app-name:hover { color: var(--cpe-info); opacity: 0.9; }
     .btn {
       justify-self: end; font: inherit; font-size: var(--fs-sm); color: var(--cpe-text); background: transparent; cursor: pointer;
       border: 1px solid var(--line-strong); border-radius: var(--radius); padding: var(--sp-2) var(--sp-3); min-height: 38px; white-space: nowrap;
@@ -449,10 +449,7 @@
 <body>
   <!-- Shell Header with Global Navigation -->
   <header class="app-header">
-    <a class="app-name" href="#/overview">
-      <span>🏛️</span>
-      <span>CPE Asset Warehouse</span>
-    </a>
+    <a class="app-name" href="#/overview" id="app-name-link" title="กลับสู่หน้าภาพรวมหลัก (Index)">CPE Asset Warehouse</a>
     <nav class="module-nav" aria-label="โมดูลหลักของระบบ">
       <ul class="module-nav-list" id="hub-list">
         <!-- Rendered via JS -->
@@ -890,6 +887,19 @@
     });
 
     setTheme(theme());
+    const appNameLink = document.getElementById("app-name-link");
+    if (appNameLink) {
+      appNameLink.addEventListener("click", (e) => {
+        e.preventDefault();
+        location.hash = "#/overview";
+        show("overview");
+        const overviewPane = document.getElementById("overview-pane");
+        if (overviewPane) {
+          overviewPane.scrollTo({ top: 0, behavior: "smooth" });
+        }
+      });
+    }
+
     const route = () => {
       const raw = location.hash.replace(/^#\/?/, "");
       show(raw || "overview");
