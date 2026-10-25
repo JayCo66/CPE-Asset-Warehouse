@@ -82,6 +82,7 @@
   }
 
   const fyShort = (fy) => String(fy).slice(2);
+  const ym = (r) => `${r.year}-${String(r.month).padStart(2, "0")}`;   // แถวรายเดือน -> "YYYY-MM" เทียบกับวันที่ของงาน
 
   // =====================================================================
   const Views = {};
@@ -102,7 +103,7 @@
     Charts.compare(b, rows, { a: { label: `ปีงบ ${prevFy}`, color: MUTED }, b: { label: `ปีงบ ${currFy}`, color: BLUE }, fmt, better });
   };
   /** กราฟเดียวเทียบทุกกลุ่ม: แท่งคู่ปีงบก่อน/ปีงบล่าสุด บนแกนเดียวกัน ; rows: [{name, a, b}] */
-  const groupedBox = (sec, rows, { prevFy, currFy, fmt, axisFmt = fmt, better, shortName }) => {
+  const groupedBox = (sec, rows, { prevFy, currFy, fmt, axisFmt = fmt, better, shortName, onPick }) => {
     if (!rows.length) return emptyState(sec, "ไม่มีข้อมูล", "");
     const box = chartBox(sec, [[`ปีงบ ${prevFy}`, MUTED], [`ปีงบ ${currFy}`, BLUE]]);
     responsive(box, () => Charts.grouped(box, rows, {
@@ -110,7 +111,7 @@
       series: [{ key: "a", label: `ปีงบ ${prevFy}`, color: MUTED }, { key: "b", label: `ปีงบ ${currFy}`, color: BLUE }],
       delta: (r) => delta(+r.b, +r.a, { better }),
       tipTitle: (r) => r.name,
-      tipLines: (r) => [[`ปีงบ ${prevFy}`, fmt(r.a), MUTED], [`ปีงบ ${currFy}`, fmt(r.b), BLUE]],
+      tipLines: (r) => [[`ปีงบ ${prevFy}`, fmt(r.a), MUTED], [`ปีงบ ${currFy}`, fmt(r.b), BLUE]], onPick,
     }));
   };
   const noPrefix = (r) => r.name.replace(/^ครุภัณฑ์/, "");
@@ -310,6 +311,9 @@
       { label: `ปิดงานใน ${k.sla_workdays} วันทำการ`, value: pct(ratio(k.within_sla, k.resolved_jobs), 0),
         sub: k.resolved_jobs ? `${num(k.resolved_jobs)} งานในระบบใหม่` : "" },
     ], "ตัวเลขหลักงานแจ้งซ่อม");
+    // คลิกกราฟ = รายการงานแจ้งซ่อมของแท่งนั้น
+    const openJobs = drill(root, async () => ({ rows: (await api("facility.php?view=jobs")).rows, cfg: facilityJobCfg() }));
+    const bothFy = (j) => j.fiscal_year === fy.prev || j.fiscal_year === fy.curr;
 
     const s1 = section(root, { id: "fac-trend", title: "แจ้งซ่อมรายเดือน" });
     const box = chartBox(s1, [["ฟอร์มเดิม", BLUE], ["ระบบใหม่", MUTED]]);
@@ -320,11 +324,13 @@
       ref: firstNew ? { key: firstNew.key, label: "เริ่มระบบใหม่" } : null,
       tipTitle: (r) => `${monthLabel(r.year, r.month)} · ปีงบ ${r.fiscal_year}`,
       tipLines: (r) => [["รวม", `${num(r.total)} งาน`], ["แอร์", `${num(r.aircon)} งาน`]],
+      onPick: (r) => openJobs(`แจ้งซ่อม ${monthLabel(r.year, r.month)}`, (j) => j.reported.slice(0, 7) === ym(r)),
     }));
 
     groupedBox(section(root, { id: "fac-types", title: "แจ้งซ่อมตามประเภทงาน" }),
       d.types.map((r) => ({ name: r.type_name, a: r.prev, b: r.curr })),
-      { prevFy: fy.prev, currFy: fy.curr, fmt: (v) => `${num(v)} งาน`, axisFmt: num, better: "down", shortName: (r) => r.name.replace(/^งาน/, "") });
+      { prevFy: fy.prev, currFy: fy.curr, fmt: (v) => `${num(v)} งาน`, axisFmt: num, better: "down", shortName: (r) => r.name.replace(/^งาน/, ""),
+        onPick: (r) => openJobs(`${r.name} ปีงบ ${fy.prev}–${fy.curr}`, (j) => j.type_name === r.name && bothFy(j)) });
 
     const c2 = cols(root);
     if (d.season.length) {
@@ -334,7 +340,9 @@
       const sb = chartBox(s2);
       responsive(sb, () => Charts.lines(sb, season, { label: "ค่าเฉลี่ยงานแจ้งซ่อมรายเดือน", xKey: "month", xLabel: (r) => r.label,
         series: [{ key: "aircon_avg", label: "แอร์", color: BLUE }, { key: "other_avg", label: "อื่นๆ", color: MUTED }],
-        yFmt: (v) => dec(v), tipTitle: (r) => `เดือน ${r.label} (เฉลี่ยต่อปี)` }));
+        yFmt: (v) => dec(v), tipTitle: (r) => `เดือน ${r.label} (เฉลี่ยต่อปี)`,
+        onPick: (r) => openJobs(`แจ้งซ่อมเดือน ${r.label} ปีงบ ${fy.season_from.join(", ")}`,
+          (j) => j.source === "ฟอร์มเดิม" && +j.reported.slice(5, 7) === r.month && fy.season_from.includes(j.fiscal_year)) }));
     }
     const years = fy.buildings;
     const byB = new Map();
@@ -342,12 +350,21 @@
     const brows = [...byB.values()].map((r) => ({ ...r, total: d3.sum(years, (y) => r[y] || 0) })).sort((a, b) => b.total - a.total);
     const max = d3.max(brows, (r) => d3.max(years, (y) => r[y] || 0)) || 1;
     const s4 = section(c2, { id: "fac-building", title: "อาคารที่แจ้งซ่อมบ่อย" });
-    table(s4, {
+    // คลิกตัวเลข = งานของอาคารนั้นในปีงบนั้น ; คลิกชื่ออาคาร = ทุกปีงบในตาราง
+    const cellBtn = (r, y, text) => `<button type="button" class="cell-btn" data-b="${esc(r.building)}"${y ? ` data-y="${y}"` : ""}>${text}</button>`;
+    const bt = table(s4, {
       caption: "งานแจ้งซ่อมตามอาคารและปีงบ", tall: true, rows: brows, columns: [
-        { key: "building", label: "อาคาร", align: "l" },
-        ...years.map((y) => ({ label: String(y), cls: "heat", render: (r) => num(r[y] || 0),
+        { label: "อาคาร", align: "l", render: (r) => cellBtn(r, null, esc(r.building)) },
+        ...years.map((y) => ({ label: String(y), cls: "heat", render: (r) => (r[y] ? cellBtn(r, y, num(r[y])) : "0"),
           style: (r) => `background: color-mix(in srgb, var(--cpe-brand-blue) ${Math.round(((r[y] || 0) / max) * 60)}%, transparent)` })),
       ],
+    });
+    bt.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-b]");
+      if (!btn) return;
+      const b = btn.dataset.b, y = btn.dataset.y ? +btn.dataset.y : null;
+      openJobs(`${b} ปีงบ ${y || `${years[0]}–${years[years.length - 1]}`}`,
+        (j) => j.building === b && (y ? j.fiscal_year === y : years.includes(j.fiscal_year)));
     });
   };
 
@@ -362,6 +379,8 @@
       { label: "ไม่คุ้มซ่อมแล้ว", value: num(d.worth.dispose), unit: "ชิ้น", href: `#${ctx.module.path}/worth`,
         sub: "ดูรายการ", subCls: d.worth.dispose ? "delta-bad" : "delta-flat" },
     ], "ตัวเลขหลักงานซ่อมครุภัณฑ์");
+    // คลิกกราฟ = รายการงานซ่อมของแท่งนั้น
+    const openJobs = drill(root, async () => { const j = await api("repair.php?view=jobs"); return { rows: j.rows, cfg: repairJobCfg(j.sla_workdays) }; });
 
     const months = fillMonths(d.monthly, ["opened", "completed", "cost"]).map((r) => {
       const src = d.monthly.find((m) => m.year === r.year && m.month === r.month);
@@ -372,24 +391,29 @@
     const b1 = chartBox(s1);
     responsive(b1, () => Charts.bars(b1, months, { label: "ค่าซ่อมรายเดือน", series: [{ key: "cost", color: BLUE }], yFmt: num,
       xLabel: quarterTick, tipTitle: (r) => `${monthLabel(r.year, r.month)} · ปีงบ ${r.fiscal_year}`,
-      tipLines: (r) => [["ค่าซ่อม", `${num(r.cost)} บาท`], ["แจ้งซ่อม", `${num(r.opened)} งาน`]] }));
+      tipLines: (r) => [["ค่าซ่อม", `${num(r.cost)} บาท`], ["แจ้งซ่อม", `${num(r.opened)} งาน`]],
+      onPick: (r) => openJobs(`แจ้งซ่อม ${monthLabel(r.year, r.month)}`, (j) => j.repair_date.slice(0, 7) === ym(r)) }));
     const s2 = section(c2, { id: "rep-days", title: "ระยะเวลาซ่อม (วันทำการ)" });
     const b2 = chartBox(s2);
     responsive(b2, () => Charts.lines(b2, months, { label: "ระยะเวลาซ่อมรายเดือน", xKey: "key", xLabel: quarterTick,
       series: [{ key: "median_workdays", label: "ค่ากลาง", color: BLUE }], yFmt: (v) => dec(v),
-      refY: { value: sla, label: `เกณฑ์ ${sla} วัน` }, tipTitle: (r) => `${monthLabel(r.year, r.month)} · ปีงบ ${r.fiscal_year}` }));
+      refY: { value: sla, label: `เกณฑ์ ${sla} วัน` }, tipTitle: (r) => `${monthLabel(r.year, r.month)} · ปีงบ ${r.fiscal_year}`,
+      onPick: (r) => openJobs(`ซ่อมเสร็จ ${monthLabel(r.year, r.month)}`, (j) => (j.complete_date || "").slice(0, 7) === ym(r)) }));
 
     groupedBox(section(root, { id: "rep-category", title: "ค่าซ่อมตามหมวด" }),
       d.categories.map((r) => ({ name: r.name, a: r.prev_cost, b: r.curr_cost })),
-      { prevFy: fy.prev, currFy: fy.curr, fmt: (v) => `${num(v)} บาท`, axisFmt: num, better: "down", shortName: noPrefix });
+      { prevFy: fy.prev, currFy: fy.curr, fmt: (v) => `${num(v)} บาท`, axisFmt: num, better: "down", shortName: noPrefix,
+        onPick: (r) => openJobs(`${r.name} ปีงบ ${fy.prev}–${fy.curr}`, (j) => j.category === r.name && (j.fiscal_year === fy.prev || j.fiscal_year === fy.curr)) });
   };
 
-  // ค่าซ่อมสะสมเทียบราคาซื้อ: แถบ = ค่าซ่อมคิดเป็นกี่ % ของราคาซื้อ (เต็มแถบ = เท่าราคาซื้อ)
+  // ค่าซ่อมสะสมเทียบราคาซื้อ: วงกลม (ราคาซื้อ × ค่าซ่อมสะสม, ขนาด = อายุ) + รายการ (แถบ = ค่าซ่อมกี่ % ของราคาซื้อ)
+  // ปุ่มกลุ่มใช้กับทั้งกราฟและรายการ ; คลิกวงหรือชื่อครุภัณฑ์ = หน้าต่างประวัติซ่อมของชิ้นนั้น (แนวเดียวกับหน้ายืม-คืนของ Boom)
   Views["repair-worth"] = async (root) => {
     const d = await api("repair.php?view=worth");
     const T = d.thresholds, all = d.assets;
     const LABEL = { dispose: "ไม่คุ้มซ่อม", review: "ค่าซ่อมสูงแต่ยังใหม่", watch: "เฝ้าระวัง", ok: "ซ่อมต่อได้" };
     const CLS = { dispose: "bad", review: "warn", watch: "warn", ok: "ok" };
+    const COLOR = { dispose: RED, review: "var(--cpe-info)", watch: "var(--cpe-warning)", ok: MUTED };
     const groups = Object.fromEntries(Object.keys(LABEL).map((k) => [k, all.filter((a) => a.verdict === k)]));
     stats(root, [
       { label: "ไม่คุ้มซ่อม ควรเสนอจำหน่าย", value: num(groups.dispose.length), unit: "ชิ้น",
@@ -410,6 +434,31 @@
     toolbar(sec, "", [["คัดลอกรายการเสนอจำหน่าย", () => tsv(
       ["ลำดับ", "เลขครุภัณฑ์", "ชื่อ", "หมวด", "ราคาซื้อ (บาท)", "ค่าซ่อมสะสม (บาท)", "ค่าซ่อม/ราคาซื้อ", "ซ่อม (ครั้ง)", "อายุ (ปี)"],
       groups.dispose.map((r, i) => [i + 1, r.asset_code, r.asset_name, r.category_name, r.price, r.repair_cost, pct(r.ratio, 0), r.repairs, r.age_years ?? ""]))]], seg);
+
+    // กราฟวงกลม: ชิ้นที่ไม่มีค่าซ่อม (ซ่อมเอง/อยู่ในประกัน) ไม่มีอะไรให้เทียบ จึงไม่วาด
+    const costed = all.filter((a) => a.repair_cost > 0);
+    const legendEl = Charts.legend(Object.keys(LABEL).map((k) => [LABEL[k], COLOR[k]]));
+    legendEl.insertAdjacentHTML("beforeend", `<span>วงใหญ่ = อายุมาก</span><span>เส้นประ = ค่าซ่อม ${pct(T.watch, 0)} / ${pct(T.dispose, 0)} ของราคาซื้อ</span>`);
+    sec.appendChild(legendEl);
+    const chart = document.createElement("div");
+    chart.className = "chart";
+    sec.appendChild(chart);
+    const hint = document.createElement("p");
+    hint.className = "section-note";
+    hint.textContent = `คลิกวงเพื่อดูประวัติซ่อม${costed.length < all.length ? ` · ไม่แสดง ${num(all.length - costed.length)} ชิ้นที่ไม่มีค่าซ่อม` : ""}`;
+    sec.appendChild(hint);
+    const drawChart = () => Charts.bubbles(chart, costed, {
+      label: "ค่าซ่อมสะสมเทียบราคาซื้อของครุภัณฑ์แต่ละชิ้น ขนาดวงตามอายุ",
+      x: (a) => a.price, y: (a) => a.repair_cost, size: (a) => a.age_years ?? 0, color: (a) => COLOR[a.verdict],
+      xFmt: num, yFmt: num, xTitle: "ราคาซื้อ (บาท)", yTitle: "ค่าซ่อมสะสม (บาท)",
+      refs: [{ ratio: T.watch, label: pct(T.watch, 0), color: "var(--cpe-warning)" }, { ratio: T.dispose, label: pct(T.dispose, 0), color: RED }],
+      dim: (a) => a.verdict !== pick,
+      tipTitle: (a) => a.asset_name,
+      tipLines: (a) => [["ค่าซ่อม", `${pct(a.ratio, 0)} ของราคาซื้อ`], ["", `${num(a.repair_cost)} / ${num(a.price)} บาท`],
+        ["อายุ", a.age_years === null ? "ไม่ทราบ" : `${num(a.age_years)}/${num(a.life_years)} ปี`], ["", LABEL[a.verdict], COLOR[a.verdict]]],
+      onPick: openAsset,
+    });
+
     const list = document.createElement("ol");
     list.className = "worth-list";
     sec.appendChild(list);
@@ -420,8 +469,8 @@
       const cls = CLS[pick];
       list.innerHTML = rows.map((r) => html`
         <li>
-          <div class="worth-name">${esc(r.asset_name)}
-            <span>${esc(r.category_name)} · ซ่อม ${num(r.repairs)} ครั้ง${r.age_years !== null ? ` · อายุ ${num(r.age_years)}/${num(r.life_years)} ปี` : ""} · ${esc(r.asset_code)}</span></div>
+          <button type="button" class="worth-name" data-code="${esc(r.asset_code)}">${esc(r.asset_name)}
+            <span>${esc(r.category_name)} · ซ่อม ${num(r.repairs)} ครั้ง${r.age_years !== null ? ` · อายุ ${num(r.age_years)}/${num(r.life_years)} ปี` : ""} · ${esc(r.asset_code)}</span></button>
           <div class="worth-bar" role="img" aria-label="ค่าซ่อม ${pct(r.ratio, 0)} ของราคาซื้อ">
             <span class="fill is-${cls}" style="width:${Math.min(100, r.ratio * 100)}%"></span>
             <i style="left:${T.watch * 100}%"></i><i style="left:${T.dispose * 100}%"></i>
@@ -430,8 +479,57 @@
             <span>${num(r.repair_cost)} / ${num(r.price)} บาท</span></div>
         </li>`).join("");
     };
-    seg.addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { pick = b.dataset.k; draw(); } });
+    seg.addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { pick = b.dataset.k; draw(); drawChart(); } });
+    list.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-code]");
+      if (b) openAsset(all.find((a) => a.asset_code === b.dataset.code));
+    });
+
+    // หน้าต่างรายละเอียด: สรุปความคุ้มค่า + ประวัติซ่อมทุกครั้ง (โหลดรายการซ่อมครั้งแรกที่เปิด)
+    const dlg = document.createElement("dialog");
+    dlg.className = "detail";
+    dlg.innerHTML = `<div class="detail-head"><h2></h2><button type="button" class="btn" data-close>ปิด</button></div><div class="detail-body"></div>`;
+    root.appendChild(dlg);
+    dlg.querySelector("[data-close]").addEventListener("click", () => dlg.close());
+    dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); });
+    let jobs = null;
+    async function openAsset(a) {
+      dlg.querySelector("h2").textContent = a.asset_name;
+      const body = dlg.querySelector(".detail-body");
+      body.replaceChildren();
+      stats(body, [
+        { label: "ค่าซ่อมสะสม / ราคาซื้อ", value: pct(a.ratio, 0), sub: `${num(a.repair_cost)} / ${num(a.price)} บาท`,
+          subCls: a.verdict === "dispose" ? "delta-bad" : a.verdict === "ok" ? "delta-good" : "delta-flat" },
+        { label: "ซ่อมทั้งหมด", value: num(a.repairs), unit: "ครั้ง" },
+        { label: "อายุ / อายุการใช้งาน", value: a.age_years === null ? "–" : `${num(a.age_years)}/${num(a.life_years)}`, unit: "ปี" },
+      ], "สรุปครุภัณฑ์");
+      facts(body, [
+        ["ผลประเมิน", `<span class="status ${CLS[a.verdict]}">${esc(LABEL[a.verdict])}</span>`],
+        ["หมวด", esc(a.category_name)], ["สถานะ", esc(a.asset_status || "–")], ["เลขครุภัณฑ์", esc(a.asset_code)],
+        ["ซ่อมล่าสุด", esc(dateTH(a.last_repair))], ["ราคาซื้อ", `${num(a.price)} บาท (จำลอง)`],
+      ]);
+      const slot = document.createElement("div");
+      slot.innerHTML = `<p class="state">กำลังโหลดประวัติซ่อม…</p>`;
+      body.appendChild(slot);
+      if (!dlg.open) dlg.showModal();
+      try {
+        jobs ??= (await api("repair.php?view=jobs")).rows;
+      } catch {
+        slot.innerHTML = `<p class="state">โหลดประวัติซ่อมไม่สำเร็จ</p>`;
+        return;
+      }
+      slot.replaceChildren();
+      table(slot, { caption: "ประวัติซ่อมของครุภัณฑ์ชิ้นนี้", tall: true, rows: jobs.filter((j) => j.asset_code === a.asset_code), columns: [
+        { label: "วันที่แจ้ง", align: "l", render: (j) => esc(dateTH(j.repair_date)) },
+        { label: "ผู้ซ่อม", align: "l", render: (j) => esc(j.vendor_name ? `ส่งร้าน: ${j.vendor_name}` : "ซ่อมเอง") },
+        { label: "ค่าซ่อม", render: (j) => num(j.cost) },
+        { label: "วันทำการ", render: (j) => (j.workdays === null ? "–" : num(j.workdays)) },
+        { label: "ซ่อมซ้ำ", align: "l", render: (j) => (j.is_followup_flag ? '<span class="status warn">ใช่</span>' : "–") },
+      ] });
+    }
+
     draw();
+    responsive(chart, drawChart);
   };
 
   // ขอเงินลงทุน ----------------------------------------------------------
@@ -721,7 +819,9 @@
       xLabel: (r) => (r.month === 10 ? monthLabel(r.year, r.month) : null),
       tipTitle: (r) => `${monthLabel(r.year, r.month)} · ปีงบ ${r.fiscal_year}`,
       tipLines: (r) => [["ทั้งหมด", num(r.normal + r.flagged)], [cfg.flagLabel, num(r.flagged), RED]],
+      onPick: (r) => openMonth(`${monthLabel(r.year, r.month)} · ตามตัวกรอง`, (j) => cfg.date(j).slice(0, 7) === ym(r), view),
     });
+    const openMonth = drill(root, async () => ({ rows: all, cfg }));
 
     function render(resetPage = true) {
       if (resetPage) state.page = 1;
@@ -789,24 +889,77 @@
     responsive(chart, drawChart);
   }
 
-  Views["facility-jobs"] = async (root, ctx) => {
-    const d = await api("facility.php?view=jobs");
+  /**
+   * คลิกแท่ง/จุดในกราฟ -> หน้าต่างรายการงานของแท่งนั้น -> คลิกรายการ -> รายละเอียดงาน (มีปุ่มกลับไปรายการ)
+   * load() -> {rows: ทุกงาน, cfg: facilityJobCfg/repairJobCfg} โหลดครั้งแรกที่คลิก ; คืน open(title, pick(row), from?)
+   * from = เลือกจากชุดนี้แทนทุกงาน (เช่น งานตามตัวกรองปัจจุบัน) ; ประวัติในรายละเอียดยังดูจากทุกงาน
+   */
+  function drill(root, load) {
+    const dlg = document.createElement("dialog");
+    dlg.className = "detail";
+    dlg.innerHTML = `<div class="detail-head"><h2></h2><button type="button" class="btn" data-close>ปิด</button></div>
+      <div class="detail-nav" hidden><button type="button" class="btn btn-sm" data-back></button></div>
+      <div class="detail-tabs" role="tablist" hidden></div><div class="detail-body"></div>`;
+    root.appendChild(dlg);
+    const h2 = dlg.querySelector("h2"), nav = dlg.querySelector(".detail-nav"), tabBar = dlg.querySelector(".detail-tabs"),
+      body = dlg.querySelector(".detail-body");
+    dlg.querySelector("[data-close]").addEventListener("click", () => dlg.close());
+    dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); });
+    nav.querySelector("[data-back]").addEventListener("click", () => showList());
+    let data = null, list = [], title = "";
+
+    function showList() {
+      h2.textContent = title;
+      nav.hidden = true;
+      tabBar.hidden = true;
+      body.replaceChildren();
+      if (!list.length) return emptyState(body, "ไม่มีรายการ", "");
+      stats(body, data.cfg.kpis(list), "ตัวเลขของรายการนี้");
+      const w = table(body, { caption: title, tall: true, rows: list, columns: [...data.cfg.columns,
+        { label: "", render: (r) => `<button type="button" class="btn btn-sm" data-i="${list.indexOf(r)}">ดูข้อมูล</button>` }] });
+      // คลิกตรงไหนของแถวก็ได้ (ปุ่มท้ายแถวไว้ใช้กับคีย์บอร์ด ตารางกว้างอาจต้องเลื่อนไปถึง)
+      w.classList.add("is-pickable");
+      w.addEventListener("click", (e) => { const b = e.target.closest("tr")?.querySelector("[data-i]"); if (b) showDetail(list[+b.dataset.i]); });
+    }
+
+    function showDetail(r) {
+      h2.textContent = data.cfg.detailTitle(r);
+      nav.hidden = false;
+      nav.querySelector("[data-back]").textContent = `← ${title} (${num(list.length)})`;
+      tabBar.hidden = false;
+      const tabs = data.cfg.detail(r, data.rows);
+      const show = (i) => {
+        tabBar.querySelectorAll("button").forEach((b, j) => b.setAttribute("aria-selected", String(i === j)));
+        body.replaceChildren();
+        tabs[i].render(body);
+      };
+      tabBar.innerHTML = tabs.map((t, i) => `<button type="button" role="tab" data-t="${i}">${esc(t.label)}</button>`).join("");
+      tabBar.onclick = (e) => { const b = e.target.closest("button"); if (b) show(+b.dataset.t); };
+      show(0);
+    }
+
+    return async (t, pick, from) => {
+      title = t;
+      h2.textContent = t;
+      nav.hidden = true;
+      tabBar.hidden = true;
+      body.innerHTML = `<p class="state">กำลังโหลดรายการ…</p>`;
+      if (!dlg.open) dlg.showModal();
+      try {
+        data ??= await load();
+      } catch {
+        body.innerHTML = `<p class="state">โหลดรายการไม่สำเร็จ</p>`;
+        return;
+      }
+      list = (from || data.rows).filter(pick);
+      showList();
+    };
+  }
+
+  // งานแจ้งซ่อม: ตัวเลขหลัก คอลัมน์ และหน้าต่างรายละเอียด ใช้ทั้งหน้ารายการและตอนคลิกกราฟหน้าภาพรวม
+  function facilityJobCfg() {
     const has = (f) => (r) => r.flags.includes(f);
-    explorer(root, ctx, {
-      rows: d.rows, date: (r) => r.reported, flagLabel: "แจ้งซ้ำ / ปิดงานช้า", isFlag: (r) => has("repeat")(r) || has("slow")(r),
-      chips: [
-        { id: "repeat", label: "แจ้งซ้ำที่เดิมภายใน 30 วัน", test: has("repeat") },
-        { id: "aircon", label: "งานแอร์", test: has("aircon") },
-        { id: "slow", label: `ปิดงานเกิน ${d.sla_workdays} วันทำการ`, test: has("slow") },
-        { id: "noplace", label: "ไม่ระบุอาคาร", test: has("noplace") },
-      ],
-      search: (r) => `${r.type_name} ${r.place} ${r.department}`,
-      filters: [
-        { id: "fy", label: "ปีงบ", value: (r) => r.fiscal_year, desc: true },
-        { id: "building", label: "อาคาร", value: (r) => r.building },
-        { id: "type", label: "ประเภทงาน", value: (r) => r.type_name },
-        { id: "reporter", label: "ผู้แจ้ง", value: (r) => r.reporter_status || "ไม่ระบุ" },
-      ],
+    return {
       kpis: (rows) => {
         const topB = countBy(rows.filter((r) => r.building !== "ไม่ระบุอาคาร"), (r) => r.building)[0];
         return [
@@ -815,16 +968,6 @@
           { label: "งานแอร์", value: pct(ratio(rows.filter(has("aircon")).length, rows.length), 0) },
           { label: "อาคารที่แจ้งมากสุด", value: topB ? topB[0] : "–", sub: topB ? `${num(topB[1])} งาน` : "" },
         ];
-      },
-      highlights: (rows) => {
-        const place = countBy(rows.filter((r) => r.location_key !== null), (r) => r.place)[0];
-        const type = countBy(rows, (r) => r.type_name)[0];
-        const month = countBy(rows, (r) => r.reported.slice(0, 7))[0];
-        const out = [];
-        if (place && place[1] > 1) out.push({ label: "แจ้งบ่อยสุด:", text: `${place[0]} (${num(place[1])})`, row: rows.find((r) => r.place === place[0]) });
-        if (type) out.push({ label: "ประเภทมากสุด:", text: `${type[0]} (${num(type[1])})` });
-        if (month) { const [y, m] = month[0].split("-").map(Number); out.push({ label: "เดือนที่แจ้งมากสุด:", text: `${monthLabel(y, m)} (${num(month[1])})` }); }
-        return out;
       },
       columns: [
         { label: "วันที่แจ้ง", align: "l", render: (r) => esc(dateTH(r.reported)) },
@@ -856,29 +999,45 @@
           ] });
         } },
       ],
+    };
+  }
+
+  Views["facility-jobs"] = async (root, ctx) => {
+    const d = await api("facility.php?view=jobs");
+    const has = (f) => (r) => r.flags.includes(f);
+    explorer(root, ctx, {
+      ...facilityJobCfg(),
+      rows: d.rows, date: (r) => r.reported, flagLabel: "แจ้งซ้ำ / ปิดงานช้า", isFlag: (r) => has("repeat")(r) || has("slow")(r),
+      chips: [
+        { id: "repeat", label: "แจ้งซ้ำที่เดิมภายใน 30 วัน", test: has("repeat") },
+        { id: "aircon", label: "งานแอร์", test: has("aircon") },
+        { id: "slow", label: `ปิดงานเกิน ${d.sla_workdays} วันทำการ`, test: has("slow") },
+        { id: "noplace", label: "ไม่ระบุอาคาร", test: has("noplace") },
+      ],
+      search: (r) => `${r.type_name} ${r.place} ${r.department}`,
+      filters: [
+        { id: "fy", label: "ปีงบ", value: (r) => r.fiscal_year, desc: true },
+        { id: "building", label: "อาคาร", value: (r) => r.building },
+        { id: "type", label: "ประเภทงาน", value: (r) => r.type_name },
+        { id: "reporter", label: "ผู้แจ้ง", value: (r) => r.reporter_status || "ไม่ระบุ" },
+      ],
+      highlights: (rows) => {
+        const place = countBy(rows.filter((r) => r.location_key !== null), (r) => r.place)[0];
+        const type = countBy(rows, (r) => r.type_name)[0];
+        const month = countBy(rows, (r) => r.reported.slice(0, 7))[0];
+        const out = [];
+        if (place && place[1] > 1) out.push({ label: "แจ้งบ่อยสุด:", text: `${place[0]} (${num(place[1])})`, row: rows.find((r) => r.place === place[0]) });
+        if (type) out.push({ label: "ประเภทมากสุด:", text: `${type[0]} (${num(type[1])})` });
+        if (month) { const [y, m] = month[0].split("-").map(Number); out.push({ label: "เดือนที่แจ้งมากสุด:", text: `${monthLabel(y, m)} (${num(month[1])})` }); }
+        return out;
+      },
     });
   };
 
-  Views["repair-jobs"] = async (root, ctx) => {
-    const d = await api("repair.php?view=jobs");
+  // งานซ่อมครุภัณฑ์: ตัวเลขหลัก คอลัมน์ และหน้าต่างรายละเอียด ใช้ทั้งหน้ารายการและตอนคลิกกราฟหน้าภาพรวม
+  function repairJobCfg(sla) {
     const has = (f) => (r) => r.flags.includes(f);
-    const sla = d.sla_workdays;
-    explorer(root, ctx, {
-      rows: d.rows, date: (r) => r.repair_date, flagLabel: "ซ่อมซ้ำ / ช้า / ไม่คุ้ม",
-      isFlag: (r) => ["followup", "slow", "dispose"].some((f) => r.flags.includes(f)),
-      chips: [
-        { id: "followup", label: "ซ่อมซ้ำอาการเดิม", test: has("followup") },
-        { id: "slow", label: `เกิน ${sla} วันทำการ`, test: has("slow") },
-        { id: "dispose", label: "ครุภัณฑ์ไม่คุ้มซ่อม", test: has("dispose") },
-        { id: "vendor", label: "ส่งร้านภายนอก", test: has("vendor") },
-      ],
-      search: (r) => `${r.asset_name} ${r.asset_code} ${r.vendor_name || ""}`,
-      filters: [
-        { id: "fy", label: "ปีงบ", value: (r) => r.fiscal_year, desc: true },
-        { id: "category", label: "หมวด", value: (r) => r.category },
-        { id: "department", label: "หน่วยงาน", value: (r) => r.department },
-        { id: "by", label: "ผู้ซ่อม", value: (r) => r.handled_by },
-      ],
+    return {
       kpis: (rows) => {
         const done = rows.filter((r) => r.workdays !== null);
         return [
@@ -887,18 +1046,6 @@
           { label: `เสร็จใน ${sla} วันทำการ`, value: pct(ratio(done.filter((r) => r.workdays <= sla).length, done.length), 0) },
           { label: "ซ่อมซ้ำอาการเดิม", value: num(rows.filter(has("followup")).length), unit: "งาน", subCls: "delta-bad" },
         ];
-      },
-      highlights: (rows) => {
-        const out = [];
-        const cost = d3.greatest(rows, (r) => r.cost), slow = d3.greatest(rows.filter((r) => r.workdays !== null), (r) => r.workdays);
-        const often = countBy(rows, (r) => r.asset_code)[0];
-        if (cost && cost.cost) out.push({ label: "ค่าซ่อมสูงสุด:", text: `${cost.asset_name} ${num(cost.cost)} บาท`, row: cost });
-        if (slow) out.push({ label: "ซ่อมนานสุด:", text: `${slow.asset_name} ${num(slow.workdays)} วันทำการ`, row: slow });
-        if (often && often[1] > 1) {
-          const r = rows.find((x) => x.asset_code === often[0]);
-          out.push({ label: "ซ่อมบ่อยสุด:", text: `${r.asset_name} ${num(often[1])} ครั้ง`, row: r });
-        }
-        return out;
       },
       columns: [
         { label: "วันที่แจ้ง", align: "l", render: (r) => esc(dateTH(r.repair_date)) },
@@ -937,6 +1084,42 @@
           ] });
         } },
       ],
+    };
+  }
+
+  Views["repair-jobs"] = async (root, ctx) => {
+    const d = await api("repair.php?view=jobs");
+    const has = (f) => (r) => r.flags.includes(f);
+    const sla = d.sla_workdays;
+    explorer(root, ctx, {
+      ...repairJobCfg(sla),
+      rows: d.rows, date: (r) => r.repair_date, flagLabel: "ซ่อมซ้ำ / ช้า / ไม่คุ้ม",
+      isFlag: (r) => ["followup", "slow", "dispose"].some((f) => r.flags.includes(f)),
+      chips: [
+        { id: "followup", label: "ซ่อมซ้ำอาการเดิม", test: has("followup") },
+        { id: "slow", label: `เกิน ${sla} วันทำการ`, test: has("slow") },
+        { id: "dispose", label: "ครุภัณฑ์ไม่คุ้มซ่อม", test: has("dispose") },
+        { id: "vendor", label: "ส่งร้านภายนอก", test: has("vendor") },
+      ],
+      search: (r) => `${r.asset_name} ${r.asset_code} ${r.vendor_name || ""}`,
+      filters: [
+        { id: "fy", label: "ปีงบ", value: (r) => r.fiscal_year, desc: true },
+        { id: "category", label: "หมวด", value: (r) => r.category },
+        { id: "department", label: "หน่วยงาน", value: (r) => r.department },
+        { id: "by", label: "ผู้ซ่อม", value: (r) => r.handled_by },
+      ],
+      highlights: (rows) => {
+        const out = [];
+        const cost = d3.greatest(rows, (r) => r.cost), slow = d3.greatest(rows.filter((r) => r.workdays !== null), (r) => r.workdays);
+        const often = countBy(rows, (r) => r.asset_code)[0];
+        if (cost && cost.cost) out.push({ label: "ค่าซ่อมสูงสุด:", text: `${cost.asset_name} ${num(cost.cost)} บาท`, row: cost });
+        if (slow) out.push({ label: "ซ่อมนานสุด:", text: `${slow.asset_name} ${num(slow.workdays)} วันทำการ`, row: slow });
+        if (often && often[1] > 1) {
+          const r = rows.find((x) => x.asset_code === often[0]);
+          out.push({ label: "ซ่อมบ่อยสุด:", text: `${r.asset_name} ${num(often[1])} ครั้ง`, row: r });
+        }
+        return out;
+      },
     });
   };
 
