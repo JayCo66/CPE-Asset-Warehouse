@@ -67,9 +67,16 @@
 .hub-borrow .kpi-card:last-child { border-right: 0; }
 .hub-borrow .kpi-card:hover { transform: none; box-shadow: none; }
 .hub-borrow .kpi-card::before, .hub-borrow .kpi-icon { display: none; }
-.hub-borrow .kpi-title { font-size: 15px; font-weight: 400; color: var(--cpe-text-muted); margin-bottom: 4px; }
-.hub-borrow .kpi-value { font-size: 2.5rem; font-weight: 500; }
-.hub-borrow .kpi-sub { font-size: 13px; }
+.hub-borrow .kpi-title { font-size: 14px; font-weight: 500; color: var(--cpe-text-muted); margin-bottom: 4px; }
+.hub-borrow .kpi-value {
+  font-size: 17px !important;
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hub-borrow .kpi-sub { font-size: 12px; }
 
 /* กล่องสรุป / กราฟ / ตาราง: พื้นเรียบ เส้นบาง มุม 6px */
 .hub-borrow .insight-card { background: var(--cpe-surface); border: 1px solid var(--hub-line); box-shadow: none; }

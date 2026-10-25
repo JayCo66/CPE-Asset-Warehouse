@@ -517,12 +517,16 @@
       font-size: 18px;
     }
 
-    .kpi-value {
-      font-size: 26px;
+    .kpi-value,
+    .hub-borrow .kpi-value {
+      font-size: 17px !important;
       font-weight: 700;
       color: var(--cpe-text);
-      line-height: 1.2;
+      line-height: 1.25;
       font-feature-settings: "tnum";
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .kpi-sub {
@@ -1005,7 +1009,7 @@
           <span id="kpiTitle1">ครุภัณฑ์ยอดนิยมอันดับ 1</span>
           <span class="kpi-icon" id="kpiIcon1">🏆</span>
         </div>
-        <div class="kpi-value" id="kpiVal1" style="font-size: 19px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">-</div>
+        <div class="kpi-value" id="kpiVal1" style="font-size: 17px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">-</div>
         <div class="kpi-sub" id="kpiSub1">ยืม 0 ครั้ง | 0 คนไม่ซ้ำ</div>
       </div>
 
@@ -1015,7 +1019,7 @@
           <span id="kpiTitle2">ประเภทที่ต้องการมากที่สุด</span>
           <span class="kpi-icon" id="kpiIcon2">📦</span>
         </div>
-        <div class="kpi-value" id="kpiVal2" style="font-size: 19px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">-</div>
+        <div class="kpi-value" id="kpiVal2" style="font-size: 17px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">-</div>
         <div class="kpi-sub" id="kpiSub2">สัดส่วน 0% ของการยืมทั้งหมด</div>
       </div>
 
@@ -1025,7 +1029,7 @@
           <span id="kpiTitle3">จำนวนครั้งที่ยืมทั้งหมด</span>
           <span class="kpi-icon" id="kpiIcon3">📋</span>
         </div>
-        <div class="kpi-value" id="kpiVal3">0</div>
+        <div class="kpi-value" id="kpiVal3" style="font-size: 17px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">0</div>
         <div class="kpi-sub" id="kpiSub3">0 ใบคำขอ</div>
       </div>
 
@@ -1035,7 +1039,7 @@
           <span id="kpiTitle4">จำนวนผู้ยืมที่ไม่ซ้ำ (Unique)</span>
           <span class="kpi-icon" id="kpiIcon4">👥</span>
         </div>
-        <div class="kpi-value" id="kpiVal4">0</div>
+        <div class="kpi-value" id="kpiVal4" style="font-size: 17px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">0</div>
         <div class="kpi-sub" id="kpiSub4">เฉลี่ย 0 ครั้ง/คน</div>
       </div>
 
@@ -1045,7 +1049,7 @@
           <span id="kpiTitle5">ช่วงความต้องการสูงสุด (Peak)</span>
           <span class="kpi-icon" id="kpiIcon5">📈</span>
         </div>
-        <div class="kpi-value" id="kpiVal5" style="font-size: 19px;">-</div>
+        <div class="kpi-value" id="kpiVal5" style="font-size: 17px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">-</div>
         <div class="kpi-sub" id="kpiSub5">0 ชิ้นยืมในเดือนนี้</div>
       </div>
     </div>
@@ -1057,7 +1061,7 @@
         <div class="chart-header">
           <div class="chart-title-block">
             <h3 id="chartTitleA">📊 สัดส่วนความต้องการตามประเภทครุภัณฑ์ (Category Share)</h3>
-            <span style="font-size: 11px; color: var(--cpe-brand-blue); display: inline-flex; align-items: center; gap: 4px; margin-top: 3px;">
+            <span id="chartSubHintA" style="font-size: 11px; color: var(--cpe-brand-blue); display: inline-flex; align-items: center; gap: 4px; margin-top: 3px;">
               <span>💡 คลิกที่ชิ้นส่วนกราฟเพื่อเปิดดูรายการครุภัณฑ์จริงในหมวดนี้จากทะเบียนสินทรัพย์ (Asset Inventory)</span>
             </span>
           </div>
@@ -1509,6 +1513,37 @@
 
     const DOW_NAMES = ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์', 'อาทิตย์'];
 
+    // สีประจำวันตามประเพณีไทย: จันทร์เหลือง, อังคารชมพู, พุธเขียว, พฤหัสส้ม, ศุกร์ฟ้า, เสาร์ม่วง, อาทิตย์แดง
+    const DOW_COLORS = {
+      'จันทร์': '#FFC107',     // เหลือง (Yellow - CPE Amber/Gold Token)
+      'อังคาร': '#EC4899',     // ชมพู (Pink - Vibrant Pink)
+      'พุธ': '#10B981',        // เขียว (Green - Emerald Green)
+      'พฤหัสบดี': '#F97316',    // ส้ม (Orange - Vibrant Orange)
+      'ศุกร์': '#0EA5E9',       // ฟ้า (Sky Blue - Clear Sky Blue)
+      'เสาร์': '#8B5CF6',      // ม่วง (Purple)
+      'อาทิตย์': '#EF4444'     // แดง (Red)
+    };
+
+    const DOW_BORDER_COLORS = {
+      'จันทร์': '#D97706',
+      'อังคาร': '#DB2777',
+      'พุธ': '#059669',
+      'พฤหัสบดี': '#EA580C',
+      'ศุกร์': '#0284C7',
+      'เสาร์': '#7C3AED',
+      'อาทิตย์': '#DC2626'
+    };
+
+    const DOW_BG_LIGHT = {
+      'จันทร์': 'rgba(255, 193, 7, 0.15)',
+      'อังคาร': 'rgba(236, 72, 153, 0.15)',
+      'พุธ': 'rgba(16, 185, 129, 0.15)',
+      'พฤหัสบดี': 'rgba(249, 115, 22, 0.15)',
+      'ศุกร์': 'rgba(14, 165, 233, 0.15)',
+      'เสาร์': 'rgba(139, 92, 246, 0.15)',
+      'อาทิตย์': 'rgba(239, 68, 68, 0.15)'
+    };
+
     function getDayOfWeek(dateStr) {
       if (!dateStr) return 'ไม่ระบุ';
       const d = new Date(dateStr);
@@ -1517,6 +1552,91 @@
       const idx = (day === 0) ? 6 : day - 1;
       return DOW_NAMES[idx] || 'ไม่ระบุ';
     }
+
+    function getDaysBetween(endStr, startStr) {
+      if (!endStr || !startStr) return 999;
+      const d1 = new Date(endStr.substring(0, 10) + 'T00:00:00Z');
+      const d2 = new Date(startStr.substring(0, 10) + 'T00:00:00Z');
+      if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return 999;
+      const diffDays = Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
+      return diffDays < 0 ? 0 : diffDays;
+    }
+
+    // คำนวณพฤติกรรมผูกขาดเครื่อง: ยืมของชิ้นเดิมติดต่อกันเกิน 3 ครั้ง (>= 4 ครั้ง) โดยแต่ละครั้งห่างกันไม่เกิน 1 สัปดาห์ (<= 7 วัน)
+    function calculateConsecutiveMonopoly(records, maxGapDays = 7, minConsecutiveCount = 4) {
+      const groups = {};
+      records.forEach(r => {
+        const userKey = r.user?.key || r.user_key || r.user?.name;
+        const assetId = r.asset?.key || r.asset?.code || r.assetCode || r.assetName;
+        const groupKey = `${userKey}_${assetId}`;
+        if (!groups[groupKey]) groups[groupKey] = [];
+        groups[groupKey].push(r);
+      });
+
+      const monopolyFactIds = new Set();
+      const monopolyPatterns = [];
+      const recordPatternMap = new Map();
+
+      Object.entries(groups).forEach(([groupKey, groupRecords]) => {
+        const sorted = [...groupRecords].sort((a, b) => {
+          const da = new Date((a.borrow_date || a.borrowDate || '0').substring(0, 10));
+          const db = new Date((b.borrow_date || b.borrowDate || '0').substring(0, 10));
+          return da - db;
+        });
+
+        let curChain = [];
+        for (let i = 0; i < sorted.length; i++) {
+          const curr = sorted[i];
+          if (curChain.length === 0) {
+            curChain.push(curr);
+            continue;
+          }
+          const prev = curChain[curChain.length - 1];
+          const prevEnd = prev.actual_return_date || prev.actualReturnDate || prev.return_date || prev.expectedReturnDate || prev.borrow_date || prev.borrowDate;
+          const currStart = curr.borrow_date || curr.borrowDate;
+          const gap = getDaysBetween(prevEnd, currStart);
+
+          if (gap <= maxGapDays) {
+            curChain.push(curr);
+          } else {
+            if (curChain.length >= minConsecutiveCount) {
+              const pattern = {
+                groupKey,
+                userName: curChain[0].user?.name || 'ไม่ระบุ',
+                assetName: curChain[0].assetName || curChain[0].asset?.name || 'ไม่ระบุ',
+                assetCode: curChain[0].assetCode || curChain[0].asset?.code || '-',
+                chainCount: curChain.length,
+                records: curChain
+              };
+              monopolyPatterns.push(pattern);
+              curChain.forEach(c => {
+                monopolyFactIds.add(c.fact_id);
+                recordPatternMap.set(c.fact_id, pattern);
+              });
+            }
+            curChain = [curr];
+          }
+        }
+        if (curChain.length >= minConsecutiveCount) {
+          const pattern = {
+            groupKey,
+            userName: curChain[0].user?.name || 'ไม่ระบุ',
+            assetName: curChain[0].assetName || curChain[0].asset?.name || 'ไม่ระบุ',
+            assetCode: curChain[0].assetCode || curChain[0].asset?.code || '-',
+            chainCount: curChain.length,
+            records: curChain
+          };
+          monopolyPatterns.push(pattern);
+          curChain.forEach(c => {
+            monopolyFactIds.add(c.fact_id);
+            recordPatternMap.set(c.fact_id, pattern);
+          });
+        }
+      });
+
+      return { monopolyFactIds, monopolyPatterns, recordPatternMap };
+    }
+
 
     // -------------------------------------------------------------------------
     // 3. State & Global Filters
@@ -1733,6 +1853,16 @@
         }
       }
 
+      // Reset KPI Card click handlers when switching topics
+      for (let i = 1; i <= 5; i++) {
+        const card = document.getElementById(`kpiCard${i}`);
+        if (card) {
+          card.style.cursor = 'default';
+          card.onclick = null;
+          card.removeAttribute('title');
+        }
+      }
+
       // Re-apply filters to render active topic view
       applyFilters();
     }
@@ -1862,6 +1992,8 @@
 
       // Chart Titles
       document.getElementById('chartTitleA').textContent = '📊 สัดส่วนความต้องการตามประเภทครุภัณฑ์ (Category Share)';
+      const hintA1 = document.getElementById('chartSubHintA');
+      if (hintA1) hintA1.innerHTML = '<span>💡 คลิกที่ชิ้นส่วนกราฟเพื่อเปิดดูรายการครุภัณฑ์จริงในหมวดนี้จากทะเบียนสินทรัพย์ (Asset Inventory)</span>';
       document.getElementById('chartTitleB').textContent = '🏆 10 ครุภัณฑ์ที่เป็นที่ต้องการสูงสุด (Top 10 Equipment)';
       setSortBtnLabels('จำนวนครั้งที่ยืม', 'ผู้ยืมไม่ซ้ำ (Unique)');
       document.getElementById('chartTitleFull').textContent = '📅 แนวโน้มความต้องการยืมข้ามเวลา & รายภาคการศึกษา (Monthly & Semester Demand Trend)';
@@ -1942,16 +2074,35 @@
         },
         options: {
           indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+          interaction: {
+            mode: 'index',
+            axis: 'y',
+            intersect: false
+          },
           plugins: {
             legend: { position: 'top', labels: { color: textColor, boxWidth: 10 } },
             tooltip: {
               callbacks: {
+                title: (tooltipItems) => {
+                  if (!tooltipItems || tooltipItems.length === 0) return '';
+                  const idx = tooltipItems[0].dataIndex;
+                  return topList[idx] ? topList[idx].name : tooltipItems[0].label;
+                },
                 footer: () => '👆 คลิกเพื่อดูประวัติการยืมของครุภัณฑ์ชิ้นนี้'
               }
             }
           },
           onHover: (event, chartElement) => {
-            event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
+            const canvas = event.native.target;
+            canvas.style.cursor = chartElement[0] ? 'pointer' : 'default';
+            if (chartElement && chartElement.length > 0) {
+              const idx = chartElement[0].index;
+              if (topList[idx]) {
+                canvas.title = topList[idx].name;
+              }
+            } else {
+              canvas.removeAttribute('title');
+            }
           },
           onClick: (event, elements, chart) => {
             if (elements && elements.length > 0) {
@@ -2216,6 +2367,8 @@
 
       // Chart Titles
       document.getElementById('chartTitleA').textContent = '📊 ปริมาณการยืมจำแนกตามวันในสัปดาห์ (Day of Week Distribution)';
+      const hintA2 = document.getElementById('chartSubHintA');
+      if (hintA2) hintA2.innerHTML = '<span>💡 คลิกที่แท่งกราฟเพื่อดูรายการคำขอเบิกยืมที่เกิดขึ้นในวันนั้นๆ</span>';
       document.getElementById('chartTitleB').textContent = '⏱️ การกระจายของระยะเวลาการยืม (Borrow Duration Distribution)';
       setSortBtnLabels('มุมมองสัปดาห์', 'มุมมองเดือน');
       document.getElementById('chartTitleFull').textContent = '📅 แนวโน้มความต้องการยืมตลอดทั้งปีเทียบกับช่วงสอบ & โครงงาน';
@@ -2232,14 +2385,20 @@
       // Chart A: Day of Week Bar
       if (chartAInst) chartAInst.destroy();
       const ctxA = document.getElementById('chartCanvasA').getContext('2d');
+      const dowKeys = Object.keys(dowMap);
+      const dowColors = dowKeys.map(k => DOW_COLORS[k] || '#0466C8');
+      const dowBorders = dowKeys.map(k => DOW_BORDER_COLORS[k] || '#0353A4');
+
       chartAInst = new Chart(ctxA, {
         type: 'bar',
         data: {
-          labels: Object.keys(dowMap),
+          labels: dowKeys,
           datasets: [{
             label: 'จำนวนครั้งที่ยืม',
             data: Object.values(dowMap),
-            backgroundColor: ['#0466C8', '#106BDA', '#009688', '#FFC107', '#7C3AED'],
+            backgroundColor: dowColors,
+            borderColor: dowBorders,
+            borderWidth: 1.5,
             borderRadius: 6
           }]
         },
@@ -2376,7 +2535,7 @@
         type: 'bar',
         data: {
           labels: topMonCats.map(c => c[0]),
-          datasets: [{ label: 'จำนวนครั้งที่ยืมวันจันทร์', data: topMonCats.map(c => c[1]), backgroundColor: '#7C3AED', borderRadius: 4 }]
+          datasets: [{ label: 'จำนวนครั้งที่ยืมวันจันทร์', data: topMonCats.map(c => c[1]), backgroundColor: DOW_COLORS['จันทร์'] || '#FFC107', borderRadius: 4 }]
         },
         options: {
           indexAxis: 'y', responsive: true, maintainAspectRatio: false,
@@ -2421,10 +2580,17 @@
         </tr>
       `;
 
-      renderGenericTable(filteredRecords, (r, rank) => `
+      renderGenericTable(filteredRecords, (r, rank) => {
+        const dayColor = DOW_COLORS[r.dayOfWeek] || 'var(--cpe-brand-blue)';
+        const dayBg = DOW_BG_LIGHT[r.dayOfWeek] || 'rgba(4, 102, 200, 0.12)';
+        return `
         <tr>
           <td style="text-align:center;"><span class="rank-badge">${rank}</span></td>
-          <td><strong style="color:var(--cpe-brand-blue); cursor:pointer;" onclick="openDayBorrowModal('${r.dayOfWeek}')" title="คลิกดูรายการยืมวัน${r.dayOfWeek}">วัน${r.dayOfWeek} ↗</strong></td>
+          <td>
+            <span class="badge-status" style="background:${dayBg}; color:${dayColor}; font-weight:600; cursor:pointer;" onclick="openDayBorrowModal('${r.dayOfWeek}')" title="คลิกดูรายการยืมวัน${r.dayOfWeek}">
+              วัน${r.dayOfWeek} ↗
+            </span>
+          </td>
           <td>${r.borrowDate}</td>
           <td><strong>${r.assetName}</strong></td>
           <td>
@@ -2443,7 +2609,8 @@
             <button class="btn-inspect" onclick="openAssetModal('${encodeURIComponent(r.assetName)}')">เจาะลึก 🔍</button>
           </td>
         </tr>
-      `);
+      `;
+      });
     }
 
     // Helper for common timeline
@@ -2753,16 +2920,35 @@
             indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
+            interaction: {
+              mode: 'index',
+              axis: 'y',
+              intersect: false
+            },
             plugins: {
               legend: { display: false },
               tooltip: {
                 callbacks: {
+                  title: (tooltipItems) => {
+                    if (!tooltipItems || tooltipItems.length === 0) return '';
+                    const idx = tooltipItems[0].dataIndex;
+                    return lowItems[idx] ? lowItems[idx].name : tooltipItems[0].label;
+                  },
                   footer: () => '👆 คลิกเพื่อดูรายละเอียดและประวัติครุภัณฑ์'
                 }
               }
             },
             onHover: (event, chartElement) => {
-              event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
+              const canvas = event.native.target;
+              canvas.style.cursor = chartElement[0] ? 'pointer' : 'default';
+              if (chartElement && chartElement.length > 0) {
+                const idx = chartElement[0].index;
+                if (lowItems[idx]) {
+                  canvas.title = lowItems[idx].name;
+                }
+              } else {
+                canvas.removeAttribute('title');
+              }
             },
             onClick: (event, elements, chart) => {
               if (elements && elements.length > 0) {
@@ -3622,13 +3808,9 @@
       const replacedList = filteredRecords.filter(r => r.is_replaced === 1);
       const overdueList = filteredRecords.filter(r => r.is_overdue === 1);
 
-      // Repeat monopoly
-      const repeatMap = {};
-      filteredRecords.forEach(r => {
-        const k = `${r.user?.key}_${r.assetCode}`;
-        repeatMap[k] = (repeatMap[k] || 0) + 1;
-      });
-      const repeatCount = Object.values(repeatMap).filter(c => c >= 3).length;
+      // Repeat consecutive monopoly (>3 consecutive within 7-day gap)
+      const { monopolyFactIds, monopolyPatterns, recordPatternMap } = calculateConsecutiveMonopoly(filteredRecords, 7, 4);
+      const repeatCount = monopolyPatterns.length;
 
       // KPIs
       document.getElementById('kpiTitle1').textContent = 'รายการชำรุดตอนส่งคืน';
@@ -3646,15 +3828,41 @@
       document.getElementById('kpiVal3').textContent = `${overdueList.length} รายการ`;
       document.getElementById('kpiSub3').textContent = 'เกินกำหนดเวลาตามใบคำขอ';
 
-      document.getElementById('kpiTitle4').textContent = 'พฤติกรรมผูกขาดเครื่องซ้ำ (≥3)';
+      document.getElementById('kpiTitle4').textContent = 'พฤติกรรมผูกขาดเครื่อง (>3 ครั้ง)';
       document.getElementById('kpiIcon4').textContent = '🔒';
       document.getElementById('kpiVal4').textContent = `${repeatCount} รูปแบบ`;
-      document.getElementById('kpiSub4').textContent = 'ผู้ยืมเดิมเบิกเครื่องเดิมต่อเนื่อง';
+      document.getElementById('kpiSub4').textContent = 'ยืมชิ้นเดิมต่อเนื่อง ห่างกัน ≤ 7 วัน';
 
       document.getElementById('kpiTitle5').textContent = 'ระดับความเสี่ยงโดยรวม';
       document.getElementById('kpiIcon5').textContent = '🛡️';
       document.getElementById('kpiVal5').textContent = 'ปานกลาง (Medium)';
       document.getElementById('kpiSub5').textContent = 'มีครุภัณฑ์ที่ต้องตรวจสอบเป็นพิเศษ';
+
+      // Make Topic 6 KPI cards clickable with tooltips
+      const kpiCard1 = document.getElementById('kpiCard1');
+      if (kpiCard1) {
+        kpiCard1.style.cursor = 'pointer';
+        kpiCard1.title = '👆 คลิกเพื่อดูรายการคำขอที่มีรายงานชำรุด';
+        kpiCard1.onclick = () => openRiskBorrowModal('DAMAGED');
+      }
+      const kpiCard2 = document.getElementById('kpiCard2');
+      if (kpiCard2) {
+        kpiCard2.style.cursor = 'pointer';
+        kpiCard2.title = '👆 คลิกเพื่อดูรายการคำขอที่มีการเปลี่ยนเครื่องทดแทน';
+        kpiCard2.onclick = () => openRiskBorrowModal('REPLACED');
+      }
+      const kpiCard3 = document.getElementById('kpiCard3');
+      if (kpiCard3) {
+        kpiCard3.style.cursor = 'pointer';
+        kpiCard3.title = '👆 คลิกเพื่อดูรายการคำขอที่ส่งคืนล่าช้า';
+        kpiCard3.onclick = () => openRiskBorrowModal('OVERDUE');
+      }
+      const kpiCard4 = document.getElementById('kpiCard4');
+      if (kpiCard4) {
+        kpiCard4.style.cursor = 'pointer';
+        kpiCard4.title = '👆 คลิกเพื่อดูรายการคำขอที่มีพฤติกรรมผูกขาดเครื่องติดต่อกันเกิน 3 ครั้ง (ห่าง ≤7 วัน)';
+        kpiCard4.onclick = () => openRiskBorrowModal('REPEAT');
+      }
 
       // Chart Titles
       document.getElementById('chartTitleA').textContent = '📊 สัดส่วนสัญญาณเตือนและปัจจัยเสี่ยง (Risk Distribution)';
@@ -3664,8 +3872,14 @@
       document.getElementById('chartTitleC').textContent = '🔄 ภาควิชาที่มีรายการเปลี่ยนเครื่องทดแทนสูงสุด';
       document.getElementById('chartTitleD').textContent = '⏱️ วันที่เกินกำหนดเฉลี่ยในกลุ่มที่มีรายงานชำรุด';
 
+      // Combine risk records (damaged, replaced, and consecutive repeat monopoly) without duplicates
+      const repeatRecords = filteredRecords.filter(r => monopolyFactIds.has(r.fact_id));
+      const riskMapUnique = new Map();
+      [...damagedList, ...replacedList, ...repeatRecords].forEach(r => riskMapUnique.set(r.fact_id, r));
+      const riskList = Array.from(riskMapUnique.values());
+
       renderChartsTopicRisk(damagedList, replacedList, overdueList, repeatCount);
-      renderTableTopicRisk(damagedList.concat(replacedList));
+      renderTableTopicRisk(riskList, recordPatternMap);
     }
 
     function renderChartsTopicRisk(damagedList, replacedList, overdueList, repeatCount) {
@@ -3677,7 +3891,7 @@
       chartAInst = new Chart(ctxA, {
         type: 'doughnut',
         data: {
-          labels: ['ชำรุดตอนคืน', 'เปลี่ยนเครื่องทดแทน', 'ส่งคืนล่าช้า', 'ผูกขาดเครื่องซ้ำ'],
+          labels: ['ชำรุดตอนคืน', 'เปลี่ยนเครื่องทดแทน', 'ส่งคืนล่าช้า', 'ผูกขาดเครื่องต่อเนื่อง'],
           datasets: [{ data: [damagedList.length, replacedList.length, overdueList.length, repeatCount], backgroundColor: ['#E43F0B', '#106BDA', '#FFC107', '#7C3AED'], borderColor, borderWidth: 2 }]
         },
         options: {
@@ -3870,8 +4084,8 @@
       });
     }
 
-    function renderTableTopicRisk(riskList) {
-      document.getElementById('tablePanelTitle').textContent = '📋 รายการครุภัณฑ์ที่มีสัญญาณเตือนความเสี่ยงและชำรุด (Risk & Anomaly Ledger)';
+    function renderTableTopicRisk(riskList, recordPatternMap) {
+      document.getElementById('tablePanelTitle').textContent = '📋 รายการครุภัณฑ์ที่มีสัญญาณเตือนความเสี่ยงและพฤติกรรมผิดปกติ (Risk & Anomaly Ledger)';
       document.getElementById('tableHeadRow').innerHTML = `
         <tr>
           <th style="width: 50px; text-align: center;">ลำดับ</th>
@@ -3881,34 +4095,52 @@
           <th>ผู้ยืม</th>
           <th>สังกัด</th>
           <th>สภาพตอนคืน</th>
-          <th>การเปลี่ยนเครื่อง</th>
+          <th>สัญญาณเตือน / Anomaly</th>
           <th style="text-align: center;">เจาะลึก</th>
         </tr>
       `;
 
-      renderGenericTable(riskList, (r, rank) => `
-        <tr>
-          <td style="text-align:center;"><span class="rank-badge">${rank}</span></td>
-          <td style="font-family: monospace;">#${r.request_id}</td>
-          <td><strong>${r.assetName}</strong></td>
-          <td>
-            <span class="tag-category" onclick="openCategoryInventoryModal('${encodeURIComponent(r.assetCategory)}')" style="cursor: pointer;" title="คลิกเพื่อดูครุภัณฑ์ในหมวดนี้จาก Asset Inventory">
-              ${r.assetCategory} ↗
-            </span>
-          </td>
-          <td>${r.user?.name || '-'}</td>
-          <td>
-            <span style="cursor: pointer; text-decoration: underline dotted;" onclick="openDepartmentBorrowModal('${encodeURIComponent(r.deptName)}')">
-              ${r.deptName}
-            </span>
-          </td>
-          <td><span class="badge-status ${r.return_condition==='ชำรุด'?'status-danger':'status-ready'}">${r.return_condition || 'ปกติ'}</span></td>
-          <td>${r.is_replaced===1 ? '<strong style="color:var(--cpe-info)">🔄 เปลี่ยนเครื่อง</strong>' : '-'}</td>
-          <td style="text-align:center;">
-            <button class="btn-inspect" onclick="openAssetModal('${encodeURIComponent(r.assetName)}')">เจาะลึก 🔍</button>
-          </td>
-        </tr>
-      `);
+      renderGenericTable(riskList, (r, rank) => {
+        const pattern = recordPatternMap ? recordPatternMap.get(r.fact_id) : null;
+        const isRepeat = !!pattern;
+        let anomalyBadges = [];
+        if (r.return_condition === 'ชำรุด') {
+          anomalyBadges.push('<span class="badge-status status-danger" style="margin-right:3px;">⚠️ ชำรุด</span>');
+        }
+        if (r.is_replaced === 1) {
+          anomalyBadges.push('<span class="badge-status" style="background: rgba(16, 107, 218, 0.15); color: #106BDA; margin-right:3px;">🔄 เปลี่ยนเครื่อง</span>');
+        }
+        if (isRepeat) {
+          anomalyBadges.push(`<span class="badge-status" style="background: rgba(124, 58, 237, 0.15); color: #9061F9; font-weight: 600; cursor: pointer;" onclick="openRiskBorrowModal('REPEAT')" title="คลิกดูประวัติการผูกขาดเครื่องนี้">🔒 ผูกขาดต่อเนื่อง (${pattern.chainCount} ครั้ง, ห่าง ≤7 วัน)</span>`);
+        }
+        if (anomalyBadges.length === 0) {
+          anomalyBadges.push('<span style="color:var(--cpe-text-muted)">-</span>');
+        }
+
+        return `
+          <tr>
+            <td style="text-align:center;"><span class="rank-badge">${rank}</span></td>
+            <td style="font-family: monospace;">#${r.request_id}</td>
+            <td><strong>${r.assetName}</strong></td>
+            <td>
+              <span class="tag-category" onclick="openCategoryInventoryModal('${encodeURIComponent(r.assetCategory)}')" style="cursor: pointer;" title="คลิกเพื่อดูครุภัณฑ์ในหมวดนี้จาก Asset Inventory">
+                ${r.assetCategory} ↗
+              </span>
+            </td>
+            <td>${r.user?.name || '-'}</td>
+            <td>
+              <span style="cursor: pointer; text-decoration: underline dotted;" onclick="openDepartmentBorrowModal('${encodeURIComponent(r.deptName)}')">
+                ${r.deptName}
+              </span>
+            </td>
+            <td><span class="badge-status ${r.return_condition==='ชำรุด'?'status-danger':'status-ready'}">${r.return_condition || 'ปกติ'}</span></td>
+            <td><div style="display: flex; flex-wrap: wrap; gap: 4px;">${anomalyBadges.join('')}</div></td>
+            <td style="text-align:center;">
+              <button class="btn-inspect" onclick="openAssetModal('${encodeURIComponent(r.assetName)}')">เจาะลึก 🔍</button>
+            </td>
+          </tr>
+        `;
+      });
     }
 
     // -------------------------------------------------------------------------
@@ -4378,8 +4610,8 @@
         title = '⏰ รายการที่มีประวัติส่งคืนเกินกำหนด';
         sub = 'ผู้ยืมส่งคืนช้ากว่าวันที่ระบุในสัญญา';
       } else if (riskType === 'REPEAT') {
-        title = '🔒 รายการที่มีพฤติกรรมผูกขาดเครื่องเดิม (≥3 ครั้ง)';
-        sub = 'ผู้ยืมคนเดิมทำการเบิกยืมครุภัณฑ์รหัสเดิมซ้ำตั้งแต่ 3 ครั้งขึ้นไป';
+        title = '🔒 รายการที่มีพฤติกรรมผูกขาดเครื่องต่อเนื่อง (>3 ครั้ง)';
+        sub = 'ผู้ยืมคนเดิมทำการเบิกยืมครุภัณฑ์รหัสเดิมติดต่อกันเกิน 3 ครั้ง โดยแต่ละครั้งห่างกันไม่เกิน 1 สัปดาห์';
       }
       if (monthStr) {
         title += ` (${monthStr})`;
@@ -4461,12 +4693,8 @@
         } else if (rt === 'OVERDUE') {
           base = base.filter(r => r.is_overdue === 1);
         } else if (rt === 'REPEAT') {
-          const repMap = {};
-          allRecords.forEach(r => {
-            const k = `${r.user?.key}_${r.assetCode}`;
-            repMap[k] = (repMap[k] || 0) + 1;
-          });
-          base = base.filter(r => (repMap[`${r.user?.key}_${r.assetCode}`] || 0) >= 3);
+          const { monopolyFactIds } = calculateConsecutiveMonopoly(allRecords, 7, 4);
+          base = base.filter(r => monopolyFactIds.has(r.fact_id));
         } else if (rt === 'NORMAL') {
           base = base.filter(r => r.return_condition !== 'ชำรุด' && r.is_replaced !== 1 && r.is_overdue !== 1);
         } else if (rt === 'ALL_RISK') {
