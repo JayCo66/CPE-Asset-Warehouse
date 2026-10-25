@@ -4,18 +4,17 @@
     <select id="dashboard-filter-snapshot" data-dashboard-filter="snapshot">
       <option value="latest">ชุดข้อมูลล่าสุด</option>
     </select>
-    <span id="dashboard-snapshot-context" class="filter-context">กำลังตรวจสอบข้อมูลจากคลัง</span>
   </div>
 
-  <div class="api-state dashboard-request-state api-state-loading" id="dashboard-request-state" role="status" aria-live="polite" hidden>
-    <span id="dashboard-request-message">กำลังโหลดข้อมูลจากคลังสินทรัพย์</span>
-    <button class="button button-secondary" type="button" id="dashboard-retry" hidden>ลองอีกครั้ง</button>
+  <div class="api-state dashboard-request-state api-state-loading" id="dashboard-request-state" data-dashboard-request-state role="status" aria-live="polite" hidden>
+    <span id="dashboard-request-message" data-dashboard-request-message>กำลังโหลดข้อมูลจากคลังสินทรัพย์</span>
+    <button class="button button-secondary" type="button" id="dashboard-retry" data-dashboard-retry hidden>ลองอีกครั้ง</button>
   </div>
 
   <details class="dashboard-filter-details" id="dashboard-filter-details">
     <summary>
       <span>ตัวกรองร่วม</span>
-      <span class="filter-count" id="dashboard-filter-count">ยังไม่ได้กรอง</span>
+      <span class="filter-count" id="dashboard-filter-count" data-dashboard-filter-count>ยังไม่ได้กรอง</span>
     </summary>
     <div class="dashboard-filter-grid">
       <label class="select-label" for="dashboard-filter-department">
@@ -109,7 +108,7 @@
         </select>
       </label>
       <div class="dashboard-filter-actions">
-        <button class="button button-secondary" type="button" id="dashboard-filter-reset">ล้างตัวกรอง</button>
+        <button class="button button-secondary" type="button" id="dashboard-filter-reset" data-dashboard-filter-reset>ล้างตัวกรอง</button>
       </div>
     </div>
   </details>
