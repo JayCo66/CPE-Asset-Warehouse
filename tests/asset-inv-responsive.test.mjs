@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 
 const styles = readFileSync(new URL("../src/asset-inv/styles.css", import.meta.url), "utf8");
 const registerHtml = readFileSync(new URL("../src/asset-inv/sections/asset-register.html", import.meta.url), "utf8");
+const overviewHtml = readFileSync(new URL("../src/asset-inv/sections/executive-overview.html", import.meta.url), "utf8");
 const indexHtml = readFileSync(new URL("../src/asset-inv/index.html", import.meta.url), "utf8");
 const dashboardApp = readFileSync(new URL("../src/asset-inv/app.js", import.meta.url), "utf8");
 
@@ -82,4 +83,15 @@ test("constrains dashboard grid tracks so wide scorecards scroll inside their pa
   assert.match(styles, /\.dashboard,\s*\.dashboard-sections\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);[^}]*min-width:\s*0;/su);
   assert.match(styles, /\.dashboard-page\s*\{[^}]*min-width:\s*0;/su);
   assert.match(styles, /\.dashboard-table-wrap\s*\{[^}]*max-width:\s*100%;[^}]*overflow-x:\s*auto/su);
+});
+
+test("lays out the executive hero, supporting KPI grid, and analysis panels responsively", () => {
+  assert.match(overviewHtml, /class="overview-executive-layout"/u);
+  assert.match(overviewHtml, /class="overview-supporting-kpis"/u);
+  assert.match(overviewHtml, /class="dashboard-panel-grid overview-analytics-grid"/u);
+  assert.match(styles, /\.overview-executive-layout\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1\.35fr\)\s+minmax\(0,\s*1fr\)/su);
+  assert.match(styles, /\.overview-supporting-kpis\s*\{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/su);
+  assert.match(styles, /\.overview-analytics-grid\s*\{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/su);
+  assert.match(styles, /@media\s*\(max-width:\s*1199px\)[\s\S]*?\.overview-executive-layout\s*\{[^}]*grid-template-columns:\s*1fr/su);
+  assert.match(styles, /@media\s*\(max-width:\s*767px\)[\s\S]*?\.overview-analytics-grid\s*\{[^}]*grid-template-columns:\s*1fr/su);
 });

@@ -16,7 +16,6 @@ const INVENTORY_FILTER_PARAMETERS = Object.freeze([
   "availability",
   "damage",
   "locationStatus",
-  "belowThreshold",
 ]);
 
 function applyInventoryFilters(url, { search = "", ...filters } = {}) {

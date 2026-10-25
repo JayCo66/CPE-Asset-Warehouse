@@ -251,7 +251,6 @@ try {
                 snapshot_date.`full_date` AS `snapshot_date`,
                 SUM(COALESCE(fai.`asset_count`, 0)) AS `total`,
                 SUM(CASE WHEN fai.`is_available_flag` = 1 THEN COALESCE(fai.`asset_count`, 0) ELSE 0 END) AS `ready`,
-                SUM(CASE WHEN fai.`is_below_threshold_flag` = 1 THEN COALESCE(fai.`asset_count`, 0) ELSE 0 END) AS `below_threshold`,
                 SUM(CASE WHEN fai.`has_location_flag` = 0 THEN COALESCE(fai.`asset_count`, 0) ELSE 0 END) AS `missing_location`,
                 SUM(CASE WHEN fai.`asset_age_years` BETWEEN 0 AND 2 THEN COALESCE(fai.`asset_count`, 0) ELSE 0 END) AS `age_zero_to_two`,
                 SUM(CASE WHEN fai.`asset_age_years` BETWEEN 3 AND 5 THEN COALESCE(fai.`asset_count`, 0) ELSE 0 END) AS `age_three_to_five`,
@@ -276,7 +275,6 @@ try {
                 'snapshotDate' => $row['snapshot_date'],
                 'total' => (int)$row['total'],
                 'ready' => (int)$row['ready'],
-                'belowThreshold' => (int)$row['below_threshold'],
                 'missingLocation' => (int)$row['missing_location'],
                 'ageBands' => [
                     'zeroToTwo' => (int)$row['age_zero_to_two'],
@@ -348,7 +346,6 @@ try {
             fai.`asset_count`,
             fai.`is_available_flag`,
             fai.`is_damaged_flag`,
-            fai.`is_below_threshold_flag`,
             fai.`has_location_flag`,
             fai.`asset_age_years`
         ' . warehouseInventoryFromSql() . '
@@ -399,7 +396,6 @@ try {
             'asset_count' => warehouseInventoryNullableInt($row['asset_count']),
             'is_available_flag' => warehouseInventoryNullableInt($row['is_available_flag']),
             'is_damaged_flag' => warehouseInventoryNullableInt($row['is_damaged_flag']),
-            'is_below_threshold_flag' => warehouseInventoryNullableInt($row['is_below_threshold_flag']),
             'has_location_flag' => warehouseInventoryNullableInt($row['has_location_flag']),
             'asset_age_years' => warehouseInventoryNullableInt($row['asset_age_years']),
         ];

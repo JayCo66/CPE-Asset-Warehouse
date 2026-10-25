@@ -60,20 +60,11 @@ Stored critique trend: **25/40 → 31/40 → 33/40 → 33/40**. The latest saved
 - `IMPROVEMENT_REPORT.md`
 - `.impeccable/critique/` (generated latest critique snapshot)
 
-Remaining broader issues are unchanged: the threshold flag still needs a data-owner definition, only one actual warehouse snapshot is available, query scaling has not been benchmarked at larger data volumes, user-facing task help is absent, and cross-browser/device/touch validation remains outstanding.
+Remaining broader issues are unchanged: only one actual warehouse snapshot is available, query scaling has not been benchmarked at larger data volumes, user-facing task help is absent, and cross-browser/device/touch validation remains outstanding.
 
 ## Follow-up pass — 2026-10-23
 
-### Phase 1 — Threshold flag investigation
-
-- Inspected `warehouse schema.sql`, `etl_warehouse.py`, `README.md`, and the API data mapping.
-- The warehouse schema comment describes `is_below_threshold_flag` as value below ฿5,000. The ETL implementation instead sets it when `type_code` starts with `FN`, `FP`, or `FU`, or the type name contains “ต่ำกว่าเกณฑ์”. It is not calculated from stock quantity and does not use the readiness flag.
-- The implemented source is therefore an asset-type classification, but its authoritative business meaning is **undefined** until the data owner resolves the documentation conflict. No schema or calculation was changed.
-- The UI calls it an undefined type flag, and the API README lists the questions for the data owner: whether ฿5,000 is authoritative; whether the `FN`/`FP`/`FU` groups define the classification; and whether a separate minimum-quantity rule exists.
-
-Data-owner questions: (1) Is this an accounting/procurement-value threshold, and is ฿5,000 authoritative? (2) Are `FN`/`FP`/`FU` the source of truth, including donated and transferred assets? (3) Is minimum stock quantity a separate rule represented elsewhere?
-
-### Phase 2 — Server-side search and export
+### Phase 1 — Server-side search and export
 
 - Added bounded, validated `q`, `status`, and `type` filters to `assets_api/fact_asset_inventory.php`; search now spans every record in the latest snapshot and the available asset, type, category, department, and location fields.
 - The API uses fixed SQL columns and prepared parameters, escapes `LIKE` wildcard characters, and keeps existing response fields/pagination while adding `matchedTotal`, effective `page`, and complete-snapshot filter options.
@@ -81,14 +72,14 @@ Data-owner questions: (1) Is this an accounting/procurement-value threshold, and
 - CSV output retains Thai headings, includes a UTF-8 BOM, neutralizes formula-like values, and returns headings only for zero matches. Search input is limited to the API's 200-character bound.
 - Added an opt-in live API integration test. Against the local read-only MySQL API, it found a record from the final page via search, verified combined filters, checked the all-match CSV bytes/Thai heading/row count, checked an empty export, and confirmed invalid input is rejected.
 
-### Phase 3 — Mobile UI and typography
+### Phase 2 — Mobile UI and typography
 
 - Added a visible short Thai search label, a 200-character input limit, and a concise placeholder.
 - Preserved the wide table with horizontal scrolling; added a visible small-screen scroll cue and a named, keyboard-focusable table region.
 - Raised inventory summary, table-heading, and secondary row text sizes; added space around wrapped CSV buttons; and increased the row-detail link to a 44px minimum touch target.
 - Kept existing CPE colors/tokens, Thai font fallback stack, breakpoints, and compact back-to-top control with safe-area positioning. No unrelated module styling or business logic was changed.
 
-### Phase 4 — Verification and audit
+### Phase 3 — Verification and audit
 
 | Check | Result |
 | --- | --- |
@@ -256,7 +247,6 @@ The final detector run reported 1 static warning, 47 desktop findings (1280×800
 
 - **Historical comparison:** only one actual snapshot is available. Historical ETL retention is needed before a previous-period delta can be shown.
 - **Audit status:** the current API has no per-asset annual audit confirmation data. Adding it would require new API/business data support and was not invented here.
-- **Threshold definition:** project documentation describes `is_below_threshold_flag` inconsistently: the schema comment refers to a ฿5,000 value threshold, while the ETL/README logic derives the flag from asset type codes or names. The UI now says “ตามธงต่ำกว่าเกณฑ์” and makes no monetary claim, but the data owner should confirm the authoritative definition before changing its meaning.
 - **Global search/export:** the current API paginates records and has no server-side search/export contract. This implementation clearly states page-local scope rather than fetching or exporting unrelated pages. Supporting all matching rows requires a separately approved API change.
 - **Download verification:** CSV contents and filters pass unit tests, but the browser harness cancelled the download before the resulting file could be inspected.
 - **Responsive polish:** the mobile table-scroll cue, back-to-top overlap, and small text are follow-up UI work, not blockers for the four requested issues.

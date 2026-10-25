@@ -44,7 +44,6 @@ function warehouseInventoryParseFilters(array $query): array
         'availability' => warehouseInventoryReadChoice($query, 'availability', 'all', ['available', 'unavailable', 'unknown']),
         'damage' => warehouseInventoryReadChoice($query, 'damage', 'all', ['damaged', 'not-damaged', 'unknown']),
         'locationStatus' => warehouseInventoryReadChoice($query, 'locationStatus', 'all', ['assigned', 'missing', 'complete', 'incomplete', 'unknown']),
-        'belowThreshold' => warehouseInventoryReadChoice($query, 'belowThreshold', 'all', ['yes', 'no', 'unknown']),
         'snapshot' => $snapshot,
         'ageThreshold' => (int)$ageThreshold,
     ];
@@ -187,11 +186,6 @@ function warehouseInventoryBuildWhere(array $filters, ?int $snapshotDateKey): ar
             'damaged' => 'fai.`is_damaged_flag` = 1',
             'not-damaged' => 'fai.`is_damaged_flag` = 0',
             'unknown' => 'fai.`is_damaged_flag` IS NULL',
-        ],
-        'belowThreshold' => [
-            'yes' => 'fai.`is_below_threshold_flag` = 1',
-            'no' => 'fai.`is_below_threshold_flag` = 0',
-            'unknown' => 'fai.`is_below_threshold_flag` IS NULL',
         ],
         'locationStatus' => [
             'assigned' => 'fai.`has_location_flag` = 1',

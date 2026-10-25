@@ -1,7 +1,8 @@
 import {
   buildInventoryDashboardUrl,
   hasComparableSnapshots,
-} from "./inventory-dashboard-data.mjs";
+} from "./inventory-dashboard-data.mjs?v=20261025.1";
+import { squarifyTreemap } from "./treemap-layout.mjs?v=20261025.1";
 
 const DASHBOARD_API = new URL("../../assets_api/asset_inventory_dashboard.php", import.meta.url).href;
 const PAGE_IDS = ["overview", "portfolio", "departments", "locations", "aging", "acquisition", "governance", "explorer"];
@@ -23,7 +24,6 @@ const FILTER_DEFAULTS = Object.freeze({
   availability: "all",
   damage: "all",
   locationStatus: "all",
-  belowThreshold: "all",
   ageThreshold: 10,
 });
 const FILTER_LABELS = Object.freeze({
@@ -57,6 +57,8 @@ let latestPayload = null;
 let requestId = 0;
 let onFiltersChange = () => {};
 let departmentSort = { key: "totalAssets", direction: "desc" };
+let ageTreemapObserver = null;
+const ageTreemapTooltipTargets = new WeakSet();
 
 const formatCount = (value) => NUMBER_FORMAT.format(Number(value || 0));
 const formatPercent = (value) => value === null || value === undefined ? "—" : `${Number(value).toFixed(1)}%`;
@@ -107,52 +109,112 @@ function drillButton(label, filterKey, value) {
 }
 
 function renderMetrics(data) {
-  const primary = [
-    {
-      label: "สินทรัพย์ทั้งหมด",
-      value: formatCount(data.totalAssets),
-      note: "ผลรวม asset_count ในชุดข้อมูลที่เลือก",
-      tone: "primary",
-    },
-    {
-      label: "พร้อมใช้งาน",
-      value: formatCount(data.availableAssets),
-      note: `อัตราความพร้อม ${formatPercent(data.availabilityRate)}`,
-      tone: "success",
-    },
-    {
-      label: "ชำรุด",
-      value: formatCount(data.damagedAssets),
-      note: `อัตราความเสียหาย ${formatPercent(data.damageRate)}`,
-      tone: "danger",
-    },
-    {
-      label: "ครอบคลุมตำแหน่ง",
-      value: formatPercent(data.locationCoverageRate),
-      note: `ไม่มีตำแหน่ง ${formatCount(data.missingLocationAssets)} รายการ`,
-      tone: "info",
-    },
-  ];
-  setHtml("executive-metrics", primary.map((item) => `
-    <article class="metric-card metric-card-${item.tone}">
-      <span class="metric-label">${item.label}</span>
-      <strong class="metric-value">${item.value}</strong>
-      <span class="metric-footnote">${item.note}</span>
-    </article>
-  `).join(""));
+  const total = Math.max(0, Number(data.totalAssets) || 0);
+  const available = Math.max(0, Number(data.availableAssets) || 0);
+  const unavailable = Math.max(0, Number(data.unavailableAssets) || 0);
+  const unknown = Math.max(0, Number(data.availabilityUnknownAssets) || 0);
+  const readiness = document.getElementById("overview-readiness-rate");
+  if (readiness) readiness.textContent = formatPercent(data.availabilityRate);
 
-  const secondary = [
-    ["ไม่พร้อมใช้งาน", formatCount(data.unavailableAssets)],
-    ["ไม่ระบุความพร้อม", formatCount(data.availabilityUnknownAssets)],
-    ["ธงต่ำกว่าเกณฑ์", formatCount(data.belowThresholdAssets)],
-    ["อัตราธงต่ำกว่าเกณฑ์", formatPercent(data.belowThresholdRate)],
-    ["อายุเฉลี่ย", data.averageAssetAge === null ? "—" : `${Number(data.averageAssetAge).toFixed(1)} ปี`],
-    [`อายุเกิน ${filters.ageThreshold} ปี`, formatCount(data.assetsOlderThanThreshold)],
-    ["ข้อมูลอายุครบ", formatPercent(data.ageCoverageRate)],
-  ];
-  setHtml("overview-secondary-metrics", secondary.map(([label, value]) => `
-    <div class="secondary-metric"><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>
-  `).join(""));
+  const meter = document.getElementById("overview-readiness-meter");
+  if (meter) {
+    meter.setAttribute(
+      "aria-label",
+      `อัตราความพร้อมใช้งาน ${formatPercent(data.availabilityRate)} · พร้อมใช้งาน ${formatCount(available)} · ไม่พร้อมใช้งาน ${formatCount(unavailable)} · ไม่ระบุ ${formatCount(unknown)} จาก ${formatCount(total)} รายการ`,
+    );
+    const setSegmentWidth = (id, count) => {
+      const segment = document.getElementById(id);
+      if (segment) segment.style.width = total > 0 ? `${Math.max(0, Math.min(100, (count / total) * 100))}%` : "0%";
+    };
+    setSegmentWidth("overview-readiness-ready-segment", available);
+    setSegmentWidth("overview-readiness-unavailable-segment", unavailable);
+    setSegmentWidth("overview-readiness-unknown-segment", unknown);
+  }
+
+  setHtml("overview-readiness-counts", `
+    <div>
+      <dt><span class="overview-status-dot is-ready" aria-hidden="true"></span>พร้อมใช้งาน</dt>
+      <dd>${drillButton(formatCount(available), "availability", "available")}</dd>
+    </div>
+    <div>
+      <dt><span class="overview-status-dot is-unavailable" aria-hidden="true"></span>ไม่พร้อมใช้งาน</dt>
+      <dd>${drillButton(formatCount(unavailable), "availability", "unavailable")}</dd>
+    </div>
+    ${unknown > 0 ? `<div>
+      <dt><span class="overview-status-dot is-unknown" aria-hidden="true"></span>ไม่ระบุความพร้อม</dt>
+      <dd>${drillButton(formatCount(unknown), "availability", "unknown")}</dd>
+    </div>` : ""}
+  `);
+
+  const damaged = Math.max(0, Number(data.damagedAssets) || 0);
+  const damagedStatus = getStatusCount(data, "ชำรุด");
+  const repairStatus = getStatusCount(data, "ส่งซ่อม");
+  const ageThreshold = Number.isFinite(Number(filters.ageThreshold)) ? Number(filters.ageThreshold) : 10;
+  const olderThanThreshold = Math.max(0, Number(data.assetsOlderThanThreshold) || 0);
+  const olderThanTotalRate = total > 0 ? (olderThanThreshold / total) * 100 : null;
+  const disposalEstimate = data.disposalEstimate;
+  const disposalValue = disposalEstimate?.eligibleAssets;
+  const hasDisposalEstimate = disposalEstimate?.available === true
+    && disposalValue !== null
+    && disposalValue !== undefined
+    && Number.isFinite(Number(disposalValue));
+  const disposalAssets = hasDisposalEstimate ? Math.max(0, Number(disposalValue)) : 0;
+  const disposalRate = hasDisposalEstimate && total > 0 ? (disposalAssets / total) * 100 : null;
+  setHtml("executive-metrics", `
+    <article class="overview-kpi-card">
+      <h3>ครุภัณฑ์ทั้งหมด</h3>
+      <strong class="overview-kpi-value">${formatCount(total)}</strong>
+      <p>ฐานในการคำนวณ KPI</p>
+    </article>
+    <article class="overview-kpi-card is-danger">
+      <h3>ชำรุด / ส่งซ่อม</h3>
+      <strong class="overview-kpi-value">${drillButton(formatCount(damaged), "damage", "damaged")}</strong>
+      <p>ชำรุด ${drillButton(formatCount(damagedStatus), "status", "ชำรุด")} · ส่งซ่อม ${drillButton(formatCount(repairStatus), "status", "ส่งซ่อม")}</p>
+    </article>
+    <article class="overview-kpi-card ${hasDisposalEstimate ? "is-info" : "is-unavailable"}">
+      <h3>ประมาณการเข้าข่ายพิจารณาทดแทน</h3>
+      <strong class="overview-kpi-value" aria-label="${hasDisposalEstimate ? "จำนวนเข้าข่ายพิจารณาทดแทนโดยประมาณ" : "ประมาณการเกณฑ์พิจารณาทดแทนยังไม่พร้อมใช้งาน"}">${hasDisposalEstimate ? formatCount(disposalAssets) : "—"}</strong>
+      <p>${hasDisposalEstimate ? `${formatPercent(disposalRate)} ของสินทรัพย์ตามตัวกรอง · ค่าซ่อมสะสมและอายุ · ราคาอ้างอิงจำลอง` : "ข้อมูลการซ่อมไม่พร้อมสำหรับการประมาณการ"}</p>
+    </article>
+    <article class="overview-kpi-card is-info">
+      <h3>อายุเกิน ${formatCount(ageThreshold)} ปี</h3>
+      <strong class="overview-kpi-value">${formatCount(olderThanThreshold)}</strong>
+      <p>${formatPercent(olderThanTotalRate)} ของครุภัณฑ์ทั้งหมด</p>
+    </article>
+  `);
+}
+
+function getStatusCount(data, statusName) {
+  const status = (Array.isArray(data.statusDistribution) ? data.statusDistribution : [])
+    .find((item) => item.key === statusName || item.label === statusName);
+  const count = Number(status?.assets);
+  return Number.isFinite(count) && count > 0 ? count : 0;
+}
+
+function renderUnavailableBreakdown(data) {
+  const target = document.getElementById("overview-unavailable-breakdown");
+  if (!target) return;
+
+  const rows = [
+    { label: "ชำรุด", status: "ชำรุด", tone: "is-damaged" },
+    { label: "ถูกยืม", status: "ถูกยืม", tone: "is-borrowed" },
+    { label: "ส่งซ่อม", status: "ส่งซ่อม", tone: "is-repair" },
+  ].map((row) => ({ ...row, count: getStatusCount(data, row.status) }));
+  const unavailable = Math.max(0, Number(data.unavailableAssets) || 0);
+  const categorized = rows.reduce((sum, row) => sum + row.count, 0);
+  if (unavailable > categorized) {
+    rows.push({ label: "สถานะอื่นหรือไม่ระบุ", status: null, tone: "is-unknown", count: unavailable - categorized });
+  }
+
+  target.innerHTML = `<ol class="unavailable-breakdown-list">${rows.map((row) => `
+    <li class="unavailable-breakdown-row ${row.tone}">
+      <span class="unavailable-breakdown-label">
+        <span class="overview-status-dot ${row.tone}" aria-hidden="true"></span>
+        ${row.status ? drillButton(row.label, "status", row.status) : escapeHtml(row.label)}
+      </span>
+      <strong>${formatCount(row.count)}</strong>
+    </li>
+  `).join("")}</ol>`;
 }
 
 function renderRankedBars(id, rows, {
@@ -370,6 +432,167 @@ function renderTable(id, caption, columns, rows, { emptyTitle = "ไม่มี
   target.innerHTML = `<table class="dashboard-data-table"><caption class="sr-only">${escapeHtml(caption)}</caption><thead><tr>${header}</tr></thead><tbody>${body}</tbody></table>`;
 }
 
+function bindAgeTreemapTooltip(target) {
+  if (ageTreemapTooltipTargets.has(target)) return;
+
+  const state = { hovered: null, focused: null, active: null };
+  const update = () => {
+    const tile = [state.focused, state.hovered].find((candidate) => candidate?.isConnected);
+    const tooltip = target.querySelector(".age-treemap-tooltip");
+    if (!tooltip || !tile) {
+      if (state.active?.isConnected) state.active.removeAttribute("aria-describedby");
+      state.active = null;
+      if (tooltip) tooltip.hidden = true;
+      return;
+    }
+
+    if (state.active !== tile) {
+      if (state.active?.isConnected) state.active.removeAttribute("aria-describedby");
+      state.active = tile;
+    }
+    tooltip.textContent = tile.dataset.tooltip || "";
+    tooltip.hidden = false;
+    tile.setAttribute("aria-describedby", tooltip.id);
+
+    const bounds = tile.getBoundingClientRect();
+    const tooltipBounds = tooltip.getBoundingClientRect();
+    const inset = 8;
+    const left = Math.max(inset, Math.min(
+      window.innerWidth - tooltipBounds.width - inset,
+      bounds.left + bounds.width / 2 - tooltipBounds.width / 2,
+    ));
+    const above = bounds.top - tooltipBounds.height - inset;
+    const top = above >= inset
+      ? above
+      : Math.min(window.innerHeight - tooltipBounds.height - inset, bounds.bottom + inset);
+    tooltip.style.left = String(left) + "px";
+    tooltip.style.top = String(Math.max(inset, top)) + "px";
+  };
+
+  target.addEventListener("pointerover", (event) => {
+    const tile = event.target?.closest?.(".age-treemap-tile");
+    if (!tile || !target.contains(tile)) return;
+    if (event.relatedTarget?.closest?.(".age-treemap-tile") === tile) return;
+    state.hovered = tile;
+    update();
+  });
+  target.addEventListener("pointerout", (event) => {
+    const tile = event.target?.closest?.(".age-treemap-tile");
+    if (!tile || event.relatedTarget?.closest?.(".age-treemap-tile") === tile) return;
+    state.hovered = null;
+    update();
+  });
+  target.addEventListener("focusin", (event) => {
+    const tile = event.target?.closest?.(".age-treemap-tile");
+    if (!tile) return;
+    state.focused = tile;
+    update();
+  });
+  target.addEventListener("focusout", (event) => {
+    const tile = event.target?.closest?.(".age-treemap-tile");
+    if (!tile || event.relatedTarget?.closest?.(".age-treemap-tile") === tile) return;
+    state.focused = null;
+    update();
+  });
+  ageTreemapTooltipTargets.add(target);
+}
+
+function renderAgeTreemap(id, source, totalAssets) {
+  const target = document.getElementById(id);
+  if (!target) return;
+
+  ageTreemapObserver?.disconnect();
+  ageTreemapObserver = null;
+
+  const sourceCounts = source && typeof source === "object" ? source : {};
+  const rows = Object.entries(AGE_LABELS).map(([key, label], index) => {
+    const count = Number(sourceCounts[key]);
+    return {
+      key,
+      label,
+      index,
+      assets: Number.isFinite(count) && count > 0 ? count : 0,
+    };
+  });
+  const total = Number(totalAssets);
+  const denominator = Number.isFinite(total) && total > 0 ? total : 0;
+  const populatedRows = rows.filter((row) => row.assets > 0);
+  const detailRows = rows.map((row) => {
+    const share = denominator > 0 ? (row.assets / denominator) * 100 : 0;
+    return '<tr><th scope="row">' + drillButton(row.label, "ageBand", row.key) + '</th><td>' +
+      formatCount(row.assets) + '</td><td>' + formatPercent(share) + '</td></tr>';
+  }).join("");
+
+  const tiles = populatedRows.map((row) => {
+    const share = denominator > 0 ? (row.assets / denominator) * 100 : 0;
+    const tooltip = row.label + "\nจำนวน: " + formatCount(row.assets) + " รายการ\nสัดส่วน: " + formatPercent(share);
+    const accessibleLabel = "กรองตามช่วงอายุ " + row.label;
+    return '<button class="age-treemap-tile age-treemap-tone-' + row.index + ' is-tiny" type="button" data-band-key="' +
+      escapeHtml(row.key) + '" data-drill-filter="ageBand" data-filter-value="' + escapeHtml(row.key) +
+      '" data-tooltip="' + escapeHtml(tooltip) + '" aria-label="' + escapeHtml(accessibleLabel) +
+      '" title="' + escapeHtml(tooltip) + '">' +
+      '<span class="age-treemap-index" aria-hidden="true">' + String(row.index + 1).padStart(2, "0") + '</span>' +
+      '<span class="age-treemap-content"><strong class="age-treemap-count">' + formatCount(row.assets) +
+      '</strong><span class="age-treemap-label">' + escapeHtml(row.label) +
+      '</span><span class="age-treemap-share">' + formatPercent(share) + '</span></span></button>';
+  }).join("");
+
+  const treemap = populatedRows.length > 0
+    ? '<div class="age-treemap-stage" role="group" aria-label="โครงสร้างอายุครุภัณฑ์ พื้นที่ของแต่ละช่องแทนจำนวนสินทรัพย์">' +
+      tiles + '<div id="overview-age-treemap-tooltip" class="age-treemap-tooltip" role="tooltip" hidden></div></div>'
+    : '<div class="age-treemap-empty">' + emptyMarkup("ไม่มีข้อมูลอายุครุภัณฑ์ในชุดที่เลือก") + '</div>';
+
+  target.innerHTML = treemap +
+    '<details class="age-treemap-details">' +
+      '<summary>ดูจำนวนและสัดส่วนครบทุกช่วงอายุ</summary>' +
+      '<div class="dashboard-table-wrap">' +
+        '<table class="dashboard-data-table age-treemap-detail-table">' +
+          '<caption class="sr-only">โครงสร้างอายุครุภัณฑ์ จำนวน และสัดส่วนของทุกช่วงอายุ</caption>' +
+          '<thead><tr><th scope="col">ช่วงอายุ</th><th scope="col">จำนวนสินทรัพย์</th><th scope="col">สัดส่วนจากสินทรัพย์ทั้งหมด</th></tr></thead>' +
+          '<tbody>' + detailRows + '</tbody>' +
+        '</table>' +
+      '</div>' +
+    '</details>';
+
+  if (populatedRows.length === 0) return;
+  bindAgeTreemapTooltip(target);
+
+  const stage = target.querySelector(".age-treemap-stage");
+  const tilesByKey = new Map([...stage.querySelectorAll(".age-treemap-tile")]
+    .map((tile) => [tile.dataset.bandKey, tile]));
+  const updateLayout = () => {
+    const width = stage.clientWidth;
+    const height = stage.clientHeight;
+    if (width <= 0 || height <= 0) return;
+
+    const cells = squarifyTreemap(populatedRows, width, height);
+    for (const cell of cells) {
+      const tile = tilesByKey.get(cell.item.key);
+      if (!tile) continue;
+      const inset = Math.min(1, Math.floor(Math.min(cell.width, cell.height) / 3));
+      tile.style.left = String(cell.x + inset) + "px";
+      tile.style.top = String(cell.y + inset) + "px";
+      tile.style.width = String(Math.max(0, cell.width - inset * 2)) + "px";
+      tile.style.height = String(Math.max(0, cell.height - inset * 2)) + "px";
+      const sizeClass = cell.width >= 150 && cell.height >= 92
+        ? "is-large"
+        : cell.width >= 88 && cell.height >= 50
+          ? "is-medium"
+          : cell.width >= 54 && cell.height >= 32
+            ? "is-small"
+            : "is-tiny";
+      tile.classList.remove("is-large", "is-medium", "is-small", "is-tiny");
+      tile.classList.add(sizeClass);
+    }
+  };
+
+  updateLayout();
+  if (typeof ResizeObserver === "function") {
+    ageTreemapObserver = new ResizeObserver(updateLayout);
+    ageTreemapObserver.observe(stage);
+  }
+}
+
 function renderComboTable(id, caption, rows, firstFilter, secondFilter, firstLabel, secondLabel, limit = 40) {
   const mapped = (rows || []).slice(0, limit).map((row) => ({
     first: row.first,
@@ -389,20 +612,8 @@ function renderComboTable(id, caption, rows, firstFilter, secondFilter, firstLab
 
 function renderOverview(data, payload) {
   renderMetrics(data);
-  renderRankedBars("overview-status-distribution", data.statusDistribution, {
-    labelKey: "label", countKey: "assets", filterKey: "status", valueKey: "key", limit: 8,
-  });
-  renderRankedBars("overview-availability-distribution", data.availabilityDistribution, {
-    labelKey: "label", countKey: "assets", filterKey: "availability", valueKey: "key", limit: 3,
-  });
-  const ageRows = Object.entries(payload.aging.ageDistribution || {}).map(([key, assets]) => ({
-    key,
-    label: AGE_LABELS[key] || key,
-    assets,
-  }));
-  renderRankedBars("overview-age-distribution", ageRows, {
-    labelKey: "label", countKey: "assets", filterKey: "ageBand", valueKey: "key", limit: 7, sort: false,
-  });
+  renderUnavailableBreakdown(data);
+  renderAgeTreemap("overview-age-distribution", payload?.aging?.ageDistribution, data?.totalAssets);
   renderRateHeatmap("overview-issue-heatmap", "อัตราประเด็นสินทรัพย์ตามหน่วยงาน", payload.departments?.rows, [
     {
       label: "ไม่มีตำแหน่ง",
@@ -499,7 +710,6 @@ function renderDepartments(data) {
     { label: "อายุเฉลี่ย", key: "averageAssetAge", sortKey: "averageAssetAge", render: (row) => row.averageAssetAge === null ? "—" : `${row.averageAssetAge} ปี` },
     { label: `อายุเกิน ${filters.ageThreshold}`, key: "assetsOlderThanThreshold", sortKey: "assetsOlderThanThreshold", render: (row) => formatCount(row.assetsOlderThanThreshold) },
     { label: "อัตราสินทรัพย์เก่า", key: "oldAssetRate", sortKey: "oldAssetRate", render: (row) => formatPercent(row.oldAssetRate) },
-    { label: "ธงต่ำกว่าเกณฑ์", key: "belowThresholdRate", sortKey: "belowThresholdRate", render: (row) => formatPercent(row.belowThresholdRate) },
   ], rows);
   renderRankedBars("department-old-ranking", [...rows].sort((a, b) => (b.oldAssetRate ?? -1) - (a.oldAssetRate ?? -1)), {
     labelKey: "label", countKey: "assetsOlderThanThreshold", rateKey: "oldAssetRate", filterKey: "department", valueKey: "filterValue", limit: 10, sort: false,
@@ -764,7 +974,7 @@ function updateSnapshotLabel(payload) {
   if (label) label.textContent = `${formatCount(payload.overview?.totalAssets)} สินทรัพย์ตามตัวกรอง · ${snapshotDate}`;
   if (date) date.textContent = snapshotDate;
   if (state) state.textContent = "ข้อมูลเชื่อมต่อจากคลัง MySQL";
-  if (detail) detail.textContent = "สรุปจำนวนด้วย SUM(asset_count) · ธงต่ำกว่าเกณฑ์แสดงตามข้อมูลคลัง โดยความหมายทางธุรกิจยังไม่ได้รับการยืนยัน";
+  if (detail) detail.textContent = "สรุปจำนวนสินทรัพย์ด้วย SUM(asset_count)";
 }
 
 function updateSelect(select, values, selected, allLabel, mapValue = (value) => [value, value]) {
@@ -863,9 +1073,21 @@ async function loadDashboard() {
 
 function clearDashboardData() {
   const metrics = document.getElementById("executive-metrics");
-  const secondary = document.getElementById("overview-secondary-metrics");
   if (metrics) metrics.replaceChildren();
-  if (secondary) secondary.replaceChildren();
+  const readiness = document.getElementById("overview-readiness-rate");
+  if (readiness) readiness.textContent = "—";
+  const readinessCounts = document.getElementById("overview-readiness-counts");
+  if (readinessCounts) readinessCounts.replaceChildren();
+  const readinessMeter = document.getElementById("overview-readiness-meter");
+  if (readinessMeter) readinessMeter.setAttribute("aria-label", "ยังไม่มีข้อมูลความพร้อมใช้งาน");
+  for (const id of [
+    "overview-readiness-ready-segment",
+    "overview-readiness-unavailable-segment",
+    "overview-readiness-unknown-segment",
+  ]) {
+    const segment = document.getElementById(id);
+    if (segment) segment.style.width = "0%";
+  }
   for (const element of document.querySelectorAll(".dashboard-chart, .dashboard-table-wrap, #overview-history-content")) {
     element.replaceChildren();
   }

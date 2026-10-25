@@ -19,9 +19,9 @@ function isCount(value) {
 export function normalizeSnapshotSummary(snapshot) {
   if (!snapshot || typeof snapshot !== "object") return null;
 
-  const countKeys = ["snapshotDateKey", "total", "ready", "belowThreshold", "missingLocation"];
+  const countKeys = ["snapshotDateKey", "total", "ready", "missingLocation"];
   if (countKeys.some((key) => !isCount(snapshot[key]))) return null;
-  if (snapshot.ready > snapshot.total || snapshot.belowThreshold > snapshot.total || snapshot.missingLocation > snapshot.total) {
+  if (snapshot.ready > snapshot.total || snapshot.missingLocation > snapshot.total) {
     return null;
   }
 
@@ -34,7 +34,6 @@ export function normalizeSnapshotSummary(snapshot) {
     snapshotDate: typeof snapshot.snapshotDate === "string" ? snapshot.snapshotDate : null,
     total: snapshot.total,
     ready: snapshot.ready,
-    belowThreshold: snapshot.belowThreshold,
     missingLocation: snapshot.missingLocation,
     ageBands: Object.fromEntries(AGE_BAND_KEYS.map((key) => [key, ageBands[key]])),
   };
@@ -62,11 +61,6 @@ export function compareInventorySnapshots(currentSnapshot, previousSnapshot) {
       previous: previous.ready,
       delta: current.ready - previous.ready,
       percentagePointDelta: getPercentagePointDelta(current.ready, current.total, previous.ready, previous.total),
-    },
-    belowThreshold: {
-      current: current.belowThreshold,
-      previous: previous.belowThreshold,
-      delta: current.belowThreshold - previous.belowThreshold,
     },
     located: {
       current: currentLocated,

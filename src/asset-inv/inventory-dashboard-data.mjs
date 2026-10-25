@@ -16,7 +16,6 @@ const FILTER_PARAMETERS = Object.freeze([
   "availability",
   "damage",
   "locationStatus",
-  "belowThreshold",
   "ageThreshold",
 ]);
 

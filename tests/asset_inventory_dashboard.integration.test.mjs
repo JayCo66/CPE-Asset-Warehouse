@@ -93,7 +93,6 @@ test(
         availability: flagFilter(selectedRow.is_available_flag, "available", "unavailable"),
         damage: flagFilter(selectedRow.is_damaged_flag, "damaged", "not-damaged"),
         locationStatus: flagFilter(selectedRow.has_location_flag, "assigned", "missing"),
-        belowThreshold: flagFilter(selectedRow.is_below_threshold_flag, "yes", "no"),
       };
       const combinedFilters = {
         department: filterValue(selectedRow.department_name),
@@ -137,8 +136,7 @@ test(
           && assetAgeBand(row.asset_age_years) === combinedFilters.ageBand
           && matchesFlag(row.is_available_flag, combinedFilters.availability)
           && matchesFlag(row.is_damaged_flag, combinedFilters.damage)
-          && locationMatches
-          && matchesFlag(row.is_below_threshold_flag, combinedFilters.belowThreshold);
+          && locationMatches;
       });
       const combinedUrl = new URL(endpoint);
       for (const [name, value] of Object.entries(combinedFilters)) combinedUrl.searchParams.set(name, value);
@@ -151,7 +149,6 @@ test(
       const availableAssets = sum((row) => flagIs(row.is_available_flag, 1));
       const unavailableAssets = sum((row) => flagIs(row.is_available_flag, 0));
       const damagedAssets = sum((row) => flagIs(row.is_damaged_flag, 1));
-      const belowThresholdAssets = sum((row) => flagIs(row.is_below_threshold_flag, 1));
       const missingLocationAssets = sum((row) => flagIs(row.has_location_flag, 0));
       const locationAssignedAssets = sum((row) => flagIs(row.has_location_flag, 1));
       const locationDetailCompleteAssets = sum((row) => flagIs(row.has_location_flag, 1)
@@ -163,7 +160,6 @@ test(
       assert.equal(overview.availableAssets, availableAssets);
       assert.equal(overview.unavailableAssets, unavailableAssets);
       assert.equal(overview.damagedAssets, damagedAssets);
-      assert.equal(overview.belowThresholdAssets, belowThresholdAssets);
       assert.equal(overview.missingLocationAssets, missingLocationAssets);
       assert.equal(overview.locationAssignedAssets, locationAssignedAssets);
       assert.equal(overview.locationDetailCompleteAssets, locationDetailCompleteAssets);
@@ -172,7 +168,6 @@ test(
       assert.equal(overview.availabilityRate, percentage(availableAssets, totalAssets));
       assert.equal(overview.unavailableRate, percentage(unavailableAssets, totalAssets));
       assert.equal(overview.damageRate, percentage(damagedAssets, totalAssets));
-      assert.equal(overview.belowThresholdRate, percentage(belowThresholdAssets, totalAssets));
       assert.equal(overview.missingLocationRate, percentage(missingLocationAssets, totalAssets));
       assert.equal(overview.locationCoverageRate, percentage(locationAssignedAssets, totalAssets));
       assert.equal(overview.locationDetailCompleteRate, percentage(locationDetailCompleteAssets, totalAssets));
@@ -180,7 +175,7 @@ test(
       assert.equal(overview.oldAssetRate, percentage(olderAssets, knownAgeAssets));
 
       const department = combinedPayload.data.departments.rows[0];
-      for (const metric of ["availabilityRate", "damageRate", "belowThresholdRate", "missingLocationRate", "locationCoverageRate", "oldAssetRate"]) {
+      for (const metric of ["availabilityRate", "damageRate", "missingLocationRate", "locationCoverageRate", "oldAssetRate"]) {
         assert.equal(department[metric], overview[metric], `Department and overview ${metric} should share the same filtered definition.`);
       }
       for (const field of Object.values(combinedPayload.data.governance.qualityFields)) {
@@ -237,7 +232,6 @@ test(
     for (const rate of [
       "availabilityRate",
       "damageRate",
-      "belowThresholdRate",
       "missingLocationRate",
       "locationCoverageRate",
       "locationDetailCompleteRate",

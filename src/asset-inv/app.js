@@ -15,17 +15,17 @@ import {
 import {
   buildAssetInventoryCsv,
   normalizeSnapshotSummary,
-} from "./inventory-data.mjs";
+} from "./inventory-data.mjs?v=20261025.1";
 import {
   buildAssetInventoryApiUrl,
   buildAssetInventoryExportUrl,
-} from "./inventory-api.mjs";
+} from "./inventory-api.mjs?v=20261025.1";
 import {
   getExecutiveDashboardFilters,
   initExecutiveDashboard,
   refreshExecutiveDashboard,
   setInventoryDashboardPage,
-} from "./executive-dashboard.mjs?v=20261025.1";
+} from "./executive-dashboard.mjs?v=20261025.6";
 
 const dashboardData = {
   moduleNav: [

@@ -44,7 +44,7 @@ runTest('uses empty search and all filters by default', static function (): void
     foreach ([
         'status', 'type', 'department', 'category', 'building', 'source',
         'acquisitionYear', 'fiscalYear', 'ageBand', 'availability', 'damage',
-        'locationStatus', 'belowThreshold',
+        'locationStatus',
         'room', 'floor', 'area', 'acquisitionFiscalYear',
     ] as $name) {
         expectSame('all', $filters[$name], "{$name} should not restrict the inventory by default.");
@@ -98,7 +98,6 @@ runTest('validates executive filters and age thresholds', static function (): vo
         'availability' => 'unavailable',
         'damage' => 'damaged',
         'locationStatus' => 'incomplete',
-        'belowThreshold' => 'yes',
         'snapshot' => '20261022',
         'ageThreshold' => '15',
     ]);
@@ -150,7 +149,6 @@ runTest('builds dimension and flag filters with bound values', static function (
         'availability' => 'unavailable',
         'damage' => 'damaged',
         'locationStatus' => 'incomplete',
-        'belowThreshold' => 'yes',
     ]);
     $where = warehouseInventoryBuildWhere($filters, 20261022);
 
