@@ -1106,6 +1106,9 @@
         <div class="chart-header">
           <div class="chart-title-block">
             <h3 id="chartTitleC">👤 สัดส่วนผู้ยืมตามสถานภาพในแต่ละประเภทครุภัณฑ์</h3>
+            <span style="font-size: 11px; color: var(--cpe-brand-blue); display: inline-flex; align-items: center; gap: 4px; margin-top: 3px;">
+              <span>💡 คลิกที่แท่งกราฟของแต่ละสถานภาพเพื่อเปิดดูรายการยืมจริง</span>
+            </span>
           </div>
         </div>
         <div class="chart-container">
@@ -1299,6 +1302,99 @@
         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 12px; color: var(--cpe-text-dim); flex-wrap: wrap; gap: 8px;">
           <span id="catModalCountLabel">แสดง 0 จาก 0 รายการ</span>
           <span style="font-style: italic;">💡 สามารถคลิกปุ่ม "ประวัติยืม 🔍" เพื่อดูประวัติการเบิกยืมของครุภัณฑ์แต่ละชิ้น</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Role & Category Borrow Transactions Modal -->
+  <div class="modal-overlay" id="roleBorrowListModal">
+    <div class="modal-window modal-wide">
+      <div class="modal-header">
+        <div class="modal-title">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 24px;">👤</span>
+            <div>
+              <h4 id="rbModalTitle" style="margin: 0; font-size: 16px;">รายการยืม: ครุภัณฑ์คอมพิวเตอร์ — อาจารย์</h4>
+              <div style="font-size: 12px; color: var(--cpe-text-dim); margin-top: 2px;">
+                ประวัติการเบิกยืมใช้งานจริงจากระบบ <code>dw_borrow</code> Data Warehouse
+              </div>
+            </div>
+          </div>
+        </div>
+        <button class="modal-close-btn" id="btnCloseRbModal" title="ปิดหน้าต่าง">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Stat Grid -->
+        <div class="modal-stat-grid" id="rbModalStatGrid">
+          <div class="modal-stat-card">
+            <div class="label">จำนวนครั้งที่ยืม (Total Borrows)</div>
+            <div class="val" id="rbStatCount" style="color: var(--cpe-brand-blue);">0 ครั้ง</div>
+          </div>
+          <div class="modal-stat-card">
+            <div class="label">ผู้ยืมไม่ซ้ำกัน (Unique Borrowers)</div>
+            <div class="val" id="rbStatUsers" style="color: var(--cpe-purple);">0 คน</div>
+          </div>
+          <div class="modal-stat-card">
+            <div class="label">ระยะเวลายืมเฉลี่ย (Avg Duration)</div>
+            <div class="val" id="rbStatAvgDays" style="color: var(--cpe-success);">0 วัน</div>
+          </div>
+          <div class="modal-stat-card">
+            <div class="label">คืนล่าช้า (Overdue Rate)</div>
+            <div class="val" id="rbStatOverdue" style="color: var(--cpe-danger);">0 ครั้ง</div>
+          </div>
+        </div>
+
+        <!-- Action & Search Toolbar -->
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px;">
+          <div style="display: flex; gap: 8px; align-items: center; flex: 1; min-width: 260px;">
+            <input type="text" id="rbModalSearchInput" placeholder="🔍 ค้นหาชื่อผู้ยืม, รหัส/ชื่อครุภัณฑ์, สังกัด หรือวัตถุประสงค์..." style="width: 100%; padding: 8px 14px; font-size: 13px; border-radius: var(--radius-md); background: var(--cpe-surface-subtle); border: 1px solid var(--cpe-border); color: var(--cpe-text);" />
+          </div>
+          <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+            <span style="font-size: 11px; color: var(--cpe-text-dim); margin-right: 4px;">สถานภาพ:</span>
+            <button class="cat-filter-btn rb-role-btn active" data-role="ALL">ทั้งหมด</button>
+            <button class="cat-filter-btn rb-role-btn" data-role="นิสิต">นิสิต</button>
+            <button class="cat-filter-btn rb-role-btn" data-role="อาจารย์">อาจารย์</button>
+            <button class="cat-filter-btn rb-role-btn" data-role="เจ้าหน้าที่">เจ้าหน้าที่</button>
+          </div>
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <button class="cat-filter-btn rb-status-btn active" data-status="ALL">สถานะทั้งหมด</button>
+            <button class="cat-filter-btn rb-status-btn" data-status="NORMAL">คืนปกติ</button>
+            <button class="cat-filter-btn rb-status-btn" data-status="OVERDUE">คืนล่าช้า</button>
+          </div>
+          <div>
+            <button id="btnFilterDashboardByRb" class="btn-inspect" style="padding: 7px 14px; font-size: 12px; font-weight: 600; background: var(--cpe-surface-subtle); border: 1px solid var(--cpe-brand-blue); color: var(--cpe-brand-blue);">
+              🔍 กรองแดชบอร์ดตามกลุ่มนี้
+            </button>
+          </div>
+        </div>
+
+        <!-- Table Container -->
+        <div class="table-responsive" id="rbModalTableWrapper" style="max-height: 400px; overflow-y: auto; border: 1px solid var(--cpe-border); border-radius: var(--radius-md);">
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 40px; text-align: center;">#</th>
+                <th style="min-width: 100px;">วันที่ยืม</th>
+                <th style="min-width: 100px;">กำหนดคืน</th>
+                <th style="min-width: 220px;">รหัส & ชื่อครุภัณฑ์</th>
+                <th style="min-width: 160px;">ผู้ยืม (สถานภาพ)</th>
+                <th style="min-width: 150px;">ภาควิชา / สังกัด</th>
+                <th style="min-width: 180px;">วัตถุประสงค์การยืม</th>
+                <th style="min-width: 80px; text-align: center;">ระยะเวลา</th>
+                <th style="min-width: 85px; text-align: center;">สถานะ</th>
+                <th style="min-width: 85px; text-align: center;">เจาะลึก</th>
+              </tr>
+            </thead>
+            <tbody id="rbModalTableBody">
+              <!-- Populated via JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 12px; color: var(--cpe-text-dim); flex-wrap: wrap; gap: 8px;">
+          <span id="rbModalCountLabel">แสดง 0 จาก 0 รายการ</span>
+          <span style="font-style: italic;">💡 สามารถคลิกปุ่ม "เจาะลึก 🔍" เพื่อดูประวัติครุภัณฑ์รายชิ้น หรือสลับสถานภาพผู้ยืมด้านบน</span>
         </div>
       </div>
     </div>
@@ -1846,7 +1942,24 @@
         },
         options: {
           indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { position: 'top', labels: { color: textColor, boxWidth: 10 } } },
+          plugins: {
+            legend: { position: 'top', labels: { color: textColor, boxWidth: 10 } },
+            tooltip: {
+              callbacks: {
+                footer: () => '👆 คลิกเพื่อดูประวัติการยืมของครุภัณฑ์ชิ้นนี้'
+              }
+            }
+          },
+          onHover: (event, chartElement) => {
+            event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
+          },
+          onClick: (event, elements, chart) => {
+            if (elements && elements.length > 0) {
+              const idx = elements[0].index;
+              const asset = topList[idx];
+              if (asset) openAssetModal(asset.name);
+            }
+          },
           scales: {
             x: { grid: { color: gridColor }, ticks: { color: textColor }, beginAtZero: true },
             y: { grid: { display: false }, ticks: { color: textColor, font: { size: 11 } } }
@@ -1919,7 +2032,25 @@
         },
         options: {
           responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { position: 'top', labels: { color: textColor, boxWidth: 10 } } },
+          plugins: {
+            legend: { position: 'top', labels: { color: textColor, boxWidth: 10 } },
+            tooltip: {
+              callbacks: {
+                footer: () => '👆 คลิกเพื่อดูรายการยืมทั้งหมดในกลุ่มนี้'
+              }
+            }
+          },
+          onHover: (event, chartElement) => {
+            event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
+          },
+          onClick: (event, elements, chart) => {
+            if (elements && elements.length > 0) {
+              const el = elements[0];
+              const categoryName = chart.data.labels[el.index];
+              const roleName = chart.data.datasets[el.datasetIndex].label;
+              openRoleBorrowListModal(categoryName, roleName);
+            }
+          },
           scales: {
             x: { stacked: true, grid: { display: false }, ticks: { color: textColor, font: { size: 10 } } },
             y: { stacked: true, grid: { color: gridColor }, ticks: { color: textColor }, beginAtZero: true }
@@ -3613,6 +3744,212 @@
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && catModal.classList.contains('active')) {
         catModal.classList.remove('active');
+      }
+    });
+
+    // -------------------------------------------------------------------------
+    // 10.2 Role & Category Borrow Transactions Modal
+    // -------------------------------------------------------------------------
+    const rbModal = document.getElementById('roleBorrowListModal');
+    const btnCloseRbModal = document.getElementById('btnCloseRbModal');
+    let currentRbCategory = '';
+    let currentRbRole = 'ALL';
+    let currentRbStatus = 'ALL';
+    let currentRbRecords = [];
+
+    window.openRoleBorrowListModal = function(categoryName, roleName) {
+      currentRbCategory = categoryName || '';
+      currentRbRole = roleName || 'ALL';
+      currentRbStatus = 'ALL';
+
+      // Update role buttons active state
+      document.querySelectorAll('.rb-role-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-role') === currentRbRole);
+      });
+      // Update status buttons active state
+      document.querySelectorAll('.rb-status-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-status') === 'ALL');
+      });
+
+      // Clear search
+      document.getElementById('rbModalSearchInput').value = '';
+
+      updateRbModalContent();
+      rbModal.classList.add('active');
+    };
+
+    function updateRbModalContent() {
+      // Filter records by category first (or all if not specified)
+      let base = allRecords;
+      if (currentRbCategory && currentRbCategory !== 'ALL') {
+        base = base.filter(r => r.assetCategory === currentRbCategory);
+      }
+
+      // Filter by role if specific role chosen
+      let roleFiltered = base;
+      if (currentRbRole && currentRbRole !== 'ALL') {
+        roleFiltered = roleFiltered.filter(r => r.userRole === currentRbRole);
+      }
+
+      currentRbRecords = roleFiltered;
+
+      // Update title
+      const catText = currentRbCategory || 'ทุกประเภทครุภัณฑ์';
+      const roleText = currentRbRole === 'ALL' ? 'ทุกสถานภาพ' : `กลุ่ม ${currentRbRole}`;
+      document.getElementById('rbModalTitle').textContent = `รายการยืม: ${catText} — ${roleText}`;
+
+      // Calculate KPIs
+      const totalCount = roleFiltered.length;
+      const uniqueUsers = new Set(roleFiltered.map(r => r.user?.key || r.user?.name)).size;
+      const totalDays = roleFiltered.reduce((acc, r) => acc + (r.duration_days || 0), 0);
+      const avgDays = totalCount > 0 ? (totalDays / totalCount).toFixed(1) : '0';
+      const overdueCount = roleFiltered.filter(r => r.is_overdue === 1).length;
+      const overduePct = totalCount > 0 ? ((overdueCount / totalCount) * 100).toFixed(1) : '0';
+
+      document.getElementById('rbStatCount').textContent = `${totalCount.toLocaleString()} ครั้ง`;
+      document.getElementById('rbStatUsers').textContent = `${uniqueUsers.toLocaleString()} คน`;
+      document.getElementById('rbStatAvgDays').textContent = `${avgDays} วัน`;
+      document.getElementById('rbStatOverdue').textContent = `${overdueCount.toLocaleString()} ครั้ง (${overduePct}%)`;
+
+      renderRbModalTable();
+    }
+
+    function renderRbModalTable() {
+      const searchTerm = (document.getElementById('rbModalSearchInput').value || '').trim().toLowerCase();
+      const tbody = document.getElementById('rbModalTableBody');
+
+      let filtered = currentRbRecords.filter(r => {
+        // Status filter
+        if (currentRbStatus === 'NORMAL' && r.is_overdue === 1) return false;
+        if (currentRbStatus === 'OVERDUE' && r.is_overdue !== 1) return false;
+
+        // Search filter
+        if (searchTerm) {
+          const userName = (r.user?.name || '').toLowerCase();
+          const userRole = (r.userRole || '').toLowerCase();
+          const assetName = (r.assetName || '').toLowerCase();
+          const assetCode = (r.assetCode || '').toLowerCase();
+          const dept = (r.deptName || '').toLowerCase();
+          const reason = (r.reason || '').toLowerCase();
+          return userName.includes(searchTerm) || userRole.includes(searchTerm) || assetName.includes(searchTerm) || assetCode.includes(searchTerm) || dept.includes(searchTerm) || reason.includes(searchTerm);
+        }
+        return true;
+      });
+
+      document.getElementById('rbModalCountLabel').textContent = `แสดง ${filtered.length.toLocaleString()} จาก ${currentRbRecords.length.toLocaleString()} รายการ`;
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="10" style="text-align: center; padding: 36px 16px; color: var(--cpe-text-dim);">
+              <div style="font-size: 26px; margin-bottom: 6px;">🔍</div>
+              <strong style="color: var(--cpe-text);">ไม่พบรายการยืมที่ตรงกับเงื่อนไขการค้นหา</strong><br>
+              <span style="font-size: 12px; margin-top: 4px; display: inline-block;">ลองปรับคำค้นหา หรือเลือกตัวกรองสถานภาพ / สถานะเป็น 'ทั้งหมด'</span>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      // Sort by borrowDate descending
+      const sorted = [...filtered].sort((a,b) => (b.borrowDate || '').localeCompare(a.borrowDate || ''));
+      const displayList = sorted.slice(0, 150);
+
+      tbody.innerHTML = displayList.map((r, idx) => {
+        let roleBadgeColor = 'var(--cpe-brand-blue)';
+        if (r.userRole === 'อาจารย์') roleBadgeColor = 'var(--cpe-warning)';
+        else if (r.userRole === 'เจ้าหน้าที่') roleBadgeColor = 'var(--cpe-success)';
+
+        return `
+          <tr>
+            <td style="text-align: center; font-size: 11px; color: var(--cpe-text-dim);">${idx + 1}</td>
+            <td style="font-family: monospace; font-size: 12px; color: var(--cpe-text); white-space: nowrap;">${r.borrowDate || '-'}</td>
+            <td style="font-family: monospace; font-size: 12px; color: var(--cpe-text-dim); white-space: nowrap;">${r.return_date || '-'}</td>
+            <td>
+              <strong style="color: var(--cpe-text);">${r.assetName || '-'}</strong>
+              <div style="font-family: monospace; font-size: 11px; color: var(--cpe-brand-blue); margin-top: 2px;">${r.assetCode || '-'}</div>
+            </td>
+            <td>
+              <strong style="color: var(--cpe-text);">${r.user?.name || '-'}</strong>
+              <div style="display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: var(--radius-pill); background: var(--cpe-surface-subtle); border: 1px solid var(--cpe-border); color: ${roleBadgeColor}; margin-top: 2px;">
+                ${r.userRole || '-'}
+              </div>
+            </td>
+            <td style="font-size: 12px; color: var(--cpe-text-muted);">${r.deptName || '-'}</td>
+            <td style="font-size: 12px; color: var(--cpe-text-muted); max-width: 220px; word-break: break-word;">${r.reason || '-'}</td>
+            <td style="text-align: center; font-size: 12px; font-weight: 600; color: var(--cpe-text);">${r.duration_days ?? '-'} วัน</td>
+            <td style="text-align: center;">
+              <span class="badge-status ${r.is_overdue === 1 ? 'status-danger' : 'status-ready'}" style="font-size: 11px; padding: 2px 8px;">
+                ${r.is_overdue === 1 ? 'คืนล่าช้า' : 'ปกติ'}
+              </span>
+            </td>
+            <td style="text-align: center;">
+              <button class="btn-inspect" style="padding: 3px 8px; font-size: 11px;" onclick="openAssetModal('${encodeURIComponent(r.assetName)}')">
+                เจาะลึก 🔍
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Role switcher events
+    document.querySelectorAll('.rb-role-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.rb-role-btn').forEach(b => b.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+        currentRbRole = e.currentTarget.getAttribute('data-role');
+        updateRbModalContent();
+      });
+    });
+
+    // Status switcher events
+    document.querySelectorAll('.rb-status-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.rb-status-btn').forEach(b => b.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+        currentRbStatus = e.currentTarget.getAttribute('data-status');
+        renderRbModalTable();
+      });
+    });
+
+    // Search event
+    document.getElementById('rbModalSearchInput').addEventListener('input', () => {
+      renderRbModalTable();
+    });
+
+    // Filter Dashboard button
+    document.getElementById('btnFilterDashboardByRb').addEventListener('click', () => {
+      if (currentRbCategory && currentRbCategory !== 'ALL') {
+        filters.category = currentRbCategory;
+        const catSelect = document.getElementById('categoryFilter');
+        if (catSelect) {
+          for (let i = 0; i < catSelect.options.length; i++) {
+            if (catSelect.options[i].value === currentRbCategory) {
+              catSelect.selectedIndex = i;
+              break;
+            }
+          }
+        }
+      }
+      if (currentRbRole && currentRbRole !== 'ALL') {
+        filters.role = currentRbRole;
+        const roleSelect = document.getElementById('roleFilter');
+        if (roleSelect) {
+          roleSelect.value = currentRbRole;
+        }
+      }
+      applyFilters();
+      rbModal.classList.remove('active');
+    });
+
+    btnCloseRbModal.addEventListener('click', () => rbModal.classList.remove('active'));
+    rbModal.addEventListener('click', (e) => {
+      if (e.target === rbModal) rbModal.classList.remove('active');
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && rbModal.classList.contains('active')) {
+        rbModal.classList.remove('active');
       }
     });
 
