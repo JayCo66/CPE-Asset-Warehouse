@@ -1855,10 +1855,6 @@ tbody tr:hover td {
   border-radius: var(--radius-control);
 }
 
-.dashboard-sections > .dashboard-filter-panel {
-  margin-bottom: 0;
-}
-
 .snapshot-filter-row {
   display: grid;
   grid-template-columns: minmax(130px, auto) minmax(180px, 280px) minmax(180px, 1fr);

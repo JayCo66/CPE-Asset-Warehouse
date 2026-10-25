@@ -25,7 +25,7 @@ import {
   initExecutiveDashboard,
   refreshExecutiveDashboard,
   setInventoryDashboardPage,
-} from "./executive-dashboard.mjs?v=20261025.6";
+} from "./executive-dashboard.mjs?v=20261025.7";
 
 const dashboardData = {
   moduleNav: [
@@ -92,6 +92,8 @@ const assetDetailState = {
 let assetDetailRequestId = 0;
 let assetApiRequestId = 0;
 let assetApiSearchTimer;
+let requestedDashboardScrollTarget = null;
+let hasRenderedInventoryDashboard = false;
 
 let elements;
 
@@ -212,7 +214,55 @@ async function loadDashboardSections() {
 
   const sections = await Promise.all(responses.map((response) => response.text()));
   container.innerHTML = sections.join("\n");
+  installDashboardFilterPanels(container);
   container.removeAttribute("aria-busy");
+}
+
+function installDashboardFilterPanels(container) {
+  const template = container.querySelector(".dashboard-filter-panel");
+  const overview = container.querySelector(".executive-overview");
+  const pages = [...container.querySelectorAll("[data-dashboard-page]")];
+  if (!template || !overview || pages.length === 0) {
+    throw new Error("ไม่พบแม่แบบตัวกรองหรือส่วนแดชบอร์ดสำหรับติดตั้งตัวกรอง");
+  }
+
+  const targets = [
+    { id: "overview", element: overview, label: overview.querySelector("h1")?.textContent.trim() || "ภาพรวม" },
+    ...pages.map((element) => ({
+      id: element.dataset.dashboardPage,
+      element,
+      label: element.querySelector("h1")?.textContent.trim() || element.dataset.dashboardPage,
+    })),
+  ];
+
+  for (const target of targets) {
+    const panel = template.cloneNode(true);
+    panel.dataset.filterScope = target.id;
+    panel.setAttribute("aria-label", `ตัวกรองข้อมูลร่วม · ${target.label}`);
+
+    const idMap = new Map();
+    panel.querySelectorAll("[id]").forEach((element) => {
+      idMap.set(element.id, `${element.id}-${target.id}`);
+    });
+    panel.querySelectorAll("[id]").forEach((element) => {
+      element.id = idMap.get(element.id);
+    });
+    panel.querySelectorAll("[for]").forEach((element) => {
+      if (idMap.has(element.htmlFor)) element.htmlFor = idMap.get(element.htmlFor);
+    });
+    for (const attribute of ["aria-controls", "aria-describedby", "aria-labelledby"]) {
+      panel.querySelectorAll(`[${attribute}]`).forEach((element) => {
+        element.setAttribute(attribute, element.getAttribute(attribute).split(/\s+/).map((id) => idMap.get(id) || id).join(" "));
+      });
+    }
+
+    const summaryLabel = panel.querySelector(".dashboard-filter-details > summary > span:first-child");
+    if (summaryLabel) summaryLabel.textContent = `ตัวกรอง · ${target.label}`;
+    if (target.id !== "overview") panel.querySelector("[data-dashboard-request-state]")?.remove();
+    target.element.prepend(panel);
+  }
+
+  template.remove();
 }
 
 async function loadAssetDetailSection() {
@@ -361,15 +411,39 @@ function handleDashboardSectionClick(event) {
   if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
   if (!(event.target instanceof Element)) return;
 
+  if (event.target.closest(".overview-explorer-action, [data-drill-filter], [data-drill-filters]")) {
+    requestedDashboardScrollTarget = "explorer";
+    return;
+  }
+
   const link = event.target.closest(".inventory-view-nav [data-dashboard-link]");
-  if (!link || link.dataset.dashboardLink !== getCurrentDashboardPage()) return;
+  if (!link) return;
+
+  requestedDashboardScrollTarget = "filters";
+  if (link.dataset.dashboardLink !== getCurrentDashboardPage()) return;
 
   event.preventDefault();
   window.location.hash = "#/inventory/overview";
 }
 
+function expandDashboardFilters(pageId) {
+  const scopes = pageId === "overview" ? ["overview"] : ["overview", pageId];
+  for (const scope of scopes) {
+    const details = elements.dashboardSections.querySelector(`[data-filter-scope="${scope}"] .dashboard-filter-details`);
+    if (details) details.open = true;
+  }
+}
+
+function scrollDashboardFiltersIntoView(pageId) {
+  const filterPanel = elements.dashboardSections.querySelector(`.dashboard-filter-panel[data-filter-scope="${pageId}"]`);
+  if (!filterPanel) return;
+
+  const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+  window.requestAnimationFrame(() => filterPanel.scrollIntoView({ behavior, block: "start" }));
+}
+
 function scrollAssetExplorerIntoView() {
-  const explorer = elements.dashboardSections.querySelector('[data-dashboard-page="explorer"]');
+  const explorer = elements.dashboardSections.querySelector("#asset-register");
   if (!explorer) return;
 
   const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
@@ -679,7 +753,14 @@ function renderModuleView(moduleId = getCurrentModuleId()) {
   } else {
     const pageId = getCurrentDashboardPage();
     setInventoryDashboardPage(pageId);
-    if (pageId === "explorer") scrollAssetExplorerIntoView();
+    expandDashboardFilters(pageId);
+    const scrollTarget = requestedDashboardScrollTarget;
+    requestedDashboardScrollTarget = null;
+    if (pageId === "explorer" && scrollTarget === "explorer") scrollAssetExplorerIntoView();
+    else if (scrollTarget === "filters" || hasRenderedInventoryDashboard || pageId !== "overview") {
+      scrollDashboardFiltersIntoView(pageId);
+    }
+    hasRenderedInventoryDashboard = true;
   }
 }
 
