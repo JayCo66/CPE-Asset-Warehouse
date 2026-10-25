@@ -58,7 +58,7 @@
     // รายการหน้า (เมนูสร้างจากข้อมูลนี้) ; hide = selector เมนูโมดูลเดิมของหน้านั้น ซ่อนเฉพาะตอนเปิดผ่านหน้ารวม ไม่ได้แก้ไฟล์ของเจ้าของ
     const PAGES = [
       { id: "assets", label: "ทะเบียนสินทรัพย์", owner: "Sutham", src: "src/asset-inv/", hide: [".module-nav"] },
-      { id: "borrow", label: "ยืม-คืน", owner: "Boom", src: "dashboard_borrow.html", hide: [".floating-nav-wrapper"] },
+      { id: "borrow", label: "ยืม-คืน", owner: "Boom", src: "dashboard_borrow.html", hide: [] },   // เมนูลอยของหน้านี้คือเมนู 6 หัวข้อวิเคราะห์ ไม่ซ่อน
       { id: "facility", label: "แจ้งซ่อมอาคาร", owner: "G1ilbert", src: "dashboard_report.html#/facility", hide: [".module-nav"] },
       { id: "repair", label: "ซ่อมครุภัณฑ์", owner: "G1ilbert", src: "dashboard_report.html#/repair", hide: [".module-nav"] },
     ];
@@ -72,7 +72,7 @@
     function hideOwnNav(frame, page) {
       try {
         const doc = frame.contentDocument;
-        if (!doc || doc.getElementById("hub-hide")) return;
+        if (!doc || !page.hide.length || doc.getElementById("hub-hide")) return;
         const st = doc.createElement("style");
         st.id = "hub-hide";
         st.textContent = `${page.hide.join(",")} { display: none !important; }`;
