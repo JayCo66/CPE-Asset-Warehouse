@@ -13,7 +13,6 @@ const currentSnapshot = {
   snapshotDate: "2026-10-22",
   total: 4,
   ready: 3,
-  belowThreshold: 1,
   missingLocation: 1,
   ageBands: { zeroToTwo: 1, threeToFive: 1, sixToEight: 1, ninePlus: 1, unknown: 0 },
 };
@@ -45,7 +44,6 @@ test("compares real snapshot counts and percentage-point changes", () => {
     snapshotDate: "2025-09-30",
     total: 3,
     ready: 2,
-    belowThreshold: 2,
     missingLocation: 1,
     ageBands: { zeroToTwo: 1, threeToFive: 1, sixToEight: 1, ninePlus: 0, unknown: 0 },
   };
@@ -53,7 +51,6 @@ test("compares real snapshot counts and percentage-point changes", () => {
   assert.deepEqual(compareInventorySnapshots(currentSnapshot, previousSnapshot), {
     total: { current: 4, previous: 3, delta: 1 },
     ready: { current: 3, previous: 2, delta: 1, percentagePointDelta: 8.3 },
-    belowThreshold: { current: 1, previous: 2, delta: -1 },
     located: { current: 3, previous: 2, delta: 1, percentagePointDelta: 8.3 },
   });
 });

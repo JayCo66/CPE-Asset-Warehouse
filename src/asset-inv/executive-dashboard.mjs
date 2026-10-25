@@ -1,7 +1,7 @@
 import {
   buildInventoryDashboardUrl,
   hasComparableSnapshots,
-} from "./inventory-dashboard-data.mjs";
+} from "./inventory-dashboard-data.mjs?v=20261025.1";
 
 const DASHBOARD_API = new URL("../../assets_api/asset_inventory_dashboard.php", import.meta.url).href;
 const PAGE_IDS = ["overview", "portfolio", "departments", "locations", "aging", "acquisition", "governance", "explorer"];
@@ -23,7 +23,6 @@ const FILTER_DEFAULTS = Object.freeze({
   availability: "all",
   damage: "all",
   locationStatus: "all",
-  belowThreshold: "all",
   ageThreshold: 10,
 });
 const FILTER_LABELS = Object.freeze({
@@ -144,8 +143,6 @@ function renderMetrics(data) {
   const secondary = [
     ["ไม่พร้อมใช้งาน", formatCount(data.unavailableAssets)],
     ["ไม่ระบุความพร้อม", formatCount(data.availabilityUnknownAssets)],
-    ["ธงต่ำกว่าเกณฑ์", formatCount(data.belowThresholdAssets)],
-    ["อัตราธงต่ำกว่าเกณฑ์", formatPercent(data.belowThresholdRate)],
     ["อายุเฉลี่ย", data.averageAssetAge === null ? "—" : `${Number(data.averageAssetAge).toFixed(1)} ปี`],
     [`อายุเกิน ${filters.ageThreshold} ปี`, formatCount(data.assetsOlderThanThreshold)],
     ["ข้อมูลอายุครบ", formatPercent(data.ageCoverageRate)],
@@ -499,7 +496,6 @@ function renderDepartments(data) {
     { label: "อายุเฉลี่ย", key: "averageAssetAge", sortKey: "averageAssetAge", render: (row) => row.averageAssetAge === null ? "—" : `${row.averageAssetAge} ปี` },
     { label: `อายุเกิน ${filters.ageThreshold}`, key: "assetsOlderThanThreshold", sortKey: "assetsOlderThanThreshold", render: (row) => formatCount(row.assetsOlderThanThreshold) },
     { label: "อัตราสินทรัพย์เก่า", key: "oldAssetRate", sortKey: "oldAssetRate", render: (row) => formatPercent(row.oldAssetRate) },
-    { label: "ธงต่ำกว่าเกณฑ์", key: "belowThresholdRate", sortKey: "belowThresholdRate", render: (row) => formatPercent(row.belowThresholdRate) },
   ], rows);
   renderRankedBars("department-old-ranking", [...rows].sort((a, b) => (b.oldAssetRate ?? -1) - (a.oldAssetRate ?? -1)), {
     labelKey: "label", countKey: "assetsOlderThanThreshold", rateKey: "oldAssetRate", filterKey: "department", valueKey: "filterValue", limit: 10, sort: false,
@@ -764,7 +760,7 @@ function updateSnapshotLabel(payload) {
   if (label) label.textContent = `${formatCount(payload.overview?.totalAssets)} สินทรัพย์ตามตัวกรอง · ${snapshotDate}`;
   if (date) date.textContent = snapshotDate;
   if (state) state.textContent = "ข้อมูลเชื่อมต่อจากคลัง MySQL";
-  if (detail) detail.textContent = "สรุปจำนวนด้วย SUM(asset_count) · ธงต่ำกว่าเกณฑ์แสดงตามข้อมูลคลัง โดยความหมายทางธุรกิจยังไม่ได้รับการยืนยัน";
+  if (detail) detail.textContent = "สรุปจำนวนสินทรัพย์ด้วย SUM(asset_count)";
 }
 
 function updateSelect(select, values, selected, allLabel, mapValue = (value) => [value, value]) {

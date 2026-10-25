@@ -38,34 +38,13 @@ existing Thai headings, includes a UTF-8 BOM for spreadsheet compatibility,
 neutralizes formula-like cells, and writes in keyset batches using a temporary
 stream to bound PHP memory use. An empty match produces a header-only CSV.
 
-### Threshold flag: business meaning unconfirmed
-
-The API's `belowThreshold` aggregate reflects the stored
-`is_below_threshold_flag`. The ETL currently sets that flag from asset-type
-classification (`type_code` beginning `FN`, `FP`, or `FU`, or `type_name`
-containing “ต่ำกว่าเกณฑ์”); this is not a quantity-based low-stock calculation
-and does not use the readiness flag. However, `warehouse schema.sql` separately
-describes the field as below ฿5,000. The authoritative business meaning has not
-been confirmed, so the dashboard labels this flag as undefined and must not
-interpret it as a minimum stock level, readiness state, or verified monetary
-threshold. No flag calculation or schema was changed.
-
-The data owner should confirm:
-
-1. Is the intended condition a procurement/accounting value threshold, and is
-   ฿5,000 the authoritative amount?
-2. Are the `FN` / `FP` / `FU` type-code groups the authoritative source for the
-   flag, including donated and transferred assets?
-3. Should this remain an asset-type classification, or is there a separate
-   inventory-quantity/minimum-stock rule that belongs in another field?
-
 `summary.current` and `summary.previous` have this shape:
 
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `snapshotDateKey` | integer | Warehouse date key |
 | `snapshotDate` | string or `null` | Snapshot date from `dim_date` |
-| `total`, `ready`, `belowThreshold`, `missingLocation` | integer | Counts from the selected snapshot |
+| `total`, `ready`, `missingLocation` | integer | Counts from the selected snapshot |
 | `ageBands.zeroToTwo`, `threeToFive`, `sixToEight`, `ninePlus`, `unknown` | integer | Age counts; unknown acquisition age is reported separately |
 
 Counts are aggregated from the existing one-row-per-asset snapshot facts and

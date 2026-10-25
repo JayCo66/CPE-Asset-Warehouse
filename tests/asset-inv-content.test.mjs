@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const registerHtml = readFileSync(new URL("../src/asset-inv/sections/asset-register.html", import.meta.url), "utf8");
-const overviewHtml = readFileSync(new URL("../src/asset-inv/sections/overview.html", import.meta.url), "utf8");
+const overviewHtml = readFileSync(new URL("../src/asset-inv/sections/executive-overview.html", import.meta.url), "utf8");
 const analysisHtml = readFileSync(new URL("../src/asset-inv/sections/analysis.html", import.meta.url), "utf8");
 const dashboardApp = readFileSync(new URL("../src/asset-inv/app.js", import.meta.url), "utf8");
 const executiveDashboard = readFileSync(new URL("../src/asset-inv/executive-dashboard.mjs", import.meta.url), "utf8");
@@ -25,12 +25,6 @@ test("labels whole-inventory search, export scopes, and the actual inventory-dat
   assert.match(dashboardApp, /matchedTotal/u);
   assert.match(registerHtml, /วันที่ชุดข้อมูลที่เลือก/u);
   assert.doesNotMatch(registerHtml, /การอัปเดตล่าสุด/u);
-});
-
-test("labels the threshold flag without assigning it a stock or readiness meaning", () => {
-  assert.match(executiveDashboard, /ธงต่ำกว่าเกณฑ์/u);
-  assert.match(executiveDashboard, /ความหมายทางธุรกิจยังไม่ได้รับการยืนยัน/u);
-  assert.doesNotMatch(`${overviewHtml}\n${registerHtml}\n${executiveDashboard}`, /สต็อกต่ำ|ปริมาณสินค้าต่ำ/u);
 });
 
 test("uses Thai copy for snapshot concepts across the inventory dashboard", () => {

@@ -62,7 +62,7 @@ function warehouseInventoryAnalyticsCreate(int $ageThreshold): array
         'attentionAreas' => [
             'damaged' => 0, 'unavailable' => 0, 'old' => 0, 'missingLocation' => 0,
             'oldDamaged' => 0, 'oldUnavailable' => 0, 'oldMissingLocation' => 0,
-            'missingCriticalMetadata' => 0, 'belowThreshold' => 0,
+            'missingCriticalMetadata' => 0,
         ],
         'exceptions' => [], 'exceptionsTotal' => 0,
     ];
@@ -94,9 +94,6 @@ function warehouseInventoryAnalyticsEmptyMetrics(): array
         'damaged' => 0,
         'notDamaged' => 0,
         'damageUnknown' => 0,
-        'belowThreshold' => 0,
-        'thresholdNo' => 0,
-        'thresholdUnknown' => 0,
         'missingLocation' => 0,
         'locationAssigned' => 0,
         'locationUnknown' => 0,
@@ -135,7 +132,6 @@ function warehouseInventoryAnalyticsAddMetrics(array &$metrics, array $row, int 
 
     $available = warehouseInventoryAnalyticsFlag($row['is_available_flag'] ?? null);
     $damaged = warehouseInventoryAnalyticsFlag($row['is_damaged_flag'] ?? null);
-    $belowThreshold = warehouseInventoryAnalyticsFlag($row['is_below_threshold_flag'] ?? null);
     $hasLocation = warehouseInventoryAnalyticsFlag($row['has_location_flag'] ?? null);
     $age = $row['asset_age_years'] ?? null;
     $knownAge = $age !== null && is_numeric($age) && (int)$age >= 0;
@@ -161,14 +157,6 @@ function warehouseInventoryAnalyticsAddMetrics(array &$metrics, array $row, int 
         $metrics['notDamaged'] += $weight;
     } else {
         $metrics['damageUnknown'] += $weight;
-    }
-
-    if ($belowThreshold === 1) {
-        $metrics['belowThreshold'] += $weight;
-    } elseif ($belowThreshold === 0) {
-        $metrics['thresholdNo'] += $weight;
-    } else {
-        $metrics['thresholdUnknown'] += $weight;
     }
 
     if ($hasLocation === 1) {
@@ -272,7 +260,6 @@ function warehouseInventoryAnalyticsConsume(array &$state, array $row): void
     $available = warehouseInventoryAnalyticsFlag($row['is_available_flag'] ?? null);
     $damaged = warehouseInventoryAnalyticsFlag($row['is_damaged_flag'] ?? null);
     $hasLocation = warehouseInventoryAnalyticsFlag($row['has_location_flag'] ?? null);
-    $belowThreshold = warehouseInventoryAnalyticsFlag($row['is_below_threshold_flag'] ?? null);
     $old = $age !== null && is_numeric($age) && (int)$age > $threshold;
 
     warehouseInventoryAnalyticsAddMetrics($state['metrics'], $row, $weight, $threshold);
@@ -408,7 +395,6 @@ function warehouseInventoryAnalyticsConsume(array &$state, array $row): void
     if ($old && $available === 0) $state['attentionAreas']['oldUnavailable'] += $weight;
     if ($old && $missingLocation) $state['attentionAreas']['oldMissingLocation'] += $weight;
     if ($missingCritical) $state['attentionAreas']['missingCriticalMetadata'] += $weight;
-    if ($belowThreshold === 1) $state['attentionAreas']['belowThreshold'] += $weight;
 
     $reasons = warehouseInventoryAnalyticsAttentionReasons($row, $qualityChecks, $threshold);
     if ($reasons !== []) {
@@ -449,7 +435,6 @@ function warehouseInventoryAnalyticsAttentionReasons(array $row, array $qualityC
     $available = warehouseInventoryAnalyticsFlag($row['is_available_flag'] ?? null);
     $damaged = warehouseInventoryAnalyticsFlag($row['is_damaged_flag'] ?? null);
     $hasLocation = warehouseInventoryAnalyticsFlag($row['has_location_flag'] ?? null);
-    $belowThreshold = warehouseInventoryAnalyticsFlag($row['is_below_threshold_flag'] ?? null);
     $age = $row['asset_age_years'] ?? null;
     $old = $age !== null && is_numeric($age) && (int)$age > $ageThreshold;
     $reasons = [];
@@ -474,9 +459,6 @@ function warehouseInventoryAnalyticsAttentionReasons(array $row, array $qualityC
     }
     if ($qualityChecks['assetCode'] || $qualityChecks['assetName'] || $qualityChecks['department']) {
         $reasons[] = 'ข้อมูลสำคัญไม่ครบ (รหัส ชื่อ หรือหน่วยงาน)';
-    }
-    if ($belowThreshold === 1) {
-        $reasons[] = 'ธงต่ำกว่าเกณฑ์';
     }
     return $reasons;
 }
@@ -515,9 +497,6 @@ function warehouseInventoryAnalyticsMetricOutput(array $metrics): array
         'damagedAssets' => (int)$metrics['damaged'],
         'damageRate' => warehouseInventoryAnalyticsRate($metrics['damaged'], $total),
         'damageUnknownAssets' => (int)$metrics['damageUnknown'],
-        'belowThresholdAssets' => (int)$metrics['belowThreshold'],
-        'belowThresholdRate' => warehouseInventoryAnalyticsRate($metrics['belowThreshold'], $total),
-        'belowThresholdUnknownAssets' => (int)$metrics['thresholdUnknown'],
         'missingLocationAssets' => (int)$metrics['missingLocation'],
         'missingLocationRate' => warehouseInventoryAnalyticsRate($metrics['missingLocation'], $total),
         'locationAssignedAssets' => (int)$metrics['locationAssigned'],
@@ -649,7 +628,6 @@ function warehouseInventoryAnalyticsFinalize(array $state): array
         'oldUnavailable' => 'อายุเกินเกณฑ์และไม่พร้อมใช้งาน',
         'oldMissingLocation' => 'อายุเกินเกณฑ์และไม่มีตำแหน่ง',
         'missingCriticalMetadata' => 'ข้อมูลสำคัญไม่ครบ',
-        'belowThreshold' => 'ธงต่ำกว่าเกณฑ์',
     ];
     $attentionAreas = [];
     foreach ($attentionLabels as $key => $label) {

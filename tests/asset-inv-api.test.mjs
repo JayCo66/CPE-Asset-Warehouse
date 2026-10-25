@@ -71,7 +71,6 @@ test("preserves every shared inventory filter in paginated and all-matching requ
     availability: "unavailable",
     damage: "damaged",
     locationStatus: "incomplete",
-    belowThreshold: "yes",
   };
   const pageUrl = new URL(buildAssetInventoryApiUrl(endpoint, { ...filters, search: " CPE-1 ", page: 2 }));
   const exportUrl = new URL(buildAssetInventoryExportUrl(endpoint, { ...filters, search: " CPE-1 " }));

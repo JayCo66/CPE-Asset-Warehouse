@@ -45,7 +45,6 @@ warehouseInventoryAnalyticsConsume($state, [
     'asset_age_years' => 11,
     'is_available_flag' => 0,
     'is_damaged_flag' => 1,
-    'is_below_threshold_flag' => 1,
     'has_location_flag' => 1,
 ]);
 warehouseInventoryAnalyticsConsume($state, [
@@ -75,7 +74,6 @@ warehouseInventoryAnalyticsConsume($state, [
     'asset_age_years' => 5,
     'is_available_flag' => 1,
     'is_damaged_flag' => 0,
-    'is_below_threshold_flag' => 0,
     'has_location_flag' => 0,
 ]);
 
@@ -131,7 +129,6 @@ $missingNameRow = [
     'asset_age_years' => 4,
     'is_available_flag' => 1,
     'is_damaged_flag' => 0,
-    'is_below_threshold_flag' => 0,
     'has_location_flag' => 0,
 ];
 warehouseInventoryAnalyticsConsume($missingNameState, $missingNameRow);
@@ -178,7 +175,6 @@ warehouseInventoryAnalyticsConsume($roomDrillState, [
     'asset_age_years' => 4,
     'is_available_flag' => 1,
     'is_damaged_flag' => 0,
-    'is_below_threshold_flag' => 0,
     'has_location_flag' => 1,
 ]);
 $roomDrillResult = warehouseInventoryAnalyticsFinalize($roomDrillState);
@@ -202,7 +198,6 @@ warehouseInventoryAnalyticsConsume($negativeWeightState, [
     'type_name' => 'Test type',
     'is_available_flag' => 1,
     'is_damaged_flag' => 0,
-    'is_below_threshold_flag' => 0,
     'has_location_flag' => 0,
 ]);
 $negativeWeightResult = warehouseInventoryAnalyticsFinalize($negativeWeightState);

@@ -91,7 +91,6 @@ function warehouseDashboardFetchAnalytics(PDO $pdo, array $filters, int $snapsho
             fai.`asset_age_years`,
             fai.`is_available_flag`,
             fai.`is_damaged_flag`,
-            fai.`is_below_threshold_flag`,
             fai.`has_location_flag`,
             fai.`asset_key`,
             fai.`department_key`,
