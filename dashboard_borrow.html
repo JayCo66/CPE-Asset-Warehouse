@@ -101,6 +101,7 @@
       line-height: 1.5;
       -webkit-font-smoothing: antialiased;
       padding-bottom: 60px;
+      overflow-x: hidden;
     }
 
     /* ==========================================================================
@@ -195,37 +196,37 @@
       border-color: var(--cpe-brand-blue);
     }
 
-    /* Floating Global Module Switcher (Restrained, Content-First - docs/frontend-guide.md) */
+    /* Floating Global Module Switcher (Fit on Page without scrolling - docs/frontend-guide.md) */
     .floating-nav-container {
       max-width: 1360px;
-      margin: 18px auto 0;
+      margin: 16px auto 0;
       padding: 0 20px;
-    }
-
-    .floating-nav-scroll {
-      overflow-x: auto;
-      padding-bottom: 4px;
+      width: 100%;
+      box-sizing: border-box;
+      overflow: hidden;
     }
 
     .floating-nav {
       background: var(--cpe-surface);
       border: 1px solid var(--cpe-border);
       border-radius: var(--radius-pill);
-      padding: 5px 6px;
-      display: inline-flex;
-      align-items: center;
+      padding: 4px;
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
       gap: 4px;
       box-shadow: var(--shadow-sm);
-      white-space: nowrap;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     .nav-module-pill {
-      display: inline-flex;
+      display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 8px 16px;
+      justify-content: center;
+      gap: 5px;
+      padding: 7px 4px;
       border-radius: var(--radius-pill);
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 500;
       color: var(--cpe-text-muted);
       text-decoration: none;
@@ -233,6 +234,11 @@
       border: none;
       cursor: pointer;
       transition: var(--transition);
+      min-width: 0;
+      width: 100%;
+      text-align: center;
+      white-space: nowrap;
+      box-sizing: border-box;
     }
     .nav-module-pill:hover {
       color: var(--cpe-text);
@@ -244,16 +250,48 @@
       font-weight: 600;
       box-shadow: 0 2px 8px rgba(4, 102, 200, 0.4);
     }
+    .nav-module-pill .pill-text {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+      font-size: 11.5px;
+    }
     .nav-module-pill .pill-badge {
-      font-size: 11px;
-      padding: 2px 7px;
+      font-size: 10.5px;
+      font-weight: 600;
+      padding: 1px 6px;
       border-radius: var(--radius-pill);
       background: rgba(255, 255, 255, 0.18);
+      flex-shrink: 0;
     }
     .nav-module-pill:not(.active) .pill-badge {
       background: var(--cpe-surface-subtle);
       color: var(--cpe-text-dim);
       border: 1px solid var(--cpe-border);
+    }
+
+    @media (max-width: 1100px) {
+      .floating-nav {
+        grid-template-columns: repeat(3, 1fr);
+        border-radius: var(--radius-lg);
+        padding: 6px;
+      }
+      .nav-module-pill {
+        padding: 8px 8px;
+        font-size: 12px;
+      }
+    }
+    @media (max-width: 640px) {
+      .floating-nav {
+        grid-template-columns: repeat(2, 1fr);
+        border-radius: var(--radius-md);
+      }
+    }
+    @media (max-width: 420px) {
+      .floating-nav {
+        grid-template-columns: 1fr;
+      }
     }
 
     /* Main Container */
@@ -917,34 +955,32 @@
 
   <!-- Floating Global Module Switcher (All 6 Core Insights - docs/frontend-guide.md) -->
   <div class="floating-nav-container">
-    <div class="floating-nav-scroll">
-      <nav class="floating-nav" id="moduleNav" aria-label="Global Module Navigation">
-        <button class="nav-module-pill active" data-topic="demand" title="1. ความต้องการใช้งานครุภัณฑ์ (Equipment Demand)">
-          <span>📦 1. ความต้องการใช้งาน</span>
-          <span class="pill-badge" id="badgeDemand">266</span>
-        </button>
-        <button class="nav-module-pill" data-topic="patterns" title="2. รูปแบบการยืมตามช่วงเวลา (Borrowing Patterns)">
-          <span>📅 2. รูปแบบตามช่วงเวลา</span>
-          <span class="pill-badge" id="badgePatterns">7 วัน</span>
-        </button>
-        <button class="nav-module-pill" data-topic="utilization" title="3. ประสิทธิภาพในการใช้ครุภัณฑ์ (Asset Utilization)">
-          <span>⚡ 3. ประสิทธิภาพการใช้งาน</span>
-          <span class="pill-badge" id="badgeUtilization">10.9 วัน</span>
-        </button>
-        <button class="nav-module-pill" data-topic="punctuality" title="4. ความตรงต่อเวลาในการคืน (Return Behavior)">
-          <span>⏱️ 4. ความตรงต่อเวลาในการคืน</span>
-          <span class="pill-badge" id="badgePunctuality">83.5%</span>
-        </button>
-        <button class="nav-module-pill" data-topic="departments" title="5. ความต้องการของแต่ละภาควิชา (Department Demand)">
-          <span>🏢 5. ความต้องการรายภาควิชา</span>
-          <span class="pill-badge" id="badgeDepartments">12 ภาค</span>
-        </button>
-        <button class="nav-module-pill" data-topic="risk" title="6. ความเสี่ยงในการจัดการครุภัณฑ์ (Asset Management Risk)">
-          <span>🚨 6. ความเสี่ยงในการจัดการ</span>
-          <span class="pill-badge" id="badgeRisk">43 เสี่ยง</span>
-        </button>
-      </nav>
-    </div>
+    <nav class="floating-nav" id="moduleNav" aria-label="Global Module Navigation">
+      <button class="nav-module-pill active" data-topic="demand" title="1. ความต้องการใช้งานครุภัณฑ์ (Equipment Demand)">
+        <span class="pill-text">📦 1. ความต้องการใช้งาน</span>
+        <span class="pill-badge" id="badgeDemand">266</span>
+      </button>
+      <button class="nav-module-pill" data-topic="patterns" title="2. รูปแบบการยืมตามช่วงเวลา (Borrowing Patterns)">
+        <span class="pill-text">📅 2. รูปแบบตามช่วงเวลา</span>
+        <span class="pill-badge" id="badgePatterns">7 วัน</span>
+      </button>
+      <button class="nav-module-pill" data-topic="utilization" title="3. ประสิทธิภาพในการใช้ครุภัณฑ์ (Asset Utilization)">
+        <span class="pill-text">⚡ 3. ประสิทธิภาพการใช้</span>
+        <span class="pill-badge" id="badgeUtilization">10.9 วัน</span>
+      </button>
+      <button class="nav-module-pill" data-topic="punctuality" title="4. ความตรงต่อเวลาในการคืน (Return Behavior)">
+        <span class="pill-text">⏱️ 4. ความตรงต่อเวลา</span>
+        <span class="pill-badge" id="badgePunctuality">83.5%</span>
+      </button>
+      <button class="nav-module-pill" data-topic="departments" title="5. ความต้องการของแต่ละภาควิชา (Department Demand)">
+        <span class="pill-text">🏢 5. ความต้องการรายภาค</span>
+        <span class="pill-badge" id="badgeDepartments">12 ภาค</span>
+      </button>
+      <button class="nav-module-pill" data-topic="risk" title="6. ความเสี่ยงในการจัดการครุภัณฑ์ (Asset Management Risk)">
+        <span class="pill-text">🚨 6. ความเสี่ยงการจัดการ</span>
+        <span class="pill-badge" id="badgeRisk">43 เสี่ยง</span>
+      </button>
+    </nav>
   </div>
 
   <main class="container">
