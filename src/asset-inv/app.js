@@ -357,6 +357,25 @@ function getCurrentDashboardPage() {
     : "overview";
 }
 
+function handleDashboardSectionClick(event) {
+  if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  if (!(event.target instanceof Element)) return;
+
+  const link = event.target.closest(".inventory-view-nav [data-dashboard-link]");
+  if (!link || link.dataset.dashboardLink !== getCurrentDashboardPage()) return;
+
+  event.preventDefault();
+  window.location.hash = "#/inventory/overview";
+}
+
+function scrollAssetExplorerIntoView() {
+  const explorer = elements.dashboardSections.querySelector('[data-dashboard-page="explorer"]');
+  if (!explorer) return;
+
+  const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+  window.requestAnimationFrame(() => explorer.scrollIntoView({ behavior, block: "start" }));
+}
+
 function getCurrentModuleId() {
   const [route] = getCurrentRouteSegments();
   return dashboardData.moduleNav.some((module) => module.id === route) ? route : "inventory";
@@ -658,7 +677,9 @@ function renderModuleView(moduleId = getCurrentModuleId()) {
     elements.modulePlaceholderDescription.textContent = activeModule.description;
     elements.modulePlaceholderTitle.focus({ preventScroll: true });
   } else {
-    setInventoryDashboardPage(getCurrentDashboardPage());
+    const pageId = getCurrentDashboardPage();
+    setInventoryDashboardPage(pageId);
+    if (pageId === "explorer") scrollAssetExplorerIntoView();
   }
 }
 
@@ -1056,6 +1077,7 @@ function exportAllMatchingAssetRows() {
 }
 
 function initInteractions() {
+  elements.dashboardSections.addEventListener("click", handleDashboardSectionClick);
   elements.assetApiSearch.addEventListener("input", () => {
     window.clearTimeout(assetApiSearchTimer);
     assetApiRequestId += 1;
