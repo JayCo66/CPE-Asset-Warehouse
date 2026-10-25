@@ -167,81 +167,17 @@
       line-height: 1.6;
     }
 
-    /* Executive Aggregate Stats Strip */
-    .summary-strip {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 14px;
-      margin-bottom: 32px;
-    }
-    .summary-card {
-      background: var(--cpe-surface);
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      padding: 16px 18px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      transition: border-color .15s ease;
-    }
-    .summary-card:hover {
-      border-color: var(--line-strong);
-    }
-    .summary-card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      margin-bottom: 6px;
-    }
-    .summary-card-label {
-      font-size: var(--fs-xs);
-      color: var(--cpe-text-muted);
-      font-weight: 500;
-    }
-    .summary-card-icon {
-      font-size: 15px;
-      opacity: 0.9;
-    }
-    .summary-card-val-row {
-      display: flex;
-      align-items: baseline;
-      gap: 6px;
-      margin-bottom: 4px;
-    }
-    .summary-card-val {
-      font-size: 1.85rem;
-      font-weight: 600;
-      color: var(--cpe-text);
-      font-variant-numeric: tabular-nums;
-      line-height: 1.2;
-    }
-    .summary-card-unit {
-      font-size: var(--fs-xs);
-      color: var(--text-faint);
-    }
-    .summary-card-sub {
-      font-size: 0.8125rem;
-      color: var(--cpe-text-muted);
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-    .status-pill-good {
-      color: var(--cpe-success);
-      font-weight: 500;
-    }
-
-    /* Topics Grid */
+        /* Topics Grid */
     .topics-header {
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
-      margin-bottom: 18px;
+      margin-bottom: 20px;
       border-bottom: 1px solid var(--line);
       padding-bottom: 12px;
     }
     .topics-header-title {
-      font-size: 1.25rem;
+      font-size: 1.3rem;
       font-weight: 600;
       color: var(--cpe-text);
       margin: 0 0 4px;
@@ -266,6 +202,7 @@
       display: flex;
       flex-direction: column;
       justify-content: space-between;
+      min-height: 230px;
       transition: border-color .2s ease;
     }
     .topic-card:hover {
@@ -276,7 +213,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 12px;
+      margin-bottom: 14px;
     }
     .topic-tag {
       font-size: var(--fs-xs);
@@ -318,83 +255,39 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
     }
     .topic-icon {
-      font-size: 24px;
+      font-size: 26px;
       flex-shrink: 0;
       line-height: 1;
     }
     .topic-title {
-      font-size: 1.15rem;
+      font-size: 1.2rem;
       font-weight: 600;
       color: var(--cpe-text);
       margin: 0;
     }
     .topic-subtitle {
-      font-size: 12px;
+      font-size: 12.5px;
       color: var(--text-faint);
-      margin: 0 0 12px;
+      margin: 0 0 14px;
     }
     .topic-desc {
-      font-size: 0.875rem;
+      font-size: var(--fs-base);
       color: var(--cpe-text-muted);
-      line-height: 1.55;
-      margin: 0 0 16px;
-    }
-
-    /* Baseline Data Box inside card */
-    .baseline-box {
-      background: color-mix(in srgb, var(--cpe-page-start) 65%, var(--cpe-surface));
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      padding: 14px 16px;
-      margin-bottom: 18px;
-    }
-    .baseline-title {
-      font-size: 11.5px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: var(--text-faint);
-      margin-bottom: 10px;
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-    .baseline-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 12px 16px;
-    }
-    .baseline-item {
-      display: flex;
-      flex-direction: column;
-    }
-    .baseline-item-lbl {
-      font-size: 11.5px;
-      color: var(--cpe-text-muted);
-      margin-bottom: 2px;
-    }
-    .baseline-item-val {
-      font-size: 13.5px;
-      font-weight: 600;
-      color: var(--cpe-text);
-      font-variant-numeric: tabular-nums;
+      line-height: 1.6;
+      margin: 0 0 20px;
     }
 
     /* Action button */
     .topic-card-action {
       margin-top: auto;
-      padding-top: 14px;
+      padding-top: 16px;
       border-top: 1px solid var(--line);
       display: flex;
       align-items: center;
-      justify-content: space-between;
-    }
-    .topic-owner {
-      font-size: 12px;
-      color: var(--text-faint);
+      justify-content: flex-end;
     }
     .btn-topic {
       display: inline-flex;
@@ -403,7 +296,7 @@
       font-family: inherit;
       font-size: 0.875rem;
       font-weight: 500;
-      padding: 8px 18px;
+      padding: 9px 20px;
       border-radius: var(--radius);
       text-decoration: none;
       cursor: pointer;
@@ -432,17 +325,15 @@
     @media (max-width: 960px) {
       .app-header { grid-template-columns: 1fr auto; }
       .module-nav { grid-column: 1 / -1; grid-row: 2; justify-content: flex-start; }
-      .summary-strip { grid-template-columns: repeat(2, 1fr); }
       .topics-grid { grid-template-columns: 1fr; }
     }
     @media (max-width: 600px) {
-      .summary-strip { grid-template-columns: 1fr; }
-      .baseline-grid { grid-template-columns: 1fr; }
       .topic-card-action { flex-direction: column; align-items: stretch; gap: 10px; }
       .btn-topic { justify-content: center; width: 100%; }
     }
     @media (prefers-reduced-motion: no-preference) {
       .module-nav-list a, .btn, .btn-topic { transition: background-color .15s, color .15s, transform .15s; }
+    }
     }
   </style>
 </head>
@@ -473,57 +364,7 @@
             เพื่อสนับสนุนการตัดสินใจเชิงบริหารและการตรวจนับพัสดุประจำปี
           </p>
 
-          <!-- Executive Aggregate Stats Strip -->
-          <div class="summary-strip" role="region" aria-label="ตัวชี้วัดภาพรวมทั้งระบบ">
-            <div class="summary-card">
-              <div class="summary-card-header">
-                <span class="summary-card-label">สินทรัพย์ทั้งหมดในคลัง</span>
-                <span class="summary-card-icon">📦</span>
-              </div>
-              <div class="summary-card-val-row">
-                <span class="summary-card-val">4,324</span>
-                <span class="summary-card-unit">ชิ้น</span>
-              </div>
-              <span class="summary-card-sub status-pill-good">✓ สภาพพร้อมใช้งาน 99.8% (4,317 ชิ้น)</span>
-            </div>
-
-            <div class="summary-card">
-              <div class="summary-card-header">
-                <span class="summary-card-label">สถิติการยืม-คืนอุปกรณ์</span>
-                <span class="summary-card-icon">🔄</span>
-              </div>
-              <div class="summary-card-val-row">
-                <span class="summary-card-val">247</span>
-                <span class="summary-card-unit">ครั้ง</span>
-              </div>
-              <span class="summary-card-sub">ผู้ยืม 165 คนไม่ซ้ำ | คืนตรงเวลา 86.6%</span>
-            </div>
-
-            <div class="summary-card">
-              <div class="summary-card-header">
-                <span class="summary-card-label">งานแจ้งซ่อมอาคารสถานที่</span>
-                <span class="summary-card-icon">🏢</span>
-              </div>
-              <div class="summary-card-val-row">
-                <span class="summary-card-val">770+</span>
-                <span class="summary-card-unit">งาน</span>
-              </div>
-              <span class="summary-card-sub status-pill-good">✓ ปิดงานตามเกณฑ์ SLA 82.4% (3 วัน)</span>
-            </div>
-
-            <div class="summary-card">
-              <div class="summary-card-header">
-                <span class="summary-card-label">งานซ่อมบำรุงครุภัณฑ์</span>
-                <span class="summary-card-icon">🛠️</span>
-              </div>
-              <div class="summary-card-val-row">
-                <span class="summary-card-val">145+</span>
-                <span class="summary-card-unit">งาน</span>
-              </div>
-              <span class="summary-card-sub">ซ่อมเสร็จใน SLA 88.5% (15 วัน)</span>
-            </div>
-          </div>
-        </section>
+          </section>
 
         <!-- 4 Core Topics Section -->
         <section aria-labelledby="topics-title">
@@ -552,31 +393,9 @@
                   พร้อมทั้งติดตามอายุการใช้งานและค่าเสื่อมสภาพเพื่อเตรียมการตรวจนับพัสดุประจำปี
                 </p>
 
-                <div class="baseline-box">
-                  <div class="baseline-title">📌 ข้อมูลพื้นฐานและตัวชี้วัดสำคัญ (Key Baseline)</div>
-                  <div class="baseline-grid">
-                    <div class="baseline-item">
-                      <span class="baseline-item-lbl">จำนวนครุภัณฑ์ในคลัง</span>
-                      <span class="baseline-item-val">4,324 ชิ้น</span>
-                    </div>
-                    <div class="baseline-item">
-                      <span class="baseline-item-lbl">สถานะพร้อมใช้งาน (Ready)</span>
-                      <span class="baseline-item-val" style="color:var(--cpe-success);">4,317 ชิ้น (99.8%)</span>
-                    </div>
-                    <div class="baseline-item">
-                      <span class="baseline-item-lbl">อายุใช้งานเกิน 10 ปี</span>
-                      <span class="baseline-item-val" style="color:var(--cpe-warning);">2,750+ รายการ (~64%)</span>
-                    </div>
-                    <div class="baseline-item">
-                      <span class="baseline-item-lbl">การจัดกลุ่มพัสดุ</span>
-                      <span class="baseline-item-val">คอมพิวเตอร์, เครื่องมือวัด, โสตฯ</span>
-                    </div>
-                  </div>
                 </div>
-              </div>
 
               <div class="topic-card-action">
-                <span class="topic-owner">ผู้รับผิดชอบ: สุธรรม</span>
                 <a href="#/assets" class="btn-topic" aria-label="เข้าสู่แดชบอร์ดทะเบียนสินทรัพย์">
                   <span>เข้าสู่แดชบอร์ดทะเบียนสินทรัพย์</span>
                   <span class="btn-arrow">→</span>
@@ -601,31 +420,9 @@
                   ตลอดจนตรวจจับครุภัณฑ์นอนนิ่งไม่เคยถูกใช้งาน (Zero-Borrow) เพื่อพิจารณาจัดสรรทรัพยากรใหม่
                 </p>
 
-                <div class="baseline-box">
-                  <div class="baseline-title">📌 ข้อมูลพื้นฐานและตัวชี้วัดสำคัญ (Key Baseline)</div>
-                  <div class="baseline-grid">
-                    <div class="baseline-item">
-                      <span class="baseline-item-lbl">จำนวนครั้งที่ยืมทั้งหมด</span>
-                      <span class="baseline-item-val">247 ครั้ง (165 ผู้ยืม)</span>
-                    </div>
-                    <div class="baseline-item">
-                      <span class="baseline-item-lbl">อัตราคืนตรงเวลา</span>
-                      <span class="baseline-item-val" style="color:var(--cpe-success);">86.6% (คืนช้า 33 ครั้ง)</span>
-                    </div>
-                    <div class="baseline-item">
-                      <span class="baseline-item-lbl">ไม่เคยถูกยืม (Zero-Borrow)</span>
-                      <span class="baseline-item-val" style="color:var(--cpe-info);">4,214 ชิ้น (2,447 โมเดล)</span>
-                    </div>
-                    <div class="baseline-item">
-                      <span class="baseline-item-lbl">ครุภัณฑ์หมุนเวียนสูง</span>
-                      <span class="baseline-item-val">39 รายการ (ยืมบ่อย ≥3 ครั้ง)</span>
-                    </div>
-                  </div>
                 </div>
-              </div>
 
               <div class="topic-card-action">
-                <span class="topic-owner">ผู้รับผิดชอบ: บูม</span>
                 <a href="#/borrow" class="btn-topic" aria-label="เข้าสู่แดชบอร์ดการยืม-คืน">
                   <span>เข้าสู่แดชบอร์ดการยืม-คืน</span>
                   <span class="btn-arrow">→</span>
@@ -650,31 +447,9 @@
                   จำแนกตามประเภทงาน อาคาร และวัดระดับการให้บริการ (SLA) ภายใน 3 วันทำการ
                 </p>
 
-                <div class="baseline-box">
-                  <div class="baseline-title">📌 ข้อมูลพื้นฐานและตัวชี้วัดสำคัญ (Key Baseline)</div>
-                  <div class="baseline-grid">
-                    <div class="baseline-item">
-                      <span class="baseline-item-lbl">รายการแจ้งซ่อมสะสม</span>
-                      <span class="baseline-item-val">770+ งาน</span>
-                    </div>
-                    <div class="baseline-item">
-                      <span class="baseline-item-lbl">ปิดงานตาม SLA (3 วัน)</span>
-                      <span class="baseline-item-val" style="color:var(--cpe-success);">82.4%</span>
-                    </div>
-                    <div class="baseline-item">
-                      <span class="baseline-item-lbl">ประเภทงานที่แจ้งสูงสุด</span>
-                      <span class="baseline-item-val">ระบบปรับอากาศ (แอร์) &amp; ไฟฟ้า</span>
-                    </div>
-                    <div class="baseline-item">
-                      <span class="baseline-item-lbl">สถิติช่วงเกิดเหตุบ่อย</span>
-                      <span class="baseline-item-val">ฤดูร้อน (มี.ค. - พ.ค.)</span>
-                    </div>
-                  </div>
                 </div>
-              </div>
 
               <div class="topic-card-action">
-                <span class="topic-owner">ผู้รับผิดชอบ: กิลเบิร์ต</span>
                 <a href="#/facility" class="btn-topic" aria-label="เข้าสู่แดชบอร์ดแจ้งซ่อมอาคาร">
                   <span>เข้าสู่แดชบอร์ดแจ้งซ่อมอาคาร</span>
                   <span class="btn-arrow">→</span>
@@ -699,31 +474,9 @@
                   เพื่อจำแนกครุภัณฑ์ที่ค่าซ่อมสะสมสูงเกิน 50% ของราคาซื้อสำหรับวางแผนจำหน่ายออก
                 </p>
 
-                <div class="baseline-box">
-                  <div class="baseline-title">📌 ข้อมูลพื้นฐานและตัวชี้วัดสำคัญ (Key Baseline)</div>
-                  <div class="baseline-grid">
-                    <div class="baseline-item">
-                      <span class="baseline-item-lbl">งานซ่อมครุภัณฑ์สะสม</span>
-                      <span class="baseline-item-val">145+ งาน</span>
-                    </div>
-                    <div class="baseline-item">
-                      <span class="baseline-item-lbl">เสร็จใน SLA (15 วันทำการ)</span>
-                      <span class="baseline-item-val" style="color:var(--cpe-success);">88.5%</span>
-                    </div>
-                    <div class="baseline-item">
-                      <span class="baseline-item-lbl">รายการไม่คุ้มซ่อมต่อ</span>
-                      <span class="baseline-item-val" style="color:var(--cpe-danger);">28 ชิ้น (ค่าซ่อม >50%)</span>
-                    </div>
-                    <div class="baseline-item">
-                      <span class="baseline-item-lbl">อัตราซ่อมสำเร็จส่งคืน</span>
-                      <span class="baseline-item-val">92.0%</span>
-                    </div>
-                  </div>
                 </div>
-              </div>
 
               <div class="topic-card-action">
-                <span class="topic-owner">ผู้รับผิดชอบ: กิลเบิร์ต</span>
                 <a href="#/repair" class="btn-topic" aria-label="เข้าสู่แดชบอร์ดซ่อมครุภัณฑ์">
                   <span>เข้าสู่แดชบอร์ดซ่อมครุภัณฑ์</span>
                   <span class="btn-arrow">→</span>
@@ -741,10 +494,10 @@
     // ข้อมูลโมดูลและแดชบอร์ดของระบบ (ขับเคลื่อนด้วย Module Metadata ตาม Frontend Guide)
     const PAGES = [
       { id: "overview", label: "ภาพรวมระบบ", isOverview: true },
-      { id: "assets", label: "ทะเบียนสินทรัพย์", owner: "Sutham", src: "src/asset-inv/", hide: [".app-header", ".module-nav"], theme: true },
-      { id: "borrow", label: "ยืม-คืน", owner: "Boom", src: "src/borrow/", hide: [".app-header"], theme: true },
-      { id: "facility", label: "แจ้งซ่อมอาคาร", owner: "G1ilbert", src: "src/maintenance/#/facility", hide: [".app-header", ".module-nav"], theme: false },
-      { id: "repair", label: "ซ่อมครุภัณฑ์", owner: "G1ilbert", src: "src/maintenance/#/repair", hide: [".app-header", ".module-nav"], theme: false }
+      { id: "assets", label: "ทะเบียนสินทรัพย์", src: "src/asset-inv/", hide: [".app-header", ".module-nav"], theme: true },
+      { id: "borrow", label: "ยืม-คืน", src: "src/borrow/", hide: [".app-header"], theme: true },
+      { id: "facility", label: "แจ้งซ่อมอาคาร", src: "src/maintenance/#/facility", hide: [".app-header", ".module-nav"], theme: false },
+      { id: "repair", label: "ซ่อมครุภัณฑ์", src: "src/maintenance/#/repair", hide: [".app-header", ".module-nav"], theme: false }
     ];
 
     const THEME_KEYS = ["cpe_theme", "cpe_dw_theme", "cpe-asset-inventory-theme"];
