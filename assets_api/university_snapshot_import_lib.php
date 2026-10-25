@@ -2,6 +2,10 @@
 declare(strict_types=1);
 
 const WAREHOUSE_UNIVERSITY_ASSET_URL = 'https://cpe.eng.kps.ku.ac.th/CPEAssets/assets_api/assets.php';
+const WAREHOUSE_UNIVERSITY_TYPE_URL = 'https://cpe.eng.kps.ku.ac.th/CPEAssets/assets_api/asset_types.php';
+const WAREHOUSE_UNIVERSITY_CATEGORY_URL = 'https://cpe.eng.kps.ku.ac.th/CPEAssets/assets_api/asset_categories.php';
+const WAREHOUSE_UNIVERSITY_LOCAL_TYPE_URL = 'http://127.0.0.1/assets_api/asset_types.php';
+const WAREHOUSE_UNIVERSITY_LOCAL_CATEGORY_URL = 'http://127.0.0.1/assets_api/asset_categories.php';
 const WAREHOUSE_UNIVERSITY_PAGE_SIZE = 100;
 const WAREHOUSE_UNIVERSITY_MAX_PAGES = 500;
 const WAREHOUSE_UNIVERSITY_MAX_RECORDS = 50000;
@@ -121,13 +125,20 @@ function warehouseUniversityValidateAsset(mixed $asset): void
     }
 }
 
-function warehouseUniversityFetchPage(int $page): array
+function warehouseUniversityFetchEndpointPage(string $endpointUrl, int $page): array
 {
-    if ($page < 1 || !extension_loaded('curl')) {
+    $allowedUrls = [
+        WAREHOUSE_UNIVERSITY_ASSET_URL,
+        WAREHOUSE_UNIVERSITY_TYPE_URL,
+        WAREHOUSE_UNIVERSITY_CATEGORY_URL,
+        WAREHOUSE_UNIVERSITY_LOCAL_TYPE_URL,
+        WAREHOUSE_UNIVERSITY_LOCAL_CATEGORY_URL,
+    ];
+    if ($page < 1 || !extension_loaded('curl') || !in_array($endpointUrl, $allowedUrls, true)) {
         throw new RuntimeException('Secure university API fetching is unavailable.');
     }
 
-    $handle = curl_init(WAREHOUSE_UNIVERSITY_ASSET_URL . '?limit=' . WAREHOUSE_UNIVERSITY_PAGE_SIZE . '&page=' . $page);
+    $handle = curl_init($endpointUrl . '?limit=' . WAREHOUSE_UNIVERSITY_PAGE_SIZE . '&page=' . $page);
     if ($handle === false) {
         throw new RuntimeException('Unable to initialize the university API request.');
     }
@@ -166,6 +177,223 @@ function warehouseUniversityFetchPage(int $page): array
     }
     warehouseUniversityValidateEnvelope($response);
     return $response;
+}
+
+function warehouseUniversityFetchPage(int $page): array
+{
+    return warehouseUniversityFetchEndpointPage(WAREHOUSE_UNIVERSITY_ASSET_URL, $page);
+}
+
+function warehouseUniversityCollectReferenceRows(callable $fetchPage, string $idField, string $codeField, bool $codeRequired): array
+{
+    $firstPage = $fetchPage(1);
+    warehouseUniversityValidateEnvelope($firstPage);
+    $reportedTotal = $firstPage['total'];
+    if ($reportedTotal > WAREHOUSE_UNIVERSITY_MAX_RECORDS) {
+        throw new RuntimeException('A reference list exceeds the configured import limit.');
+    }
+
+    $pageCount = max(1, (int)ceil($reportedTotal / WAREHOUSE_UNIVERSITY_PAGE_SIZE));
+    if ($pageCount > WAREHOUSE_UNIVERSITY_MAX_PAGES) {
+        throw new RuntimeException('A reference list exceeds the configured page limit.');
+    }
+
+    $rows = [];
+    $seenIds = [];
+    $firstPageFingerprint = hash('sha256', json_encode($firstPage['data'], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
+    for ($page = 1; $page <= $pageCount; $page++) {
+        $response = $page === 1 ? $firstPage : $fetchPage($page);
+        warehouseUniversityValidateEnvelope($response);
+        if ($response['total'] !== $reportedTotal) {
+            throw new RuntimeException('A reference-list total changed during pagination.');
+        }
+
+        $expectedRows = min(WAREHOUSE_UNIVERSITY_PAGE_SIZE, max(0, $reportedTotal - (($page - 1) * WAREHOUSE_UNIVERSITY_PAGE_SIZE)));
+        if (count($response['data']) !== $expectedRows) {
+            throw new RuntimeException('A reference-list page was incomplete or unexpected.');
+        }
+
+        foreach ($response['data'] as $row) {
+            if (!is_array($row)
+                || !array_key_exists($idField, $row)
+                || !array_key_exists($codeField, $row)
+                || !is_int($row[$idField])
+                || $row[$idField] < 0) {
+                throw new RuntimeException('A reference list contains an invalid row.');
+            }
+            $id = $row[$idField];
+            $idKey = (string)$id;
+            if (isset($seenIds[$idKey])) {
+                throw new RuntimeException('A reference list contains duplicate IDs.');
+            }
+            $seenIds[$idKey] = true;
+
+            $code = $row[$codeField];
+            if ($code !== null && !is_string($code) && !is_int($code) && !is_float($code)) {
+                throw new RuntimeException('A reference list contains an invalid code.');
+            }
+            $row[$codeField] = warehouseUniversityNormalizeText($code === null ? null : (string)$code);
+            if ($codeRequired && $row[$codeField] === null) {
+                throw new RuntimeException('A reference list contains an empty required code.');
+            }
+            $rows[] = $row;
+        }
+    }
+
+    if (count($rows) !== $reportedTotal) {
+        throw new RuntimeException('The validated reference-list count did not match its total.');
+    }
+
+    $verificationPage = $fetchPage(1);
+    warehouseUniversityValidateEnvelope($verificationPage);
+    if ($verificationPage['total'] !== $reportedTotal
+        || hash('sha256', json_encode($verificationPage['data'], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)) !== $firstPageFingerprint) {
+        throw new RuntimeException('A reference list changed during collection; no snapshot was saved. Please retry.');
+    }
+
+    return $rows;
+}
+
+function warehouseUniversityLoadReferenceRows(string $referenceName): array
+{
+    $references = [
+        'types' => [
+            'path' => __DIR__ . '/../mock_api/asset_types.json',
+            'id_field' => 'type_id',
+            'code_field' => 'type_code',
+            'environment' => 'CPE_UNIVERSITY_TYPE_API_URL',
+            'default_url' => WAREHOUSE_UNIVERSITY_TYPE_URL,
+            'local_url' => WAREHOUSE_UNIVERSITY_LOCAL_TYPE_URL,
+        ],
+        'categories' => [
+            'path' => __DIR__ . '/../mock_api/asset_categories.json',
+            'id_field' => 'category_id',
+            'code_field' => 'category_code',
+            'environment' => 'CPE_UNIVERSITY_CATEGORY_API_URL',
+            'default_url' => WAREHOUSE_UNIVERSITY_CATEGORY_URL,
+            'local_url' => WAREHOUSE_UNIVERSITY_LOCAL_CATEGORY_URL,
+        ],
+    ];
+    if (!isset($references[$referenceName])) {
+        throw new InvalidArgumentException('Unknown bundled asset reference list.');
+    }
+
+    $reference = $references[$referenceName];
+    $configuredUrl = getenv($reference['environment']);
+    if (is_string($configuredUrl) && trim($configuredUrl) !== '') {
+        $configuredUrl = trim($configuredUrl);
+        if (!in_array($configuredUrl, [$reference['default_url'], $reference['local_url']], true)) {
+            throw new RuntimeException('A configured university reference endpoint is not allowed.');
+        }
+        $fetchPage = static fn(int $page): array => warehouseUniversityFetchEndpointPage($configuredUrl, $page);
+        return warehouseUniversityCollectReferenceRows(
+            $fetchPage,
+            $reference['id_field'],
+            $reference['code_field'],
+            false,
+        );
+    }
+
+    $contents = file_get_contents($reference['path']);
+    if ($contents === false) {
+        throw new RuntimeException('A bundled asset reference list is unavailable; no snapshot was saved.');
+    }
+
+    try {
+        $payload = json_decode($contents, true, 64, JSON_THROW_ON_ERROR);
+    } catch (JsonException) {
+        throw new RuntimeException('A bundled asset reference list contains invalid JSON; no snapshot was saved.');
+    }
+    warehouseUniversityValidateEnvelope($payload);
+    if (count($payload['data']) !== $payload['total']) {
+        throw new RuntimeException('A bundled asset reference list is incomplete; no snapshot was saved.');
+    }
+
+    $fetchPage = static function (int $page) use ($payload): array {
+        $offset = ($page - 1) * WAREHOUSE_UNIVERSITY_PAGE_SIZE;
+        return [
+            'success' => true,
+            'total' => $payload['total'],
+            'data' => array_slice($payload['data'], $offset, WAREHOUSE_UNIVERSITY_PAGE_SIZE),
+        ];
+    };
+
+    return warehouseUniversityCollectReferenceRows(
+        $fetchPage,
+        $reference['id_field'],
+        $reference['code_field'],
+        false,
+    );
+}
+
+function warehouseUniversityBuildTypeCodeMap(array $typeRows): array
+{
+    $typeCodeById = [];
+    foreach ($typeRows as $row) {
+        $typeCode = warehouseUniversityNormalizeText($row['type_code'] ?? null);
+        if ($typeCode !== null) {
+            $typeCodeById[$row['type_id']] = strtoupper($typeCode);
+        }
+    }
+    return $typeCodeById;
+}
+
+function warehouseUniversityBuildCategoryMaps(array $categoryRows): array
+{
+    if ($categoryRows === []) {
+        throw new RuntimeException('The reference data contains no asset categories.');
+    }
+
+    $categoryById = [];
+    $categoryByCode = [];
+    foreach ($categoryRows as $row) {
+        $categoryId = $row['category_id'];
+        $categoryCode = $row['category_code'];
+        if (($categoryCode !== null
+                && (!is_string($categoryCode) || preg_match('/^\d{2}$/D', $categoryCode) !== 1))
+            || isset($categoryById[$categoryId])
+            || ($categoryCode !== null && isset($categoryByCode[$categoryCode]))) {
+            throw new RuntimeException('The reference data contains an invalid or duplicate category mapping.');
+        }
+
+        $category = [
+            'category_id' => $categoryId,
+            'category_code' => $categoryCode,
+            'category_name' => warehouseUniversityNormalizeText($row['category_name_th'] ?? null),
+        ];
+        $categoryById[$categoryId] = $category;
+        if ($categoryCode !== null) {
+            $categoryByCode[$categoryCode] = $category;
+        }
+    }
+
+    return [$categoryById, $categoryByCode];
+}
+
+function warehouseUniversityResolveCategory(array $asset, array $typeCodeById, array $categoryById, array $categoryByCode): array
+{
+    $categoryId = $asset['category_id'];
+    if ($categoryId !== null) {
+        return $categoryById[$categoryId] ?? [
+            'category_id' => $categoryId,
+            'category_code' => null,
+            'category_name' => null,
+        ];
+    }
+
+    $typeCode = warehouseUniversityNormalizeText($asset['type_code']);
+    if ($typeCode === null && $asset['type_id'] !== null) {
+        $typeCode = $typeCodeById[$asset['type_id']] ?? null;
+    }
+    if ($typeCode === null || preg_match('/^[A-Z]{2}(\d{2})$/D', strtoupper($typeCode), $matches) !== 1) {
+        throw new RuntimeException('An asset with no category ID has no mappable type code; no snapshot was saved.');
+    }
+
+    $category = $categoryByCode[$matches[1]] ?? null;
+    if (!is_array($category)) {
+        throw new RuntimeException('An asset type code has no matching category; no snapshot was saved.');
+    }
+    return $category;
 }
 
 function warehouseUniversityUuidV4(): string

@@ -129,7 +129,7 @@ function warehouseUniversityNormalizeSource(?string $source): ?string
     ][$source] ?? $source;
 }
 
-function warehouseUniversityPersistSnapshot(PDO $pdo, array $snapshot): void
+function warehouseUniversityPersistSnapshot(PDO $pdo, array $snapshot, array $typeCodeById, array $resolvedCategoryByAssetId): void
 {
     $snapshotDate = new DateTimeImmutable($snapshot['snapshot_date'], new DateTimeZone('Asia/Bangkok'));
     $dateCache = [];
@@ -180,14 +180,21 @@ function warehouseUniversityPersistSnapshot(PDO $pdo, array $snapshot): void
         ], $dimensionCache);
 
         $typeCode = warehouseUniversityNormalizeText($asset['type_code']);
+        if ($typeCode === null && $asset['type_id'] !== null) {
+            $typeCode = $typeCodeById[$asset['type_id']] ?? null;
+        }
         $typeName = warehouseUniversityNormalizeText($asset['type_name']);
         $typeKey = warehouseUniversityDimensionKey($pdo, 'type', $asset['type_id'], [
             'type_code' => $typeCode,
             'type_name' => $typeName,
         ], $dimensionCache);
 
-        $categoryKey = warehouseUniversityDimensionKey($pdo, 'category', $asset['category_id'], [
-            'category_name' => null,
+        $resolvedCategory = $resolvedCategoryByAssetId[$asset['asset_id']] ?? null;
+        if (!is_array($resolvedCategory) || !is_int($resolvedCategory['category_id'] ?? null)) {
+            throw new LogicException('An asset category was not resolved before persistence.');
+        }
+        $categoryKey = warehouseUniversityDimensionKey($pdo, 'category', $resolvedCategory['category_id'], [
+            'category_name' => $resolvedCategory['category_name'],
         ], $dimensionCache);
         $locationKey = warehouseUniversityDimensionKey($pdo, 'location', $asset['location_id'], [
             'building' => null,
@@ -304,6 +311,20 @@ try {
         WAREHOUSE_UNIVERSITY_MAX_RECORDS,
         300,
     );
+    $typeRows = warehouseUniversityLoadReferenceRows('types');
+    $categoryRows = warehouseUniversityLoadReferenceRows('categories');
+    $typeCodeById = warehouseUniversityBuildTypeCodeMap($typeRows);
+    [$categoryById, $categoryByCode] = warehouseUniversityBuildCategoryMaps($categoryRows);
+    $resolvedCategoryByAssetId = [];
+    foreach ($assets as $asset) {
+        $resolvedCategoryByAssetId[$asset['asset_id']] = warehouseUniversityResolveCategory(
+            $asset,
+            $typeCodeById,
+            $categoryById,
+            $categoryByCode,
+        );
+    }
+
     $snapshotDate = new DateTimeImmutable('now', new DateTimeZone('Asia/Bangkok'));
     $importedAt = new DateTimeImmutable('now', new DateTimeZone('UTC'));
     $snapshotId = warehouseUniversityUuidV4();
@@ -325,7 +346,7 @@ try {
     require __DIR__ . '/warehouse_db.php';
     $warehousePdo->beginTransaction();
     try {
-        warehouseUniversityPersistSnapshot($warehousePdo, $snapshot);
+        warehouseUniversityPersistSnapshot($warehousePdo, $snapshot, $typeCodeById, $resolvedCategoryByAssetId);
         $archivePath = $archiveDirectory . DIRECTORY_SEPARATOR . warehouseUniversityWriteArchive($archiveDirectory, $snapshot);
         $warehousePdo->commit();
     } catch (Throwable $error) {

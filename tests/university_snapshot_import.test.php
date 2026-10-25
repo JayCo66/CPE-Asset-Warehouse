@@ -107,6 +107,82 @@ importRunTest('rejects page-one changes during the paginated import', static fun
     }, 'A dataset that changes during collection must not be imported.');
 });
 
+importRunTest('collects complete reference pages and rejects duplicate reference IDs', static function (): void {
+    $rows = [
+        ['category_id' => 6, 'category_code' => '07', 'category_name_th' => 'Category'],
+        ['category_id' => 8, 'category_code' => '09', 'category_name_th' => 'Equipment'],
+    ];
+    $calls = 0;
+    $collected = warehouseUniversityCollectReferenceRows(
+        static function (int $page) use (&$calls, $rows): array {
+            importExpectSame(1, $page, 'A one-page reference list should request page one.');
+            $calls++;
+            return ['success' => true, 'total' => count($rows), 'data' => $rows];
+        },
+        'category_id',
+        'category_code',
+        true,
+    );
+
+    importExpectSame($rows, $collected, 'Every validated reference row should be preserved.');
+    importExpectSame(2, $calls, 'Page one should be re-fetched to detect changes during collection.');
+
+    importExpectThrows(static fn() => warehouseUniversityCollectReferenceRows(
+        static fn(): array => [
+            'success' => true,
+            'total' => 2,
+            'data' => [
+                ['category_id' => 6, 'category_code' => '07'],
+                ['category_id' => 6, 'category_code' => '08'],
+            ],
+        ],
+        'category_id',
+        'category_code',
+        true,
+    ), 'Duplicate reference IDs must stop the import.');
+});
+
+importRunTest('loads complete bundled type and category reference data', static function (): void {
+    $typeRows = warehouseUniversityLoadReferenceRows('types');
+    $categoryRows = warehouseUniversityLoadReferenceRows('categories');
+    [, $categoryByCode] = warehouseUniversityBuildCategoryMaps($categoryRows);
+
+    importExpectSame(true, $typeRows !== [], 'The bundled type reference list should load.');
+    importExpectSame(true, $categoryRows !== [], 'The bundled category reference list should load.');
+    importExpectSame(true, isset($categoryByCode['07']), 'The bundled category list should include the known 07 code.');
+    importExpectThrows(static fn() => warehouseUniversityLoadReferenceRows('untrusted-path'), 'Reference file names must be allow-listed.');
+});
+
+importRunTest('resolves a missing category through type and category reference codes', static function (): void {
+    $typeCodeById = warehouseUniversityBuildTypeCodeMap([
+        ['type_id' => 4, 'type_code' => 'fa07'],
+    ]);
+    [$categoryById, $categoryByCode] = warehouseUniversityBuildCategoryMaps([
+        ['category_id' => 6, 'category_code' => '07', 'category_name_th' => 'Category'],
+    ]);
+    $asset = importFakeAsset(1);
+    $asset['category_id'] = null;
+    $asset['type_id'] = 4;
+    $asset['type_code'] = null;
+
+    $category = warehouseUniversityResolveCategory($asset, $typeCodeById, $categoryById, $categoryByCode);
+    importExpectSame(6, $category['category_id'], 'The type-code suffix must resolve to the source category ID.');
+    importExpectSame('07', $category['category_code'], 'The resolved category must retain its source code.');
+
+    $asset['type_id'] = 99;
+    importExpectThrows(
+        static fn() => warehouseUniversityResolveCategory($asset, $typeCodeById, $categoryById, $categoryByCode),
+        'An unmappable type must not be persisted as an invented category.',
+    );
+});
+
+importRunTest('rejects upstream URLs outside the fixed university API allowlist', static function (): void {
+    importExpectThrows(
+        static fn() => warehouseUniversityFetchEndpointPage('https://attacker.example/assets.php', 1),
+        'The importer must not fetch a browser-selected or arbitrary host.',
+    );
+});
+
 importRunTest('allows same-origin snapshot requests on a deployed host and rejects cross-origin requests', static function (): void {
     $request = [
         'REMOTE_ADDR' => '203.0.113.20',
