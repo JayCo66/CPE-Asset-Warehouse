@@ -25,7 +25,7 @@ import {
   initExecutiveDashboard,
   refreshExecutiveDashboard,
   setInventoryDashboardPage,
-} from "./executive-dashboard.mjs?v=20261025.8";
+} from "./executive-dashboard.mjs?v=20261026.2";
 
 const dashboardData = {
   moduleNav: [
@@ -54,8 +54,8 @@ const ASSET_INVENTORY_API_ENDPOINT = new URL(
 ).href;
 const DASHBOARD_SECTION_FILES = [
   "sections/executive-filters.html",
-  "sections/executive-overview.html",
   "sections/executive-navigation.html",
+  "sections/executive-overview.html",
   "sections/portfolio.html",
   "sections/departments.html",
   "sections/locations.html",
@@ -247,7 +247,7 @@ function installDashboardFilterPanels(container) {
   const globalSnapshotPanel = template.cloneNode(true);
   globalSnapshotPanel.dataset.filterScope = "snapshot";
   globalSnapshotPanel.setAttribute("aria-label", "เลือกชุดข้อมูลของแดชบอร์ด");
-  globalSnapshotPanel.querySelector(".dashboard-filter-details")?.remove();
+  globalSnapshotPanel.querySelector(".dashboard-filter-toolbar")?.remove();
   globalSnapshotPanel.querySelector("[data-dashboard-request-state]")?.remove();
   makeIdsUnique(globalSnapshotPanel, "snapshot");
   const overviewHeading = overview.querySelector(".page-heading");
@@ -258,11 +258,13 @@ function installDashboardFilterPanels(container) {
   requestState?.remove();
   if (requestState) globalSnapshotPanel.after(requestState);
 
-  const targets = pages.map((element) => ({
-    id: element.dataset.dashboardPage,
-    element,
-    label: element.querySelector("h1")?.textContent.trim() || element.dataset.dashboardPage,
-  }));
+  const targets = pages
+    .filter((element) => element.dataset.dashboardPage !== "overview")
+    .map((element) => ({
+      id: element.dataset.dashboardPage,
+      element,
+      label: element.querySelector("h1")?.textContent.trim() || element.dataset.dashboardPage,
+    }));
 
   for (const target of targets) {
     const panel = template.cloneNode(true);
@@ -438,13 +440,19 @@ function handleDashboardSectionClick(event) {
   if (link.dataset.dashboardLink !== getCurrentDashboardPage()) return;
 
   event.preventDefault();
-  window.location.hash = "#/inventory/overview";
+  requestedDashboardScrollTarget = null;
+  scrollDashboardSectionIntoView(link.dataset.dashboardLink);
 }
 
-function expandDashboardFilters(pageId) {
-  if (pageId === "overview") return;
-  const details = elements.dashboardSections.querySelector(`[data-filter-scope="${pageId}"] .dashboard-filter-details`);
-  if (details) details.open = true;
+function handleDashboardFilterBlankClick(event) {
+  if (!(event.target instanceof Element)) return;
+  const panel = event.target.closest(".dashboard-filter-panel");
+  if (!panel) return;
+  const details = panel.querySelector(".dashboard-filter-details[open]");
+  if (!details) return;
+  if (event.target.closest("a, button, input, select, textarea, summary, label, [role='button'], [tabindex]:not([tabindex='-1']), [data-dashboard-filter], [data-dashboard-filter-reset], [data-drill-filter], [data-drill-filters]")) return;
+
+  details.open = false;
 }
 
 function scrollDashboardSectionIntoView(pageId) {
@@ -769,7 +777,6 @@ function renderModuleView(moduleId = getCurrentModuleId()) {
   } else {
     const pageId = getCurrentDashboardPage();
     setInventoryDashboardPage(pageId);
-    expandDashboardFilters(pageId);
     const scrollTarget = requestedDashboardScrollTarget;
     requestedDashboardScrollTarget = null;
     if (pageId === "explorer" && scrollTarget === "explorer") scrollAssetExplorerIntoView();
@@ -1174,6 +1181,7 @@ function exportAllMatchingAssetRows() {
 }
 
 function initInteractions() {
+  document.addEventListener("click", handleDashboardFilterBlankClick);
   elements.dashboardSections.addEventListener("click", handleDashboardSectionClick);
   elements.assetApiSearch.addEventListener("input", () => {
     window.clearTimeout(assetApiSearchTimer);

@@ -45,6 +45,14 @@ test("uses Thai copy for snapshot concepts across the inventory dashboard", () =
   assert.match(dashboardApp, /formatApiDate\(row\.snapshot_date\)/u);
 });
 
+test("university snapshot import uses selectors that survive filter-panel ID suffixing", () => {
+  assert.match(dashboardApp, /idMap\.set\(element\.id, `\$\{element\.id\}-\$\{suffix\}`\)/u);
+  assert.match(executiveFilters, /data-university-snapshot-import/u);
+  assert.match(executiveFilters, /data-snapshot-import-status/u);
+  assert.match(executiveDashboard, /event\.target\.closest\("\[data-university-snapshot-import\]"\)/u);
+  assert.match(executiveDashboard, /button\.closest\("\.snapshot-filter-row"\)\?\.querySelector\("\[data-snapshot-import-status\]"\)/u);
+});
+
 test("uses a decision-first overview with API-backed readiness, aging, and unavailable reasons", () => {
   assert.match(overviewHtml, /class="overview-executive-layout"/u);
   assert.match(overviewHtml, /id="overview-readiness-rate"/u);
@@ -72,7 +80,7 @@ test("uses a decision-first overview with API-backed readiness, aging, and unava
   assert.match(executiveDashboard, /ราคาอ้างอิงจำลอง/u);
   assert.match(inventoryDashboardApi, /warehouseDashboardDisposalEstimate/u);
   assert.match(inventoryDashboardApi, /warehouseDashboardDisposalEstimate\(\s*\$warehousePdo,\s*\$filters,\s*\$selectedSnapshot/su);
-  assert.match(inventoryDisposalApi, /warehouseInventoryBuildWhere\(\$filters,\s*\$snapshotDateKey\)/u);
+  assert.match(inventoryDisposalApi, /warehouseInventoryBuildWhere\(\$filters,\s*null,\s*\$snapshotId\)/u);
   assert.match(inventoryDisposalApi, /fact_asset_maintenance/u);
   assert.match(inventoryDisposalApi, /fai\.`asset_count`/u);
 });

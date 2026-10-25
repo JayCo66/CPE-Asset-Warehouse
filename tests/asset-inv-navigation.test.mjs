@@ -59,6 +59,5 @@ test("loads existing executive page fragments and exposes every executive view i
   }
 
   const links = [...localNavigation.matchAll(/data-dashboard-link="([\w-]+)"/gu)].map((match) => match[1]);
-  assert.deepEqual(links, ["overview", "portfolio", "departments", "locations", "aging", "acquisition", "governance"]);
-  assert.doesNotMatch(localNavigation, /data-dashboard-link="explorer"/u, "the asset explorer remains a drill-down view");
+  assert.deepEqual(links, ["overview", "portfolio", "departments", "locations", "aging", "acquisition", "governance", "explorer"]);
 });

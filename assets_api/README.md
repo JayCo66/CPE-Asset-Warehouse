@@ -6,17 +6,19 @@ The asset-inventory dashboard reads the local warehouse through:
 GET /assets_api/fact_asset_inventory.php?page=1&limit=10&q=เครื่องมือ&status=พร้อมใช้งาน&type=ครุภัณฑ์สำนักงาน
 ```
 
-The `data` list returns rows from the latest `snapshot_date_key` only. Existing
-response fields are preserved; `total` continues to describe the complete
-latest snapshot and `limit` retains its 1–100 range. The response also includes
-an additive `summary` object with read-only aggregates for the latest and
-immediately previous snapshots, when available:
+The `data` list returns rows from one `snapshot_id` only. The default is the
+latest capture. Use `snapshot=id:<uuid>` to select a specific capture; legacy
+`snapshot=YYYYMMDD` requests resolve to the newest snapshot for that date.
+Existing response fields are preserved, with additive `snapshot_id` on each
+row. `total` describes the selected snapshot and `limit` retains its 1–100
+range. An additive `summary` object contains read-only aggregates for the
+selected snapshot and immediately previous capture, when available:
 
-- `total` remains the number of rows in the latest snapshot.
+- `total` remains the number of rows in the selected snapshot.
 - `matchedTotal` is the number of rows matching `q`, `status`, and `type`.
 - `page` is the effective page after clamping to the matching result count.
 - `filterOptions.statuses` and `filterOptions.types` contain the available
-  filter choices for the entire latest snapshot, not just the current page.
+  filter choices for the entire selected snapshot, not just the current page.
 
 Search is server-side, with text-matching behavior determined by the MySQL
 column collation. It checks asset ID/code/name, type code/name, category, brand/model,
@@ -25,8 +27,8 @@ and names. Search terms are limited to 200 characters; status/type values are
 limited to 100 characters. `page` and `limit` retain their existing limits.
 
 The current-page CSV button exports only rows returned for the active page.
-For all matching rows in the latest snapshot, the browser navigates directly to
-the streaming endpoint (no complete record set is loaded into JavaScript):
+For all matching rows in the selected snapshot, the browser navigates directly
+to the streaming endpoint (no complete record set is loaded into JavaScript):
 
 ```text
 GET /assets_api/fact_asset_inventory.php?format=csv&scope=all&q=เครื่องมือ&status=พร้อมใช้งาน&type=ครุภัณฑ์สำนักงาน
@@ -49,21 +51,47 @@ stream to bound PHP memory use. An empty match produces a header-only CSV.
 
 Counts are aggregated from the existing one-row-per-asset snapshot facts and
 their stored flags/age values. `previous` is `null` when the warehouse has no
-earlier snapshot. No tables or source data are changed. `limit` accepts values
-from 1 to 100; `page` starts at 1.
+earlier capture. Two snapshots on one date remain separate because comparison
+and filtering use `snapshot_id`. `limit` accepts values from 1 to 100; `page`
+starts at 1.
 There is no university-API fallback in the dashboard.
+
+## University snapshot import
+
+The Asset Inventory snapshot selector sends a same-origin
+`POST /assets_api/import_university_snapshot.php`. The endpoint fetches only the
+fixed university asset URL, validates every page before persistence, and saves
+the new snapshot to `cpe_warehouse` and `output/history`. The browser never
+receives the university URL or database connection details.
+
+This project has no server-side login or role system. For the current XAMPP
+deployment, the importer is restricted on the server to loopback clients,
+checks the request Origin and a custom same-origin header, and rejects other
+hosts. It is not suitable for a shared/LAN deployment until staff
+authentication and authorization are added. PHP's cURL extension is required.
+
+Apply `database/migrations/20261025_add_inventory_snapshot_identity.sql`
+before using the updated Asset Inventory APIs. The additive migration is
+rerunnable and stops if the two verified baseline snapshots or their fact
+uniqueness differ. `database/warehouse_schema.sql` contains the matching
+fresh-install schema.
+
+The ETL stores snapshot IDs and labels in history metadata, preserves them
+through full refresh, and writes a separate archive file for each same-day
+capture. Keep `output/history` available. Generated archives are ignored by Git
+and should not be committed.
 
 ## Local setup
 
-Requirements: PHP with `pdo_mysql`, MySQL, and the `cpe_warehouse` database
+Requirements: PHP with `pdo_mysql` and cURL, MySQL, and the `cpe_warehouse` database
 loaded from the warehouse ETL output.
 
 Configure the connection with `WAREHOUSE_DB_HOST`, `WAREHOUSE_DB_PORT`,
 `WAREHOUSE_DB_USER`, and `WAREHOUSE_DB_PASS`. The connection uses
 the existing `DB_HOST`, `DB_PORT`, `DB_USER`, and `DB_PASS` variables, then local
 development defaults (`localhost:3306`, user `root`, empty password). In a
-deployed environment, use a dedicated MySQL user with read-only access to the
-warehouse tables.
+deployed environment, the dashboard needs read access and the importer needs
+write access to the snapshot, asset dimensions, and inventory fact tables.
 
 Start PHP's built-in server from the repository root:
 

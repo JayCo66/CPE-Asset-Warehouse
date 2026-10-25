@@ -13,6 +13,21 @@ CREATE TABLE `dim_date` (
   `fiscal_year` INT COMMENT 'ปีงบประมาณ'
 );
 
+CREATE TABLE `dim_inventory_snapshot` (
+  `snapshot_id` CHAR(36) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY,
+  `snapshot_date_key` INT NOT NULL COMMENT 'วันที่ของ snapshot รูปแบบ YYYYMMDD',
+  `snapshot_label` VARCHAR(120) NOT NULL,
+  `source_system` VARCHAR(40) NOT NULL,
+  `imported_at` DATETIME NULL COMMENT 'เวลานำเข้าฝั่งเซิร์ฟเวอร์ (UTC); NULL สำหรับข้อมูลเดิม',
+  `asset_count` INT UNSIGNED NOT NULL DEFAULT 0,
+  `archive_key` VARCHAR(255) NULL,
+  UNIQUE KEY `uq_dim_inventory_snapshot_label` (`snapshot_label`),
+  UNIQUE KEY `uq_dim_inventory_snapshot_archive` (`archive_key`),
+  KEY `idx_dim_inventory_snapshot_date` (`snapshot_date_key`, `imported_at`),
+  CONSTRAINT `fk_dim_inventory_snapshot_date`
+    FOREIGN KEY (`snapshot_date_key`) REFERENCES `dim_date` (`date_key`)
+);
+
 CREATE TABLE `dim_department` (
   `department_key` INT AUTO_INCREMENT PRIMARY KEY,
   `department_id` INT COMMENT 'Original ID จากตาราง departments',
@@ -129,6 +144,7 @@ CREATE TABLE `fact_general_maintenance` (
 CREATE TABLE `fact_asset_inventory` (
   `asset_fact_id` INT AUTO_INCREMENT PRIMARY KEY,
   `snapshot_date_key` INT COMMENT 'FK เชื่อม dim_date (วันที่บันทึกยอด snapshot)',
+  `snapshot_id` CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL COMMENT 'FK เชื่อม snapshot identity ที่แยกแต่ละชุดข้อมูล',
   `acquisition_date_key` INT COMMENT 'FK เชื่อม dim_date (ปีงบประมาณ/วันที่จัดหามา ถอดจากรหัสหรือปีจัดซื้อ)',
   `asset_key` INT COMMENT 'FK เชื่อม dim_asset',
   `department_key` INT COMMENT 'FK เชื่อม dim_department (หน่วยงานผู้ถือครอง)',
@@ -140,7 +156,8 @@ CREATE TABLE `fact_asset_inventory` (
   `is_damaged_flag` TINYINT(1) COMMENT '1 = ชำรุด/ส่งซ่อม, 0 = ปกติ',
   `is_below_threshold_flag` TINYINT(1) COMMENT '1 = ต่ำกว่าเกณฑ์ (< 5,000 บาท), 0 = ตามเกณฑ์',
   `has_location_flag` TINYINT(1) COMMENT '1 = ระบุตำแหน่งที่ตั้งแล้ว, 0 = ยังไม่ระบุ',
-  `asset_age_years` INT COMMENT 'อายุครุภัณฑ์คำนวณถึงปัจจุบัน (ปี)'
+  `asset_age_years` INT COMMENT 'อายุครุภัณฑ์คำนวณ ณ วันที่ snapshot (ปี)',
+  UNIQUE KEY `uq_fact_inventory_snapshot_asset` (`snapshot_id`, `asset_key`)
 );
 
 -- ==========================================
@@ -178,6 +195,7 @@ ALTER TABLE `fact_general_maintenance` ADD FOREIGN KEY (`staff_user_key`) REFERE
 
 -- Links สำหรับ Fact Asset Inventory
 ALTER TABLE `fact_asset_inventory` ADD FOREIGN KEY (`snapshot_date_key`) REFERENCES `dim_date` (`date_key`);
+ALTER TABLE `fact_asset_inventory` ADD FOREIGN KEY (`snapshot_id`) REFERENCES `dim_inventory_snapshot` (`snapshot_id`);
 ALTER TABLE `fact_asset_inventory` ADD FOREIGN KEY (`acquisition_date_key`) REFERENCES `dim_date` (`date_key`);
 ALTER TABLE `fact_asset_inventory` ADD FOREIGN KEY (`asset_key`) REFERENCES `dim_asset` (`asset_key`);
 ALTER TABLE `fact_asset_inventory` ADD FOREIGN KEY (`department_key`) REFERENCES `dim_department` (`department_key`);

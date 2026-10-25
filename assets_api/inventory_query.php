@@ -8,8 +8,10 @@ function warehouseInventoryParseFilters(array $query): array
         throw new InvalidArgumentException('Invalid age threshold.');
     }
 
-    $snapshot = warehouseInventoryReadQueryString($query, 'snapshot', 'latest', 10);
-    if ($snapshot !== 'latest' && preg_match('/^\d{8}$/D', $snapshot) !== 1) {
+    $snapshot = warehouseInventoryReadQueryString($query, 'snapshot', 'latest', 64);
+    if ($snapshot !== 'latest'
+        && preg_match('/^\d{8}$/D', $snapshot) !== 1
+        && preg_match('/^id:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iD', $snapshot) !== 1) {
         throw new InvalidArgumentException('Invalid snapshot key.');
     }
 
@@ -79,11 +81,14 @@ function warehouseInventoryReadQueryString(array $query, string $name, string $d
     return $value;
 }
 
-function warehouseInventoryBuildWhere(array $filters, ?int $snapshotDateKey): array
+function warehouseInventoryBuildWhere(array $filters, ?int $snapshotDateKey, ?string $snapshotId = null): array
 {
     $conditions = [];
     $params = [];
-    if ($snapshotDateKey !== null) {
+    if ($snapshotId !== null) {
+        $conditions[] = 'fai.`snapshot_id` = :snapshot_id';
+        $params['snapshot_id'] = $snapshotId;
+    } elseif ($snapshotDateKey !== null) {
         $conditions[] = 'fai.`snapshot_date_key` = :snapshot_date_key';
         $params['snapshot_date_key'] = $snapshotDateKey;
     }
@@ -205,6 +210,88 @@ function warehouseInventoryBuildWhere(array $filters, ?int $snapshotDateKey): ar
     return [
         'sql' => $conditions === [] ? '' : 'WHERE ' . implode(' AND ', $conditions),
         'params' => $params,
+    ];
+}
+
+function warehouseInventorySnapshotOptions(PDO $pdo): array
+{
+    $statement = $pdo->query(
+        'SELECT
+            snapshot.`snapshot_id`,
+            snapshot.`snapshot_date_key`,
+            snapshot_date.`full_date` AS `snapshot_date`,
+            snapshot.`snapshot_label`,
+            snapshot.`source_system`,
+            snapshot.`imported_at`,
+            COALESCE(SUM(fai.`asset_count`), 0) AS `assets`
+        FROM `dim_inventory_snapshot` snapshot
+        LEFT JOIN `dim_date` snapshot_date
+            ON snapshot_date.`date_key` = snapshot.`snapshot_date_key`
+        LEFT JOIN `fact_asset_inventory` fai
+            ON fai.`snapshot_id` = snapshot.`snapshot_id`
+        GROUP BY snapshot.`snapshot_id`, snapshot.`snapshot_date_key`, snapshot_date.`full_date`,
+            snapshot.`snapshot_label`, snapshot.`source_system`, snapshot.`imported_at`
+        ORDER BY snapshot.`snapshot_date_key` DESC, snapshot.`imported_at` DESC, snapshot.`snapshot_id` DESC'
+    );
+
+    return array_map('warehouseInventorySnapshotOptionFromRow', $statement->fetchAll(PDO::FETCH_ASSOC));
+}
+
+function warehouseInventoryResolveSnapshot(PDO $pdo, string $selection): ?array
+{
+    $conditions = [];
+    $parameters = [];
+    if ($selection !== 'latest') {
+        if (preg_match('/^id:([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/iD', $selection, $matches) === 1) {
+            $conditions[] = 'snapshot.`snapshot_id` = :snapshot_id';
+            $parameters['snapshot_id'] = strtolower($matches[1]);
+        } elseif (preg_match('/^\d{8}$/D', $selection) === 1) {
+            $conditions[] = 'snapshot.`snapshot_date_key` = :snapshot_date_key';
+            $parameters['snapshot_date_key'] = (int)$selection;
+        } else {
+            return null;
+        }
+    }
+
+    $query = 'SELECT
+            snapshot.`snapshot_id`,
+            snapshot.`snapshot_date_key`,
+            snapshot_date.`full_date` AS `snapshot_date`,
+            snapshot.`snapshot_label`,
+            snapshot.`source_system`,
+            snapshot.`imported_at`,
+            COALESCE(SUM(fai.`asset_count`), 0) AS `assets`
+        FROM `dim_inventory_snapshot` snapshot
+        LEFT JOIN `dim_date` snapshot_date
+            ON snapshot_date.`date_key` = snapshot.`snapshot_date_key`
+        LEFT JOIN `fact_asset_inventory` fai
+            ON fai.`snapshot_id` = snapshot.`snapshot_id`' .
+        ($conditions === [] ? '' : ' WHERE ' . implode(' AND ', $conditions)) . '
+        GROUP BY snapshot.`snapshot_id`, snapshot.`snapshot_date_key`, snapshot_date.`full_date`,
+            snapshot.`snapshot_label`, snapshot.`source_system`, snapshot.`imported_at`
+        ORDER BY snapshot.`snapshot_date_key` DESC, snapshot.`imported_at` DESC, snapshot.`snapshot_id` DESC
+        LIMIT 1';
+    $statement = $pdo->prepare($query);
+    foreach ($parameters as $name => $value) {
+        $statement->bindValue(':' . $name, $value, is_int($value) ? PDO::PARAM_INT : PDO::PARAM_STR);
+    }
+    $statement->execute();
+    $row = $statement->fetch(PDO::FETCH_ASSOC);
+    return is_array($row) ? warehouseInventorySnapshotOptionFromRow($row) : null;
+}
+
+function warehouseInventorySnapshotOptionFromRow(array $row): array
+{
+    $snapshotId = strtolower((string)$row['snapshot_id']);
+    return [
+        'key' => 'id:' . $snapshotId,
+        'snapshotId' => $snapshotId,
+        'dateKey' => (int)$row['snapshot_date_key'],
+        'date' => $row['snapshot_date'],
+        'label' => (string)$row['snapshot_label'],
+        'sourceSystem' => (string)$row['source_system'],
+        'importedAt' => $row['imported_at'],
+        'assets' => (int)$row['assets'],
     ];
 }
 

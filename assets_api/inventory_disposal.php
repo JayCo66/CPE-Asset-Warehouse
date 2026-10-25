@@ -42,13 +42,13 @@ function warehouseDashboardUnavailableDisposalEstimate(): array
     ];
 }
 
-function warehouseDashboardDisposalEstimate(PDO $pdo, array $filters, int $snapshotDateKey): array
+function warehouseDashboardDisposalEstimate(PDO $pdo, array $filters, string $snapshotId): array
 {
     $repairCostRatioThreshold = (float)setting('repair_cost_ratio_dispose', 0.5);
     $minimumUsefulLifeShare = (float)setting('replace_min_life_share', 0.5);
 
     try {
-        $where = warehouseInventoryBuildWhere($filters, $snapshotDateKey);
+        $where = warehouseInventoryBuildWhere($filters, null, $snapshotId);
         $conditions = $where['sql'] === ''
             ? []
             : [preg_replace('/^WHERE\s+/i', '', $where['sql'])];

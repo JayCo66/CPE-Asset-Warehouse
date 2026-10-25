@@ -1,0 +1,18 @@
+{
+  "assets_20261022.json": {
+    "snapshot_id": "be5166d5-2bc0-5ecc-8176-54a6260df3f4",
+    "snapshot_date": "2026-10-22",
+    "snapshot_label": "2026-10-22",
+    "source_system": "legacy_warehouse",
+    "imported_at": null,
+    "asset_count": 4324
+  },
+  "assets_20261025.json": {
+    "snapshot_id": "7691a4ef-74df-5c9f-8995-44137312ad5b",
+    "snapshot_date": "2026-10-25",
+    "snapshot_label": "DEMO-2026-10-25",
+    "source_system": "demo_seed",
+    "imported_at": null,
+    "asset_count": 4424
+  }
+}

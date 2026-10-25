@@ -64,19 +64,19 @@ function warehouseInventoryBindParameters(PDOStatement $statement, array $parame
     }
 }
 
-function warehouseInventoryFetchFilterOptions(PDO $pdo, int $snapshotDateKey): array
+function warehouseInventoryFetchFilterOptions(PDO $pdo, string $snapshotId): array
 {
     $statusStatement = $pdo->prepare(
         'SELECT DISTINCT da.`asset_status`
         FROM `fact_asset_inventory` fai
         LEFT JOIN `dim_asset` da
             ON da.`asset_key` = fai.`asset_key`
-        WHERE fai.`snapshot_date_key` = :snapshot_date_key
+        WHERE fai.`snapshot_id` = :snapshot_id
             AND da.`asset_status` IS NOT NULL
             AND da.`asset_status` <> \'\'
         ORDER BY da.`asset_status`'
     );
-    $statusStatement->bindValue(':snapshot_date_key', $snapshotDateKey, PDO::PARAM_INT);
+    $statusStatement->bindValue(':snapshot_id', $snapshotId, PDO::PARAM_STR);
     $statusStatement->execute();
 
     $typeStatement = $pdo->prepare(
@@ -84,12 +84,12 @@ function warehouseInventoryFetchFilterOptions(PDO $pdo, int $snapshotDateKey): a
         FROM `fact_asset_inventory` fai
         LEFT JOIN `dim_asset_type` asset_type
             ON asset_type.`type_key` = fai.`type_key`
-        WHERE fai.`snapshot_date_key` = :snapshot_date_key
+        WHERE fai.`snapshot_id` = :snapshot_id
             AND asset_type.`type_name` IS NOT NULL
             AND asset_type.`type_name` <> \'\'
         ORDER BY asset_type.`type_name`'
     );
-    $typeStatement->bindValue(':snapshot_date_key', $snapshotDateKey, PDO::PARAM_INT);
+    $typeStatement->bindValue(':snapshot_id', $snapshotId, PDO::PARAM_STR);
     $typeStatement->execute();
 
     return [
@@ -197,58 +197,40 @@ try {
     define('WAREHOUSE_INVENTORY_API_REQUEST', true);
     require __DIR__ . '/warehouse_db.php';
 
-    $latestSnapshotStmt = $warehousePdo->query(
-        'SELECT MAX(`snapshot_date_key`) FROM `fact_asset_inventory`'
-    );
-    $latestSnapshotDateKey = $latestSnapshotStmt->fetchColumn();
-
-    if ($latestSnapshotDateKey === false || $latestSnapshotDateKey === null) {
+    $snapshotOptions = warehouseInventorySnapshotOptions($warehousePdo);
+    $selectedSnapshot = warehouseInventoryResolveSnapshot($warehousePdo, $filters['snapshot']);
+    if ($selectedSnapshot === null && $snapshotOptions !== []) {
+        sendWarehouseInventoryResponse(false, 'ไม่พบชุดข้อมูล snapshot ที่เลือก', 0, [], 400);
+    }
+    if ($selectedSnapshot === null) {
         if ($format === 'csv') {
             warehouseInventorySendCsv($warehousePdo, warehouseInventoryBuildWhere($filters, 0));
         }
         sendWarehouseInventoryResponse(true, 'ยังไม่มีข้อมูล snapshot ในคลังสินทรัพย์', 0, [], 200, null, 0);
     }
 
-    $latestSnapshotDateKey = (int)$latestSnapshotDateKey;
-    $selectedSnapshotDateKey = $latestSnapshotDateKey;
-    if ($filters['snapshot'] !== 'latest') {
-        $selectedSnapshotDateKey = (int)$filters['snapshot'];
-        $selectedSnapshotStmt = $warehousePdo->prepare(
-            'SELECT 1 FROM `fact_asset_inventory`
-            WHERE `snapshot_date_key` = :snapshot_date_key LIMIT 1'
-        );
-        $selectedSnapshotStmt->bindValue(':snapshot_date_key', $selectedSnapshotDateKey, PDO::PARAM_INT);
-        $selectedSnapshotStmt->execute();
-        if ($selectedSnapshotStmt->fetchColumn() === false) {
-            sendWarehouseInventoryResponse(false, 'ไม่พบชุดข้อมูล snapshot ที่เลือก', 0, [], 400);
-        }
-    }
+    $selectedSnapshotId = $selectedSnapshot['snapshotId'];
+    $selectedIndex = array_search($selectedSnapshotId, array_column($snapshotOptions, 'snapshotId'), true);
 
     if ($format === 'csv') {
         warehouseInventorySendCsv(
             $warehousePdo,
-            warehouseInventoryBuildWhere($filters, $selectedSnapshotDateKey),
+            warehouseInventoryBuildWhere($filters, null, $selectedSnapshotId),
         );
     }
 
-    $snapshotKeysStmt = $warehousePdo->prepare(
-        'SELECT DISTINCT `snapshot_date_key`
-        FROM `fact_asset_inventory`
-        WHERE `snapshot_date_key` <= :snapshot_date_key
-        ORDER BY `snapshot_date_key` DESC
-        LIMIT 2'
-    );
-    $snapshotKeysStmt->bindValue(':snapshot_date_key', $selectedSnapshotDateKey, PDO::PARAM_INT);
-    $snapshotKeysStmt->execute();
-    $snapshotDateKeys = array_map('intval', $snapshotKeysStmt->fetchAll(PDO::FETCH_COLUMN));
+    $summarySnapshots = $selectedIndex === false ? [] : array_slice($snapshotOptions, $selectedIndex, 2);
+    $summarySnapshotIds = array_column($summarySnapshots, 'snapshotId');
     $summary = ['current' => null, 'previous' => null];
 
-    if ($snapshotDateKeys !== []) {
-        $snapshotPlaceholders = implode(', ', array_fill(0, count($snapshotDateKeys), '?'));
+    if ($summarySnapshotIds !== []) {
+        $snapshotPlaceholders = implode(', ', array_fill(0, count($summarySnapshotIds), '?'));
         $summaryStmt = $warehousePdo->prepare(
             'SELECT
+                snapshot.`snapshot_id`,
                 fai.`snapshot_date_key`,
                 snapshot_date.`full_date` AS `snapshot_date`,
+                snapshot.`snapshot_label`,
                 SUM(COALESCE(fai.`asset_count`, 0)) AS `total`,
                 SUM(CASE WHEN fai.`is_available_flag` = 1 THEN COALESCE(fai.`asset_count`, 0) ELSE 0 END) AS `ready`,
                 SUM(CASE WHEN fai.`has_location_flag` = 0 THEN COALESCE(fai.`asset_count`, 0) ELSE 0 END) AS `missing_location`,
@@ -260,19 +242,24 @@ try {
             FROM `fact_asset_inventory` fai
             LEFT JOIN `dim_date` snapshot_date
                 ON snapshot_date.`date_key` = fai.`snapshot_date_key`
-            WHERE fai.`snapshot_date_key` IN (' . $snapshotPlaceholders . ')
-            GROUP BY fai.`snapshot_date_key`, snapshot_date.`full_date`
-            ORDER BY fai.`snapshot_date_key` DESC'
+            LEFT JOIN `dim_inventory_snapshot` snapshot
+                ON snapshot.`snapshot_id` = fai.`snapshot_id`
+            WHERE fai.`snapshot_id` IN (' . $snapshotPlaceholders . ')
+            GROUP BY snapshot.`snapshot_id`, fai.`snapshot_date_key`, snapshot_date.`full_date`, snapshot.`snapshot_label`, snapshot.`imported_at`
+            ORDER BY fai.`snapshot_date_key` DESC, snapshot.`imported_at` DESC, snapshot.`snapshot_id` DESC'
         );
-        foreach ($snapshotDateKeys as $index => $snapshotDateKey) {
-            $summaryStmt->bindValue($index + 1, $snapshotDateKey, PDO::PARAM_INT);
+        foreach ($summarySnapshotIds as $index => $snapshotId) {
+            $summaryStmt->bindValue($index + 1, $snapshotId, PDO::PARAM_STR);
         }
         $summaryStmt->execute();
 
-        $summaries = array_map(static function (array $row): array {
-            return [
+        $summaryById = [];
+        foreach ($summaryStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $summaryById[(string)$row['snapshot_id']] = [
+                'snapshotId' => (string)$row['snapshot_id'],
                 'snapshotDateKey' => (int)$row['snapshot_date_key'],
                 'snapshotDate' => $row['snapshot_date'],
+                'snapshotLabel' => $row['snapshot_label'],
                 'total' => (int)$row['total'],
                 'ready' => (int)$row['ready'],
                 'missingLocation' => (int)$row['missing_location'],
@@ -284,20 +271,39 @@ try {
                     'unknown' => (int)$row['age_unknown'],
                 ],
             ];
-        }, $summaryStmt->fetchAll());
+        }
+        $summaries = [];
+        foreach ($summarySnapshots as $snapshotOption) {
+            $summaries[] = $summaryById[$snapshotOption['snapshotId']] ?? [
+                'snapshotId' => $snapshotOption['snapshotId'],
+                'snapshotDateKey' => $snapshotOption['dateKey'],
+                'snapshotDate' => $snapshotOption['date'],
+                'snapshotLabel' => $snapshotOption['label'],
+                'total' => 0,
+                'ready' => 0,
+                'missingLocation' => 0,
+                'ageBands' => [
+                    'zeroToTwo' => 0,
+                    'threeToFive' => 0,
+                    'sixToEight' => 0,
+                    'ninePlus' => 0,
+                    'unknown' => 0,
+                ],
+            ];
+        }
 
         $summary['current'] = $summaries[0] ?? null;
         $summary['previous'] = $summaries[1] ?? null;
     }
 
     $countStmt = $warehousePdo->prepare(
-        'SELECT COUNT(*) FROM `fact_asset_inventory` WHERE `snapshot_date_key` = :snapshot_date_key'
+        'SELECT COUNT(*) FROM `fact_asset_inventory` WHERE `snapshot_id` = :snapshot_id'
     );
-    $countStmt->bindValue(':snapshot_date_key', $selectedSnapshotDateKey, PDO::PARAM_INT);
+    $countStmt->bindValue(':snapshot_id', $selectedSnapshotId, PDO::PARAM_STR);
     $countStmt->execute();
     $total = (int)$countStmt->fetchColumn();
 
-    $filter = warehouseInventoryBuildWhere($filters, $selectedSnapshotDateKey);
+    $filter = warehouseInventoryBuildWhere($filters, null, $selectedSnapshotId);
 
     $matchedCountStmt = $warehousePdo->prepare(
         'SELECT COUNT(*) ' . warehouseInventoryFromSql() . ' ' . $filter['sql']
@@ -307,11 +313,12 @@ try {
     $matchedTotal = (int)$matchedCountStmt->fetchColumn();
     $page = min($page, max(1, (int)ceil($matchedTotal / $limit)));
     $offset = ($page - 1) * $limit;
-    $filterOptions = warehouseInventoryFetchFilterOptions($warehousePdo, $selectedSnapshotDateKey);
+    $filterOptions = warehouseInventoryFetchFilterOptions($warehousePdo, $selectedSnapshotId);
 
     $inventoryStmt = $warehousePdo->prepare(
         'SELECT
             fai.`asset_fact_id`,
+            fai.`snapshot_id`,
             fai.`snapshot_date_key`,
             snapshot_date.`full_date` AS `snapshot_date`,
             snapshot_date.`full_date` AS `update_date`,
@@ -362,6 +369,7 @@ try {
     $data = array_map(static function (array $row): array {
         return [
             'asset_fact_id' => (int)$row['asset_fact_id'],
+            'snapshot_id' => (string)$row['snapshot_id'],
             'snapshot_date_key' => warehouseInventoryNullableInt($row['snapshot_date_key']),
             'snapshot_date' => $row['snapshot_date'],
             'update_date' => $row['update_date'],
