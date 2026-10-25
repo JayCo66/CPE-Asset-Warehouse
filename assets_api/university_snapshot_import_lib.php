@@ -2,8 +2,6 @@
 declare(strict_types=1);
 
 const WAREHOUSE_UNIVERSITY_ASSET_URL = 'https://cpe.eng.kps.ku.ac.th/CPEAssets/assets_api/assets.php';
-const WAREHOUSE_UNIVERSITY_TYPE_URL = 'https://cpe.eng.kps.ku.ac.th/CPEAssets/assets_api/asset_types.php';
-const WAREHOUSE_UNIVERSITY_CATEGORY_URL = 'https://cpe.eng.kps.ku.ac.th/CPEAssets/assets_api/asset_categories.php';
 const WAREHOUSE_UNIVERSITY_LOCAL_TYPE_URL = 'http://127.0.0.1/assets_api/asset_types.php';
 const WAREHOUSE_UNIVERSITY_LOCAL_CATEGORY_URL = 'http://127.0.0.1/assets_api/asset_categories.php';
 const WAREHOUSE_UNIVERSITY_PAGE_SIZE = 100;
@@ -129,8 +127,6 @@ function warehouseUniversityFetchEndpointPage(string $endpointUrl, int $page): a
 {
     $allowedUrls = [
         WAREHOUSE_UNIVERSITY_ASSET_URL,
-        WAREHOUSE_UNIVERSITY_TYPE_URL,
-        WAREHOUSE_UNIVERSITY_CATEGORY_URL,
         WAREHOUSE_UNIVERSITY_LOCAL_TYPE_URL,
         WAREHOUSE_UNIVERSITY_LOCAL_CATEGORY_URL,
     ];
@@ -262,7 +258,6 @@ function warehouseUniversityLoadReferenceRows(string $referenceName): array
             'id_field' => 'type_id',
             'code_field' => 'type_code',
             'environment' => 'CPE_UNIVERSITY_TYPE_API_URL',
-            'default_url' => WAREHOUSE_UNIVERSITY_TYPE_URL,
             'local_url' => WAREHOUSE_UNIVERSITY_LOCAL_TYPE_URL,
         ],
         'categories' => [
@@ -270,7 +265,6 @@ function warehouseUniversityLoadReferenceRows(string $referenceName): array
             'id_field' => 'category_id',
             'code_field' => 'category_code',
             'environment' => 'CPE_UNIVERSITY_CATEGORY_API_URL',
-            'default_url' => WAREHOUSE_UNIVERSITY_CATEGORY_URL,
             'local_url' => WAREHOUSE_UNIVERSITY_LOCAL_CATEGORY_URL,
         ],
     ];
@@ -282,7 +276,7 @@ function warehouseUniversityLoadReferenceRows(string $referenceName): array
     $configuredUrl = getenv($reference['environment']);
     if (is_string($configuredUrl) && trim($configuredUrl) !== '') {
         $configuredUrl = trim($configuredUrl);
-        if (!in_array($configuredUrl, [$reference['default_url'], $reference['local_url']], true)) {
+        if (!in_array($configuredUrl, [$reference['local_url']], true)) {
             throw new RuntimeException('A configured university reference endpoint is not allowed.');
         }
         $fetchPage = static fn(int $page): array => warehouseUniversityFetchEndpointPage($configuredUrl, $page);

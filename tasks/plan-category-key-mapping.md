@@ -6,7 +6,7 @@ Use the repository's tracked CPE type/category reference data to resolve missing
 
 ## Architecture decisions
 
-- Load the complete tracked `mock_api/asset_types.json` and `mock_api/asset_categories.json` references used by the existing source seed and ETL.
+- Use the configured local reference API routes in Docker, with tracked `mock_api/` references as the XAMPP fallback.
 - Resolve `category_id` as: explicit asset ID first; otherwise `type_id` to `type_code`, then the two-digit type-code suffix to `category_code`, then source `category_id` and warehouse surrogate `category_key`.
 - Keep the source archive format unchanged; the existing ETL fallback already recalculates category keys on future rebuilds.
 - Apply the approved one-time local ETL full refresh to repair the three October 26 snapshots.
@@ -14,7 +14,7 @@ Use the repository's tracked CPE type/category reference data to resolve missing
 ## Task list
 
 ### Phase 1: Import mapping
-- [x] Add validated bundled-reference loading and code-to-ID resolution to the local snapshot importer.
+- [x] Add validated local-reference API loading, bundled-reference fallback, and code-to-ID resolution to the snapshot importer.
 - [x] Resolve all categories before beginning the warehouse transaction; reject unmappable rows before database writes.
 - [x] Run PHP syntax checks; do not run the test suite unless requested. Both changed PHP files pass `php -l`.
 

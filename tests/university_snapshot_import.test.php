@@ -181,6 +181,27 @@ importRunTest('rejects upstream URLs outside the fixed university API allowlist'
         static fn() => warehouseUniversityFetchEndpointPage('https://attacker.example/assets.php', 1),
         'The importer must not fetch a browser-selected or arbitrary host.',
     );
+
+    importExpectThrows(
+        static fn() => warehouseUniversityFetchEndpointPage('https://cpe.eng.kps.ku.ac.th/CPEAssets/assets_api/asset_types.php', 1),
+        'The university site does not provide the sibling reference endpoint.',
+    );
+
+    $environmentName = 'CPE_UNIVERSITY_TYPE_API_URL';
+    $previousValue = getenv($environmentName);
+    putenv($environmentName . '=https://cpe.eng.kps.ku.ac.th/CPEAssets/assets_api/asset_types.php');
+    try {
+        importExpectThrows(
+            static fn() => warehouseUniversityLoadReferenceRows('types'),
+            'A configured reference endpoint must use the fixed local API route.',
+        );
+    } finally {
+        if ($previousValue === false) {
+            putenv($environmentName);
+        } else {
+            putenv($environmentName . '=' . $previousValue);
+        }
+    }
 });
 
 importRunTest('allows same-origin snapshot requests on a deployed host and rejects cross-origin requests', static function (): void {

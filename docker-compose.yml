@@ -143,6 +143,8 @@ services:
       DB_NAME: cpeasset
       DB_USER: root
       DB_PASS: ${SOURCE_DB_ROOT_PASSWORD:-root}
+      CPE_UNIVERSITY_TYPE_API_URL: http://127.0.0.1/assets_api/asset_types.php
+      CPE_UNIVERSITY_CATEGORY_API_URL: http://127.0.0.1/assets_api/asset_categories.php
     volumes:
       - ./src/maintenance/index.html:/var/www/html/dashboard_report.html:ro
       - ./src/borrow/index.html:/var/www/html/dashboard_borrow.html:ro
