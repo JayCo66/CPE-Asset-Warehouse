@@ -1,6 +1,6 @@
 <!doctype html>
-<!-- index.html : หน้ารวมงานทั้ง 3 คน มีเมนูลอยเดียวสลับระหว่างหน้า แต่ละหน้าเปิดใน iframe ด้วยดีไซน์และฟอนต์เดิมของเจ้าของ
-     วางไว้ที่ root ของ repo (เช่น XAMPP htdocs) แล้วเปิด http://localhost/ ; ทุกหน้าต้องอยู่ origin เดียวกันจึงซ่อนเมนูโมดูลเดิมของแต่ละหน้าได้ -->
+<!-- index.html : หน้ารวมงานทั้ง 3 คน มีหัวเว็บ + เมนูลอยเดียวสลับระหว่างหน้า แต่ละหน้าเปิดใน iframe ใช้ฟอนต์แบบมีหัวและหน้าตาแบบ dashboard_report.html (hub-theme.css)
+     วางไว้ที่ root ของ repo (เช่น XAMPP htdocs) แล้วเปิด http://localhost/index.html ; ทุกหน้าต้องอยู่ origin เดียวกันจึงซ่อนเมนูเดิมของแต่ละหน้าได้ -->
 <html lang="th">
 <head>
   <meta charset="utf-8">
@@ -9,15 +9,21 @@
   <script>document.documentElement.setAttribute("data-theme", (() => { try { return localStorage.getItem("cpe_theme") || "dark"; } catch { return "dark"; } })());</script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai+Looped:wght@400;500;600&display=swap">
   <style>
-    /* สีจาก docs/design-guide.md ; โหมดสว่างใช้ค่าเดียวกับ dashboard_borrow.html */
+    /* หัวเว็บและเมนูลอยแบบเดียวกับ dashboard_report.html ; สีจาก docs/design-guide.md */
     :root {
       --cpe-page-start: #1B1D1E; --cpe-surface: #181A1B; --cpe-text: #E8E6E3; --cpe-text-muted: #CCC8C1;
       --cpe-brand-blue: #0466C8; --cpe-tool-navy: #1A243B; --cpe-info: #106BDA;
+      --line: color-mix(in srgb, var(--cpe-text) 12%, transparent);
       --line-strong: color-mix(in srgb, var(--cpe-text) 22%, transparent);
       --fill-hover: color-mix(in srgb, var(--cpe-text) 6%, transparent);
-      --nav-h: 64px;
+      --text-faint: color-mix(in srgb, var(--cpe-text-muted) 70%, transparent);
+      --font: "Leelawadee UI", "IBM Plex Sans Thai Looped", Tahoma, sans-serif;   /* แบบมีหัว เหมือนหน้าทะเบียนสินทรัพย์ */
+      --fs-xs: 0.75rem; --fs-sm: 0.8125rem; --fs-lg: 1.125rem;
+      --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px;
+      --radius: 6px; --radius-pill: 999px; --content-max: 1280px;
+      --focus: 0 0 0 2px var(--cpe-page-start), 0 0 0 4px var(--cpe-info);
       color-scheme: dark;
     }
     :root[data-theme="light"] {
@@ -27,57 +33,133 @@
     }
     * { box-sizing: border-box; }
     html, body { margin: 0; height: 100%; }
-    body { background: var(--cpe-page-start); font-family: "IBM Plex Sans Thai", "Leelawadee UI", Tahoma, sans-serif; overflow: hidden; }
-    .hub-nav { height: var(--nav-h); display: flex; align-items: center; justify-content: center; padding: 0 16px; }
-    .hub-nav ul {
-      display: flex; gap: 4px; list-style: none; margin: 0; padding: 4px; max-width: 100%; overflow-x: auto; scrollbar-width: none;
-      background: var(--cpe-tool-navy); border: 1px solid var(--line-strong); border-radius: 999px;
-      box-shadow: 0 6px 18px color-mix(in srgb, #000 30%, transparent);
+    body {
+      display: flex; flex-direction: column; overflow: hidden;
+      background: var(--cpe-page-start); color: var(--cpe-text-muted); font-family: var(--font); line-height: 1.55;
     }
-    .hub-nav ul::-webkit-scrollbar { display: none; }
-    .hub-nav li { flex: none; }
-    .hub-nav a {
-      display: flex; align-items: baseline; gap: 6px; min-height: 40px; padding: 9px 18px; border-radius: 999px;
-      color: var(--cpe-text-muted); text-decoration: none; font-size: 14px; white-space: nowrap;
+    :focus-visible { outline: none; box-shadow: var(--focus); }
+
+    .app-header {
+      display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: var(--sp-3) var(--sp-4);
+      padding: var(--sp-3) max(var(--sp-4), calc((100vw - var(--content-max)) / 2));
+      background: var(--cpe-surface); border-bottom: 1px solid var(--line);
     }
-    .hub-nav a small { font-size: 11px; opacity: 0.75; }
-    .hub-nav a:hover { background: var(--fill-hover); color: var(--cpe-text); }
-    .hub-nav a[aria-current="page"] { background: var(--cpe-brand-blue); color: #FFFFFF; font-weight: 600; }
-    .hub-nav a:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--cpe-page-start), 0 0 0 4px var(--cpe-info); }
-    .hub-frames { position: relative; height: calc(100% - var(--nav-h)); }
+    .app-name { color: var(--cpe-text); font-weight: 600; font-size: var(--fs-lg); letter-spacing: 0.01em; text-decoration: none; white-space: nowrap; border-radius: 4px; }
+    .btn {
+      justify-self: end; font: inherit; font-size: var(--fs-sm); color: var(--cpe-text); background: transparent; cursor: pointer;
+      border: 1px solid var(--line-strong); border-radius: var(--radius); padding: var(--sp-2) var(--sp-3); min-height: 38px; white-space: nowrap;
+    }
+    .btn:hover { background: var(--fill-hover); }
+
+    .module-nav { min-width: 0; display: flex; justify-content: center; }
+    .module-nav-list {
+      display: flex; gap: var(--sp-1); list-style: none; margin: 0; padding: var(--sp-1); max-width: 100%;
+      overflow-x: auto; scrollbar-width: none;
+      background: var(--cpe-tool-navy); border: 1px solid var(--line-strong); border-radius: var(--radius-pill);
+      box-shadow: 0 6px 18px color-mix(in srgb, var(--cpe-page-start) 70%, transparent);
+    }
+    .module-nav-list::-webkit-scrollbar { display: none; }
+    /* เมนูล้นจอ: จางที่ขอบด้านที่ยังเลื่อนได้ ให้รู้ว่ามีหน้าเพิ่ม */
+    .module-nav-list.fade-end { mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent); }
+    .module-nav-list.fade-start { mask-image: linear-gradient(to left, #000 calc(100% - 32px), transparent); }
+    .module-nav-list.fade-start.fade-end { mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 32px), transparent); }
+    .module-nav-list li { flex: none; }
+    .module-nav-list a {
+      display: flex; align-items: baseline; gap: 6px; padding: var(--sp-2) var(--sp-4); border-radius: var(--radius-pill);
+      color: var(--cpe-text-muted); text-decoration: none; font-size: var(--fs-sm); white-space: nowrap; min-height: 36px; line-height: 20px;
+    }
+    .module-nav-list a:hover { background: var(--fill-hover); color: var(--cpe-text); }
+    .module-nav-list a[aria-current="page"] {
+      background: var(--cpe-brand-blue); color: var(--cpe-text); font-weight: 600; box-shadow: inset 0 -2px 0 var(--cpe-text);
+    }
+    :root[data-theme="light"] .module-nav-list a[aria-current="page"] { color: #FFFFFF; box-shadow: none; }
+    :root[data-theme="light"] .module-nav-list { box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08); }
+
+    .hub-frames { position: relative; flex: 1; min-height: 0; }
     .hub-frames iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: var(--cpe-page-start); }
     .hub-frames iframe[hidden] { display: none; }
-    @media (max-width: 640px) { .hub-nav { justify-content: flex-start; } .hub-nav a small { display: none; } }
+
+    @media (max-width: 900px) {
+      .app-header { grid-template-columns: 1fr auto; }
+      .module-nav { grid-column: 1 / -1; grid-row: 2; justify-content: flex-start; }
+    }
+    @media (prefers-reduced-motion: no-preference) { .module-nav-list a, .btn { transition: background-color .15s, color .15s; } }
   </style>
 </head>
 <body>
-  <nav class="hub-nav" aria-label="งานของแต่ละคน"><ul id="hub-list"></ul></nav>
+  <header class="app-header">
+    <a class="app-name" href="#/assets">CPE Asset Warehouse</a>
+    <nav class="module-nav" aria-label="งานของแต่ละคน"><ul class="module-nav-list" id="hub-list"></ul></nav>
+    <button type="button" class="btn" id="theme-btn"></button>
+  </header>
   <main class="hub-frames" id="hub-frames"></main>
 
   <script>
-    // รายการหน้า (เมนูสร้างจากข้อมูลนี้) ; hide = selector เมนูโมดูลเดิมของหน้านั้น ซ่อนเฉพาะตอนเปิดผ่านหน้ารวม ไม่ได้แก้ไฟล์ของเจ้าของ
+    // รายการหน้า (เมนูสร้างจากข้อมูลนี้) ; hide = selector ที่ซ่อนเฉพาะตอนเปิดผ่านหน้ารวม (หน้ารวมมีหัวเว็บ เมนู และปุ่มธีมให้แล้ว)
+    // owner = เจ้าของงาน (ไม่แสดงบนเมนู) ; theme = ใส่ hub-theme.css ให้หน้านั้นเป็นหน้าตาแบบหน้าเรา ; ไม่ได้แก้ไฟล์ของเจ้าของ
     const PAGES = [
-      { id: "assets", label: "ทะเบียนสินทรัพย์", owner: "Sutham", src: "src/asset-inv/", hide: [".module-nav"] },
-      { id: "borrow", label: "ยืม-คืน", owner: "Boom", src: "dashboard_borrow.html", hide: [] },   // เมนูลอยของหน้านี้คือเมนู 6 หัวข้อวิเคราะห์ ไม่ซ่อน
-      { id: "facility", label: "แจ้งซ่อมอาคาร", owner: "G1ilbert", src: "dashboard_report.html#/facility", hide: [".module-nav"] },
-      { id: "repair", label: "ซ่อมครุภัณฑ์", owner: "G1ilbert", src: "dashboard_report.html#/repair", hide: [".module-nav"] },
+      { id: "assets", label: "ทะเบียนสินทรัพย์", owner: "Sutham", src: "src/asset-inv/", hide: [".app-header", ".module-nav"], theme: true },
+      { id: "borrow", label: "ยืม-คืน", owner: "Boom", src: "dashboard_borrow.html", hide: [".app-header"], theme: true },   // เมนู 6 หัวข้อวิเคราะห์ไม่ซ่อน กลายเป็นแท็บย่อย
+      { id: "facility", label: "แจ้งซ่อมอาคาร", owner: "G1ilbert", src: "dashboard_report.html#/facility", hide: [".app-header", ".module-nav"], theme: false },
+      { id: "repair", label: "ซ่อมครุภัณฑ์", owner: "G1ilbert", src: "dashboard_report.html#/repair", hide: [".app-header", ".module-nav"], theme: false },
     ];
+    // แต่ละคนเก็บธีมไว้คนละ key: ปุ่มบนหัวเขียนทุก key ให้ทุกหน้าเป็นธีมเดียวกัน
+    const THEME_KEYS = ["cpe_theme", "cpe_dw_theme", "cpe-asset-inventory-theme"];
     const list = document.getElementById("hub-list");
     const frames = document.getElementById("hub-frames");
+    const themeBtn = document.getElementById("theme-btn");
     const theme = () => document.documentElement.getAttribute("data-theme");
     const loaded = new Map();   // id -> { frame, theme ตอนโหลด }
 
-    list.innerHTML = PAGES.map((p) => `<li><a href="#/${p.id}" data-id="${p.id}" title="${p.label} · ${p.owner}">${p.label} <small>${p.owner}</small></a></li>`).join("");
+    list.innerHTML = PAGES.map((p) => `<li><a href="#/${p.id}" data-id="${p.id}" >${p.label}</a></li>`).join("");
 
-    function hideOwnNav(frame, page) {
+    function updateOverflow() {
+      const over = list.scrollWidth > list.clientWidth + 1;
+      list.classList.toggle("fade-start", over && list.scrollLeft > 2);
+      list.classList.toggle("fade-end", over && list.scrollLeft + list.clientWidth < list.scrollWidth - 2);
+    }
+    list.addEventListener("scroll", updateOverflow, { passive: true });
+    window.addEventListener("resize", updateOverflow);
+
+    const THEME_CSS = new URL("hub-theme.css", location.href).href;
+
+    // ใส่ style ของหน้ารวมให้หน้าใน iframe ; คืน true เมื่อใส่แล้ว (หรือใส่ไม่ได้เพราะต่าง origin)
+    function dressPage(frame, page) {
       try {
         const doc = frame.contentDocument;
-        if (!doc || !page.hide.length || doc.getElementById("hub-hide")) return;
+        if (!doc || doc.URL === "about:blank" || !doc.head) return false;
+        if (doc.getElementById("hub-hide")) return true;
+        doc.documentElement.classList.add("hub-embed", `hub-${page.id}`);
+        if (page.theme) {
+          const link = doc.createElement("link");
+          link.rel = "stylesheet";
+          link.href = THEME_CSS;
+          doc.head.appendChild(link);
+        }
         const st = doc.createElement("style");
         st.id = "hub-hide";
-        st.textContent = `${page.hide.join(",")} { display: none !important; }`;
+        st.textContent = page.hide.length ? `${page.hide.join(",")} { display: none !important; }` : "";
         doc.head.appendChild(st);
-      } catch { /* ต่าง origin: เมนูเดิมของหน้านั้นจะยังแสดงอยู่ */ }
+        return true;
+      } catch { return true; /* ต่าง origin: หน้านั้นจะแสดงแบบเดิม */ }
+    }
+    // ใส่ตั้งแต่ <head> พร้อม ไม่รอโหลดสคริปต์/กราฟเสร็จ จะได้ไม่เห็นหน้าตาเดิมแวบขึ้นมาก่อน
+    function watchPage(frame, page, oldDoc) {
+      const started = Date.now();
+      const tick = () => {
+        const fresh = (() => { try { return frame.contentDocument !== oldDoc; } catch { return true; } })();
+        if ((!fresh || !dressPage(frame, page)) && Date.now() - started < 10000) setTimeout(tick, 25);
+      };
+      tick();
+    }
+    // กราฟ Chart.js วาดบน canvas ซึ่ง CSS เปลี่ยนฟอนต์ไม่ได้ จึงตั้งฟอนต์ให้ตอนหน้าโหลดเสร็จ
+    function setChartFont(frame, page) {
+      try {
+        const Chart = page.theme && frame.contentWindow.Chart;
+        if (!Chart) return;
+        Chart.defaults.font.family = getComputedStyle(document.documentElement).getPropertyValue("--font").trim();
+        Object.values(Chart.instances).forEach((c) => c.update("none"));
+      } catch { /* ต่าง origin */ }
     }
 
     function show(id) {
@@ -85,30 +167,51 @@
       let entry = loaded.get(page.id);
       if (!entry) {
         const frame = document.createElement("iframe");
-        frame.title = `${page.label} (${page.owner})`;
-        frame.addEventListener("load", () => hideOwnNav(frame, page));
+        frame.title = page.label;
+        frame.addEventListener("load", () => { dressPage(frame, page); setChartFont(frame, page); });
         frame.src = page.src;
         frames.appendChild(frame);
+        watchPage(frame, page);
         entry = { frame, theme: theme() };
         loaded.set(page.id, entry);
       } else if (entry.theme !== theme()) {
-        entry.theme = theme();              // สลับธีมในหน้าอื่นมาแล้ว: โหลดใหม่ให้ธีมตรงกัน
-        entry.frame.contentWindow.location.reload();
+        entry.theme = theme();              // สลับธีมไปแล้วตอนหน้านี้ซ่อนอยู่: โหลดใหม่ให้ธีมตรงกัน
+        reloadPage(entry, page);
       }
       loaded.forEach((e, k) => { e.frame.hidden = k !== page.id; });
       list.querySelectorAll("a").forEach((a) => {
         if (a.dataset.id === page.id) { a.setAttribute("aria-current", "page"); a.scrollIntoView({ block: "nearest", inline: "nearest" }); }
         else a.removeAttribute("aria-current");
       });
+      updateOverflow();
       document.title = `${page.label} · CPE Asset Warehouse`;
     }
 
-    // ทุกหน้าใช้ localStorage "cpe_theme" ร่วมกัน: กดสลับธีมในหน้าใดก็ตาม เมนูลอยเปลี่ยนตาม
-    window.addEventListener("storage", (e) => {
-      if (e.key !== "cpe_theme" || !e.newValue) return;
-      document.documentElement.setAttribute("data-theme", e.newValue);
-      loaded.forEach((x) => { if (!x.frame.hidden) x.theme = e.newValue; });   // หน้าที่กดสลับเองเป็นธีมใหม่อยู่แล้ว
+    function reloadPage(entry, page) {
+      const oldDoc = entry.frame.contentDocument;   // รอจนเป็นเอกสารใหม่ ไม่งั้นจะเจอหน้าเก่าที่ใส่ style ไว้แล้ว
+      entry.frame.contentWindow.location.reload();
+      watchPage(entry.frame, page, oldDoc);
+    }
+
+    function setTheme(next, fromKey) {
+      document.documentElement.setAttribute("data-theme", next);
+      try { THEME_KEYS.forEach((k) => { if (k !== fromKey && localStorage.getItem(k) !== next) localStorage.setItem(k, next); }); } catch { /* ไม่มี storage ก็ใช้ได้ */ }
+      const light = next === "light";
+      themeBtn.textContent = light ? "โหมดมืด" : "โหมดสว่าง";
+      themeBtn.setAttribute("aria-label", light ? "สลับเป็นโหมดมืด" : "สลับเป็นโหมดสว่าง");
+    }
+    themeBtn.addEventListener("click", () => {
+      setTheme(theme() === "light" ? "dark" : "light");
+      loaded.forEach((e, id) => { if (!e.frame.hidden) { e.theme = theme(); reloadPage(e, PAGES.find((p) => p.id === id)); } });
     });
+    // กดสลับธีมด้วยปุ่มของหน้าใดหน้าหนึ่ง: หัวเว็บและหน้าอื่นเปลี่ยนตาม (หน้าที่กดเองเป็นธีมใหม่อยู่แล้ว)
+    window.addEventListener("storage", (e) => {
+      if (!THEME_KEYS.includes(e.key) || (e.newValue !== "light" && e.newValue !== "dark") || e.newValue === theme()) return;
+      setTheme(e.newValue, e.key);
+      loaded.forEach((x) => { if (!x.frame.hidden) x.theme = e.newValue; });
+    });
+
+    setTheme(theme());
     const route = () => show(location.hash.replace(/^#\/?/, ""));
     window.addEventListener("hashchange", route);
     if (!location.hash) history.replaceState(null, "", `#/${PAGES[0].id}`);
