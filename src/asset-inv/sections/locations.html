@@ -5,7 +5,15 @@
       <p class="page-intro">แยกการมีรหัสตำแหน่งออกจากความครบถ้วนของอาคาร ชั้น ห้อง และพื้นที่</p>
     </div>
   </header>
-  <div class="location-coverage-summary" id="location-coverage-summary"></div>
+  <article class="panel location-completeness-panel" aria-labelledby="location-completeness-title">
+    <div class="panel-heading">
+      <div>
+        <h2 id="location-completeness-title">ความครบถ้วนของข้อมูลตำแหน่ง</h2>
+        <p class="panel-description">แยกตำแหน่งครบ ระบุแล้วแต่รายละเอียดไม่ครบ ไม่มีตำแหน่ง และไม่ทราบธงตำแหน่ง</p>
+      </div>
+    </div>
+    <div id="location-completeness" class="dashboard-chart"></div>
+  </article>
   <section class="dashboard-panel-grid location-rank-grid" aria-label="สินทรัพย์ตามลำดับสถานที่">
     <article class="panel"><div class="panel-heading"><h2>ตามอาคาร</h2></div><div id="location-buildings" class="dashboard-chart"></div></article>
     <article class="panel"><div class="panel-heading"><h2>ตามชั้น</h2></div><div id="location-floors" class="dashboard-chart"></div></article>

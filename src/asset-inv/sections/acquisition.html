@@ -11,7 +11,11 @@
   </section>
   <article class="panel"><div class="panel-heading"><h2>รุ่นสินทรัพย์ตามปีจัดหา</h2><span class="panel-aside">จำนวน อายุเฉลี่ย และอัตราอายุเกินเกณฑ์</span></div><div id="acquisition-cohorts" class="dashboard-table-wrap"></div></article>
   <section class="dashboard-panel-grid acquisition-source-grid" aria-label="แหล่งเงินของสินทรัพย์">
-    <article class="panel"><div class="panel-heading"><h2>จำนวนตามแหล่งเงิน</h2></div><div id="acquisition-sources" class="dashboard-chart"></div></article>
+    <article class="panel">
+      <div class="panel-heading"><h2>สัดส่วนสินทรัพย์ตามแหล่งเงิน</h2></div>
+      <p class="panel-description">พื้นที่แทนจำนวนสินทรัพย์ใน snapshot ที่เลือก · source ไม่ใช่มูลค่าทุน</p>
+      <div id="acquisition-sources" class="dashboard-chart treemap-chart"></div>
+    </article>
     <article class="panel"><div class="panel-heading"><h2>ตัวชี้วัดตามแหล่งเงิน</h2></div><div id="acquisition-source-metrics" class="dashboard-table-wrap"></div></article>
   </section>
   <section class="dashboard-panel-grid acquisition-matrix-grid" aria-label="ปีจัดหาแยกตามหน่วยงาน หมวดหมู่ และประเภท">

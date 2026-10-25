@@ -101,6 +101,19 @@
     sec.appendChild(b);
     Charts.compare(b, rows, { a: { label: `ปีงบ ${prevFy}`, color: MUTED }, b: { label: `ปีงบ ${currFy}`, color: BLUE }, fmt, better });
   };
+  /** กราฟเดียวเทียบทุกกลุ่ม: แท่งคู่ปีงบก่อน/ปีงบล่าสุด บนแกนเดียวกัน ; rows: [{name, a, b}] */
+  const groupedBox = (sec, rows, { prevFy, currFy, fmt, axisFmt = fmt, better, shortName }) => {
+    if (!rows.length) return emptyState(sec, "ไม่มีข้อมูล", "");
+    const box = chartBox(sec, [[`ปีงบ ${prevFy}`, MUTED], [`ปีงบ ${currFy}`, BLUE]]);
+    responsive(box, () => Charts.grouped(box, rows, {
+      label: sec.closest("section").querySelector("h2").textContent, yFmt: axisFmt, shortName,
+      series: [{ key: "a", label: `ปีงบ ${prevFy}`, color: MUTED }, { key: "b", label: `ปีงบ ${currFy}`, color: BLUE }],
+      delta: (r) => delta(+r.b, +r.a, { better }),
+      tipTitle: (r) => r.name,
+      tipLines: (r) => [[`ปีงบ ${prevFy}`, fmt(r.a), MUTED], [`ปีงบ ${currFy}`, fmt(r.b), BLUE]],
+    }));
+  };
+  const noPrefix = (r) => r.name.replace(/^ครุภัณฑ์/, "");
 
   // =====================================================================
   // รายงานประจำปีงบประมาณ
@@ -309,6 +322,10 @@
       tipLines: (r) => [["รวม", `${num(r.total)} งาน`], ["แอร์", `${num(r.aircon)} งาน`]],
     }));
 
+    groupedBox(section(root, { id: "fac-types", title: "แจ้งซ่อมตามประเภทงาน" }),
+      d.types.map((r) => ({ name: r.type_name, a: r.prev, b: r.curr })),
+      { prevFy: fy.prev, currFy: fy.curr, fmt: (v) => `${num(v)} งาน`, axisFmt: num, better: "down", shortName: (r) => r.name.replace(/^งาน/, "") });
+
     const c2 = cols(root);
     if (d.season.length) {
       const s2 = section(c2, { id: "fac-season", title: "เดือนที่แอร์เสียบ่อย (เฉลี่ยต่อปี)" });
@@ -362,9 +379,9 @@
       series: [{ key: "median_workdays", label: "ค่ากลาง", color: BLUE }], yFmt: (v) => dec(v),
       refY: { value: sla, label: `เกณฑ์ ${sla} วัน` }, tipTitle: (r) => `${monthLabel(r.year, r.month)} · ปีงบ ${r.fiscal_year}` }));
 
-    compareBox(section(root, { id: "rep-category", title: "ค่าซ่อมตามหมวด" }),
+    groupedBox(section(root, { id: "rep-category", title: "ค่าซ่อมตามหมวด" }),
       d.categories.map((r) => ({ name: r.name, a: r.prev_cost, b: r.curr_cost })),
-      { prevFy: fy.prev, currFy: fy.curr, fmt: (v) => `${num(v)} บาท`, better: "down" });
+      { prevFy: fy.prev, currFy: fy.curr, fmt: (v) => `${num(v)} บาท`, axisFmt: num, better: "down", shortName: noPrefix });
   };
 
   // ค่าซ่อมสะสมเทียบราคาซื้อ: แถบ = ค่าซ่อมคิดเป็นกี่ % ของราคาซื้อ (เต็มแถบ = เท่าราคาซื้อ)
@@ -611,6 +628,318 @@
       tipTitle: (r) => `${r.key} · ${num(r.overdue)} จาก ${num(r.due_items)} ชิ้น` }));
   };
 
+  // =====================================================================
+  // ตัวสำรวจรายการ (แนวเดียวกับ dashboard_borrow.html ของ Boom):
+  // ชิปสัญญาณกดกรองได้ + ตัวกรอง + ตัวเลขหลักและกราฟรายเดือนที่เปลี่ยนตามตัวกรอง + ตาราง + หน้าต่างรายละเอียดพร้อมประวัติ
+  const FLAG = {
+    repeat: ["แจ้งซ้ำที่เดิม", "bad"], aircon: ["งานแอร์", "info"], slow: ["เกินเกณฑ์วันทำการ", "warn"], noplace: ["ไม่ระบุอาคาร", "warn"],
+    followup: ["ซ่อมซ้ำ", "warn"], dispose: ["ไม่คุ้มซ่อม", "bad"], vendor: ["ส่งร้าน", ""],
+  };
+  const flagChips = (flags, show = Object.keys(FLAG)) => {
+    const f = flags.filter((x) => show.includes(x));
+    return f.length ? f.map((x) => `<span class="status ${FLAG[x][1]}">${esc(FLAG[x][0])}</span>`).join(" ") : `<span class="muted-text">ปกติ</span>`;
+  };
+  const countBy = (rows, fn) => {
+    const m = new Map();
+    rows.forEach((r) => { const k = fn(r); if (k !== null && k !== undefined) m.set(k, (m.get(k) || 0) + 1); });
+    return [...m.entries()].sort((a, b) => b[1] - a[1]);
+  };
+  function facts(root, pairs) {
+    const dl = document.createElement("dl");
+    dl.className = "facts";
+    dl.innerHTML = pairs.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join("");
+    root.appendChild(dl);
+  }
+
+  /**
+   * cfg: rows, date(r) "YYYY-MM-DD", isFlag(r), flagLabel, chips [{id,label,test}], filters [{id,label,value(r),desc?}],
+   *      search(r), kpis(rows) -> stats items, highlights(rows) -> [{label, text, row?}], columns, detailTitle(r), detail(r, all) -> [{label, render(el)}]
+   */
+  function explorer(root, ctx, cfg) {
+    const all = cfg.rows, q = ctx.query, PAGE = 12;
+    const state = { chip: q.get("chip") || "all", text: q.get("q") || "", page: 1,
+      filters: Object.fromEntries(cfg.filters.map((f) => [f.id, q.get(f.id) || ""])) };
+
+    const chipBar = document.createElement("div");
+    chipBar.className = "chips";
+    chipBar.setAttribute("role", "group");
+    chipBar.setAttribute("aria-label", "สัญญาณ");
+    root.appendChild(chipBar);
+
+    const bar = document.createElement("div");
+    bar.className = "toolbar";
+    bar.innerHTML = html`<label class="field">ค้นหา<input type="search" data-f="q" autocomplete="off" value="${esc(state.text)}"></label>` +
+      cfg.filters.map((f) => {
+        const vals = [...new Set(all.map(f.value).filter((v) => v !== null && v !== undefined && v !== ""))]
+          .sort((a, b) => (f.desc ? -1 : 1) * String(a).localeCompare(String(b), "th", { numeric: true }));
+        return html`<label class="field">${esc(f.label)}<select data-f="${f.id}"><option value="">ทั้งหมด</option>${vals.map((v) =>
+          `<option value="${esc(v)}"${String(v) === state.filters[f.id] ? " selected" : ""}>${esc(v)}</option>`).join("")}</select></label>`;
+      }).join("") + `<button type="button" class="btn" data-reset hidden>ล้างตัวกรอง</button>`;
+    root.appendChild(bar);
+
+    const kpiBox = document.createElement("div");
+    root.appendChild(kpiBox);
+    const hl = document.createElement("div");
+    hl.className = "hl-row";
+    root.appendChild(hl);
+    const chartSec = section(root, { id: "exp-month", title: "รายเดือน" });
+    const chart = chartBox(chartSec, [["ปกติ", BLUE], [cfg.flagLabel, RED]]);
+    const tableSec = section(root, { id: "exp-table", title: "รายการ" });
+    const tableBox = document.createElement("div");
+    tableSec.appendChild(tableBox);
+    const pager = document.createElement("div");
+    pager.className = "pager";
+    pager.innerHTML = `<button class="btn" type="button" data-p="-1">ก่อนหน้า</button><span></span><button class="btn" type="button" data-p="1">ถัดไป</button>`;
+    tableSec.appendChild(pager);
+
+    // หน้าต่างรายละเอียด (dialog ของ browser: กด Esc ปิดได้ โฟกัสอยู่ในหน้าต่าง)
+    const dlg = document.createElement("dialog");
+    dlg.className = "detail";
+    dlg.innerHTML = `<div class="detail-head"><h2></h2><button type="button" class="btn" data-close>ปิด</button></div>
+      <div class="detail-tabs" role="tablist"></div><div class="detail-body"></div>`;
+    root.appendChild(dlg);
+    dlg.querySelector("[data-close]").addEventListener("click", () => dlg.close());
+    dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); });
+    function openDetail(r) {
+      dlg.querySelector("h2").textContent = cfg.detailTitle(r);
+      const tabs = cfg.detail(r, all), tabBar = dlg.querySelector(".detail-tabs"), body = dlg.querySelector(".detail-body");
+      const show = (i) => {
+        tabBar.querySelectorAll("button").forEach((b, j) => b.setAttribute("aria-selected", String(i === j)));
+        body.replaceChildren();
+        tabs[i].render(body);
+      };
+      tabBar.innerHTML = tabs.map((t, i) => `<button type="button" role="tab" data-t="${i}">${esc(t.label)}</button>`).join("");
+      tabBar.onclick = (e) => { const b = e.target.closest("button"); if (b) show(+b.dataset.t); };
+      show(0);
+      dlg.showModal();
+    }
+
+    let view = [], months = [];
+    const drawChart = () => Charts.bars(chart, months, {
+      label: "จำนวนรายการรายเดือน", yFmt: num,
+      series: [{ key: "normal", color: BLUE }, { key: "flagged", color: RED }],
+      xLabel: (r) => (r.month === 10 ? monthLabel(r.year, r.month) : null),
+      tipTitle: (r) => `${monthLabel(r.year, r.month)} · ปีงบ ${r.fiscal_year}`,
+      tipLines: (r) => [["ทั้งหมด", num(r.normal + r.flagged)], [cfg.flagLabel, num(r.flagged), RED]],
+    });
+
+    function render(resetPage = true) {
+      if (resetPage) state.page = 1;
+      const text = state.text.toLowerCase();
+      const base = all.filter((r) => cfg.filters.every((f) => !state.filters[f.id] || String(f.value(r)) === state.filters[f.id])
+        && (!text || cfg.search(r).toLowerCase().includes(text)));
+      const chips = [{ id: "all", label: "ทั้งหมด", test: () => true }, ...cfg.chips];
+      if (!chips.some((c) => c.id === state.chip)) state.chip = "all";
+      chipBar.innerHTML = chips.map((c) => `<button type="button" data-c="${c.id}" aria-pressed="${c.id === state.chip}">${esc(c.label)} <b>${num(base.filter(c.test).length)}</b></button>`).join("");
+      view = base.filter(chips.find((c) => c.id === state.chip).test);
+      bar.querySelector("[data-reset]").hidden = !(state.text || state.chip !== "all" || Object.values(state.filters).some(Boolean));
+      ctx.setQuery({ chip: state.chip === "all" ? "" : state.chip, q: state.text, ...state.filters });
+
+      kpiBox.replaceChildren();
+      stats(kpiBox, cfg.kpis(view), "ตัวเลขตามตัวกรอง");
+
+      const items = view.length ? cfg.highlights(view) : [];
+      hl.innerHTML = items.length ? `<span class="hl-label">เด่น</span>` + items.map((h, i) =>
+        `<${h.row ? `button type="button" data-h="${i}"` : "span"} class="hl"><span>${esc(h.label)}</span> <b>${esc(h.text)}</b></${h.row ? "button" : "span"}>`).join("") : "";
+      hl.onclick = (e) => { const b = e.target.closest("[data-h]"); if (b) openDetail(items[+b.dataset.h].row); };
+
+      const byM = new Map();
+      view.forEach((r) => {
+        const [y, m] = cfg.date(r).split("-").map(Number), k = y * 12 + m - 1;
+        if (!byM.has(k)) byM.set(k, { year: y, month: m, fiscal_year: y + 543 + (m >= 10 ? 1 : 0), flagged: 0, normal: 0 });
+        byM.get(k)[cfg.isFlag(r) ? "flagged" : "normal"]++;
+      });
+      months = fillMonths([...byM.entries()].sort((a, b) => a[0] - b[0]).map((e) => e[1]), ["flagged", "normal"]);
+      drawChart();
+      renderTable();
+    }
+
+    function renderTable() {
+      const pages = Math.max(1, Math.ceil(view.length / PAGE));
+      state.page = Math.min(state.page, pages);
+      const slice = view.slice((state.page - 1) * PAGE, state.page * PAGE);
+      tableBox.replaceChildren();
+      if (!slice.length) emptyState(tableBox, "ไม่พบรายการ", "ลองล้างตัวกรอง");
+      else {
+        const w = table(tableBox, { caption: "รายการตามตัวกรอง", rows: slice, columns: [...cfg.columns,
+          { label: "", render: (r) => `<button type="button" class="btn btn-sm" data-i="${view.indexOf(r)}">ดูข้อมูล</button>` }] });
+        w.addEventListener("click", (e) => { const b = e.target.closest("[data-i]"); if (b) openDetail(view[+b.dataset.i]); });
+      }
+      pager.querySelector("span").textContent = `${num(view.length)} รายการ · หน้า ${num(state.page)} / ${num(pages)}`;
+      pager.querySelector('[data-p="-1"]').disabled = state.page <= 1;
+      pager.querySelector('[data-p="1"]').disabled = state.page >= pages;
+    }
+
+    chipBar.addEventListener("click", (e) => { const b = e.target.closest("[data-c]"); if (b) { state.chip = b.dataset.c; render(); } });
+    let t;
+    bar.addEventListener("input", (e) => {
+      const f = e.target.dataset.f;
+      if (f === "q") { clearTimeout(t); t = setTimeout(() => { state.text = e.target.value.trim(); render(); }, 250); }
+    });
+    bar.addEventListener("change", (e) => { const f = e.target.dataset.f; if (f && f !== "q") { state.filters[f] = e.target.value; render(); } });
+    bar.querySelector("[data-reset]").addEventListener("click", () => {
+      state.text = ""; state.chip = "all";
+      Object.keys(state.filters).forEach((k) => { state.filters[k] = ""; });
+      bar.querySelectorAll("select").forEach((s) => { s.value = ""; });
+      bar.querySelector("input").value = "";
+      render();
+    });
+    pager.addEventListener("click", (e) => { const b = e.target.closest("[data-p]"); if (b) { state.page += +b.dataset.p; renderTable(); } });
+    render();
+    responsive(chart, drawChart);
+  }
+
+  Views["facility-jobs"] = async (root, ctx) => {
+    const d = await api("facility.php?view=jobs");
+    const has = (f) => (r) => r.flags.includes(f);
+    explorer(root, ctx, {
+      rows: d.rows, date: (r) => r.reported, flagLabel: "แจ้งซ้ำ / ปิดงานช้า", isFlag: (r) => has("repeat")(r) || has("slow")(r),
+      chips: [
+        { id: "repeat", label: "แจ้งซ้ำที่เดิมภายใน 30 วัน", test: has("repeat") },
+        { id: "aircon", label: "งานแอร์", test: has("aircon") },
+        { id: "slow", label: `ปิดงานเกิน ${d.sla_workdays} วันทำการ`, test: has("slow") },
+        { id: "noplace", label: "ไม่ระบุอาคาร", test: has("noplace") },
+      ],
+      search: (r) => `${r.type_name} ${r.place} ${r.department}`,
+      filters: [
+        { id: "fy", label: "ปีงบ", value: (r) => r.fiscal_year, desc: true },
+        { id: "building", label: "อาคาร", value: (r) => r.building },
+        { id: "type", label: "ประเภทงาน", value: (r) => r.type_name },
+        { id: "reporter", label: "ผู้แจ้ง", value: (r) => r.reporter_status || "ไม่ระบุ" },
+      ],
+      kpis: (rows) => {
+        const topB = countBy(rows.filter((r) => r.building !== "ไม่ระบุอาคาร"), (r) => r.building)[0];
+        return [
+          { label: "งานแจ้งซ่อม", value: num(rows.length), unit: "งาน" },
+          { label: "แจ้งซ้ำที่เดิม", value: num(rows.filter(has("repeat")).length), unit: "งาน", sub: "ภายใน 30 วัน", subCls: "delta-bad" },
+          { label: "งานแอร์", value: pct(ratio(rows.filter(has("aircon")).length, rows.length), 0) },
+          { label: "อาคารที่แจ้งมากสุด", value: topB ? topB[0] : "–", sub: topB ? `${num(topB[1])} งาน` : "" },
+        ];
+      },
+      highlights: (rows) => {
+        const place = countBy(rows.filter((r) => r.location_key !== null), (r) => r.place)[0];
+        const type = countBy(rows, (r) => r.type_name)[0];
+        const month = countBy(rows, (r) => r.reported.slice(0, 7))[0];
+        const out = [];
+        if (place && place[1] > 1) out.push({ label: "แจ้งบ่อยสุด:", text: `${place[0]} (${num(place[1])})`, row: rows.find((r) => r.place === place[0]) });
+        if (type) out.push({ label: "ประเภทมากสุด:", text: `${type[0]} (${num(type[1])})` });
+        if (month) { const [y, m] = month[0].split("-").map(Number); out.push({ label: "เดือนที่แจ้งมากสุด:", text: `${monthLabel(y, m)} (${num(month[1])})` }); }
+        return out;
+      },
+      columns: [
+        { label: "วันที่แจ้ง", align: "l", render: (r) => esc(dateTH(r.reported)) },
+        { key: "type_name", label: "ประเภทงาน", align: "l", cls: "wrap" },
+        { key: "place", label: "สถานที่", align: "l", cls: "wrap" },
+        { key: "source", label: "ช่องทาง", align: "l" },
+        { label: "สัญญาณ", align: "l", render: (r) => flagChips(r.flags, ["repeat", "slow", "noplace"]) },
+      ],
+      detailTitle: (r) => `${r.type_name} · ${dateTH(r.reported)}`,
+      detail: (r, rows) => [
+        { label: "งานแจ้งซ่อม", render: (el) => facts(el, [
+          ["วันที่แจ้ง", esc(dateTH(r.reported))], ["ประเภทงาน", esc(r.type_name)], ["สถานที่", esc(r.place)],
+          ["หน่วยงานผู้แจ้ง", esc(r.department)], ["สถานภาพผู้แจ้ง", esc(r.reporter_status || "–")], ["ช่องทาง", esc(r.source)],
+          ["ผู้รับงาน", esc(r.staff || "–")],
+          ["ปิดงาน", r.completed ? `${esc(dateTH(r.completed))} · ${num(r.workdays)} วันทำการ` : "–"],
+          ["สัญญาณ", flagChips(r.flags)],
+        ]) },
+        { label: "ประวัติสถานที่นี้", render: (el) => {
+          const same = rows.filter((x) => (r.location_key !== null ? x.location_key === r.location_key : x.building === r.building));
+          stats(el, [
+            { label: r.location_key !== null ? r.place : r.building, value: num(same.length), unit: "งาน" },
+            { label: "แจ้งซ้ำภายใน 30 วัน", value: num(same.filter(has("repeat")).length), unit: "งาน" },
+            { label: "ประเภทที่แจ้งบ่อย", value: countBy(same, (x) => x.type_name)[0][0].replace(/^งาน/, "") },
+          ], "สรุปสถานที่");
+          table(el, { caption: "งานแจ้งซ่อมที่สถานที่นี้", tall: true, rows: same, columns: [
+            { label: "วันที่แจ้ง", align: "l", render: (x) => `${esc(dateTH(x.reported))}${x.id === r.id ? ' <span class="status info">รายการนี้</span>' : ""}` },
+            { key: "type_name", label: "ประเภทงาน", align: "l", cls: "wrap" },
+            { key: "source", label: "ช่องทาง", align: "l" },
+          ] });
+        } },
+      ],
+    });
+  };
+
+  Views["repair-jobs"] = async (root, ctx) => {
+    const d = await api("repair.php?view=jobs");
+    const has = (f) => (r) => r.flags.includes(f);
+    const sla = d.sla_workdays;
+    explorer(root, ctx, {
+      rows: d.rows, date: (r) => r.repair_date, flagLabel: "ซ่อมซ้ำ / ช้า / ไม่คุ้ม",
+      isFlag: (r) => ["followup", "slow", "dispose"].some((f) => r.flags.includes(f)),
+      chips: [
+        { id: "followup", label: "ซ่อมซ้ำอาการเดิม", test: has("followup") },
+        { id: "slow", label: `เกิน ${sla} วันทำการ`, test: has("slow") },
+        { id: "dispose", label: "ครุภัณฑ์ไม่คุ้มซ่อม", test: has("dispose") },
+        { id: "vendor", label: "ส่งร้านภายนอก", test: has("vendor") },
+      ],
+      search: (r) => `${r.asset_name} ${r.asset_code} ${r.vendor_name || ""}`,
+      filters: [
+        { id: "fy", label: "ปีงบ", value: (r) => r.fiscal_year, desc: true },
+        { id: "category", label: "หมวด", value: (r) => r.category },
+        { id: "department", label: "หน่วยงาน", value: (r) => r.department },
+        { id: "by", label: "ผู้ซ่อม", value: (r) => r.handled_by },
+      ],
+      kpis: (rows) => {
+        const done = rows.filter((r) => r.workdays !== null);
+        return [
+          { label: "งานซ่อม", value: num(rows.length), unit: "งาน" },
+          { label: "ค่าซ่อม", value: num(d3.sum(rows, (r) => r.cost)), unit: "บาท" },
+          { label: `เสร็จใน ${sla} วันทำการ`, value: pct(ratio(done.filter((r) => r.workdays <= sla).length, done.length), 0) },
+          { label: "ซ่อมซ้ำอาการเดิม", value: num(rows.filter(has("followup")).length), unit: "งาน", subCls: "delta-bad" },
+        ];
+      },
+      highlights: (rows) => {
+        const out = [];
+        const cost = d3.greatest(rows, (r) => r.cost), slow = d3.greatest(rows.filter((r) => r.workdays !== null), (r) => r.workdays);
+        const often = countBy(rows, (r) => r.asset_code)[0];
+        if (cost && cost.cost) out.push({ label: "ค่าซ่อมสูงสุด:", text: `${cost.asset_name} ${num(cost.cost)} บาท`, row: cost });
+        if (slow) out.push({ label: "ซ่อมนานสุด:", text: `${slow.asset_name} ${num(slow.workdays)} วันทำการ`, row: slow });
+        if (often && often[1] > 1) {
+          const r = rows.find((x) => x.asset_code === often[0]);
+          out.push({ label: "ซ่อมบ่อยสุด:", text: `${r.asset_name} ${num(often[1])} ครั้ง`, row: r });
+        }
+        return out;
+      },
+      columns: [
+        { label: "วันที่แจ้ง", align: "l", render: (r) => esc(dateTH(r.repair_date)) },
+        { key: "asset_name", label: "ครุภัณฑ์", align: "l", cls: "wrap" },
+        { label: "หมวด", align: "l", render: (r) => esc(r.category.replace(/^ครุภัณฑ์/, "")) },
+        { label: "ค่าซ่อม", render: (r) => num(r.cost) },
+        { label: "วันทำการ", render: (r) => (r.workdays === null ? "–" : num(r.workdays)) },
+        { label: "สัญญาณ", align: "l", render: (r) => flagChips(r.flags, ["followup", "slow", "dispose"]) },
+      ],
+      detailTitle: (r) => r.asset_name,
+      detail: (r, rows) => [
+        { label: "งานซ่อม", render: (el) => facts(el, [
+          ["วันที่แจ้ง", esc(dateTH(r.repair_date))],
+          ["ซ่อมเสร็จ", r.complete_date ? `${esc(dateTH(r.complete_date))} · ${num(r.workdays)} วันทำการ` : "–"],
+          ["ผู้ซ่อม", esc(r.vendor_name ? `ส่งร้าน: ${r.vendor_name}` : "ซ่อมเองโดยเจ้าหน้าที่")],
+          ["สถานะ", esc(r.repair_status || "–")], ["ค่าซ่อม", `${num(r.cost)} บาท`],
+          ["ซ่อมซ้ำ", r.is_followup_flag ? `ครั้งที่ ${num(r.followup_no)}` : "ไม่ใช่"],
+          ["ผู้อนุมัติ", esc(r.approver || "–")], ["หน่วยงาน", esc(r.department)],
+          ["หมวด", esc(r.category)], ["เลขครุภัณฑ์", esc(r.asset_code)], ["สัญญาณ", flagChips(r.flags)],
+        ]) },
+        { label: "ประวัติครุภัณฑ์ชิ้นนี้", render: (el) => {
+          const same = rows.filter((x) => x.asset_code === r.asset_code);
+          const cls = r.asset_verdict === "dispose" ? "delta-bad" : r.asset_verdict === "ok" ? "delta-good" : "delta-flat";
+          stats(el, [
+            { label: "ค่าซ่อมสะสม / ราคาซื้อ", value: pct(r.asset_ratio, 0),
+              sub: `${num(r.asset_repair_cost)} / ${num(r.asset_price)} บาท`, subCls: cls },
+            { label: "ซ่อมทั้งหมด", value: num(same.length), unit: "ครั้ง" },
+            { label: "อายุ / อายุการใช้งาน", value: r.asset_age_years === null ? "–" : `${num(r.asset_age_years)}/${num(r.asset_life_years)}`, unit: "ปี" },
+          ], "สรุปครุภัณฑ์");
+          table(el, { caption: "งานซ่อมของครุภัณฑ์ชิ้นนี้", tall: true, rows: same, columns: [
+            { label: "วันที่แจ้ง", align: "l", render: (x) => `${esc(dateTH(x.repair_date))}${x.id === r.id ? ' <span class="status info">รายการนี้</span>' : ""}` },
+            { key: "handled_by", label: "ผู้ซ่อม", align: "l" },
+            { label: "ค่าซ่อม", render: (x) => num(x.cost) },
+            { label: "วันทำการ", render: (x) => (x.workdays === null ? "–" : num(x.workdays)) },
+            { label: "ซ่อมซ้ำ", align: "l", render: (x) => (x.is_followup_flag ? '<span class="status warn">ใช่</span>' : "–") },
+          ] });
+        } },
+      ],
+    });
+  };
+
   /** แถบเครื่องมือของหน้า: [lead เช่น ตัวเลือกปีงบ] ข้อความสรุป + ปุ่ม ; buttons: [[label | () => label, onClick(btn)]] */
   function toolbar(root, text, buttons, lead) {
     const bar = document.createElement("div");
@@ -675,5 +1004,6 @@
   }
 
   window.Views = Views;
+  window.ViewApi = api;   // ให้ app.js ดึงตัวเลขบนแท็บผ่านที่อยู่ API เดียวกัน
   window.ViewStates = { emptyState, errorState };
 })();

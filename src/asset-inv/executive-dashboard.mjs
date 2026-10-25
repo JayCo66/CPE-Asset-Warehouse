@@ -192,6 +192,160 @@ function renderRankedBars(id, rows, {
   }).join("")}</ol>`;
 }
 
+function renderRateHeatmap(id, caption, rows, columns, {
+  labelKey = "label",
+  filterValueKey = "filterValue",
+} = {}) {
+  const target = document.getElementById(id);
+  if (!target) return;
+  const sourceRows = Array.isArray(rows) ? rows : [];
+  if (sourceRows.length === 0) {
+    target.innerHTML = emptyMarkup("ไม่มีข้อมูลสำหรับเปรียบเทียบหน่วยงาน");
+    return;
+  }
+
+  const headers = columns.map((column) =>
+    `<th scope="col" title="${escapeHtml(column.description || column.label)}">${escapeHtml(column.label)}</th>`,
+  ).join("");
+  const body = sourceRows.map((row) => {
+    const label = displayValue(row[labelKey]);
+    const metricCells = columns.map((column) => {
+      const rawRate = column.getRate(row);
+      const rate = rawRate === null || rawRate === undefined || rawRate === "" || !Number.isFinite(Number(rawRate))
+        ? null
+        : Math.max(0, Math.min(100, Number(rawRate)));
+      const rawCount = column.getCount(row);
+      const rawDenominator = column.getDenominator(row);
+      const hasCount = rawCount !== null && rawCount !== undefined && Number.isFinite(Number(rawCount));
+      const hasDenominator = rawDenominator !== null && rawDenominator !== undefined && Number.isFinite(Number(rawDenominator));
+      const countText = hasCount && hasDenominator
+        ? `${formatCount(rawCount)} / ${formatCount(rawDenominator)}`
+        : "ไม่มีจำนวนให้แสดง";
+      const rateText = rate === null ? "—" : formatPercent(rate);
+      const heatIntensity = rate === null ? 0 : 0.08 + (rate / 100) * 0.24;
+      return `<td><div class="heatmap-cell${rate === null ? " is-unavailable" : ""}" style="--heat-intensity:${heatIntensity.toFixed(3)}" title="${escapeHtml(`${column.label}: ${rateText} · ${countText}`)}">
+        <strong class="heatmap-rate">${rateText}</strong>
+        <span class="heatmap-count">${countText}</span>
+      </div></td>`;
+    }).join("");
+    return `<tr><th scope="row">${drillButton(label, "department", row[filterValueKey])}</th>${metricCells}</tr>`;
+  }).join("");
+
+  target.innerHTML = `<div class="rate-heatmap-scroll" role="region" tabindex="0" aria-label="${escapeHtml(caption)}">
+    <table class="dashboard-data-table rate-heatmap-table">
+      <caption class="sr-only">${escapeHtml(caption)}</caption>
+      <thead><tr><th scope="col">หน่วยงาน</th>${headers}</tr></thead>
+      <tbody>${body}</tbody>
+    </table>
+  </div>`;
+}
+
+function layoutTreemap(items) {
+  const cells = [];
+  const weightOf = (item) => Math.max(0, Number(item.totalAssets) || 0);
+
+  function divide(group, x, y, width, height) {
+    if (group.length === 0) return;
+    if (group.length === 1) {
+      cells.push({ item: group[0], x, y, width, height });
+      return;
+    }
+
+    const totalWeight = group.reduce((sum, item) => sum + weightOf(item), 0);
+    if (totalWeight <= 0) return;
+    let splitIndex = 1;
+    let firstWeight = weightOf(group[0]);
+    while (splitIndex < group.length - 1 && firstWeight < totalWeight / 2) {
+      firstWeight += weightOf(group[splitIndex]);
+      splitIndex += 1;
+    }
+
+    const ratio = firstWeight / totalWeight;
+    const firstGroup = group.slice(0, splitIndex);
+    const secondGroup = group.slice(splitIndex);
+    if (width >= height) {
+      const firstWidth = width * ratio;
+      divide(firstGroup, x, y, firstWidth, height);
+      divide(secondGroup, x + firstWidth, y, width - firstWidth, height);
+    } else {
+      const firstHeight = height * ratio;
+      divide(firstGroup, x, y, width, firstHeight);
+      divide(secondGroup, x, y + firstHeight, width, height - firstHeight);
+    }
+  }
+
+  divide(items, 0, 0, 100, 100);
+  return cells;
+}
+
+function renderTreemap(id, rows, {
+  filterKey,
+  totalAssets = 0,
+  otherLabel = "รายการอื่น",
+  caption = "สัดส่วนสินทรัพย์",
+} = {}) {
+  const target = document.getElementById(id);
+  if (!target) return;
+  const allRows = Array.isArray(rows)
+    ? rows.map((row) => ({ ...row, totalAssets: Math.max(0, Number(row.totalAssets) || 0) }))
+      .sort((left, right) => right.totalAssets - left.totalAssets)
+    : [];
+  const rowTotal = allRows.reduce((sum, row) => sum + row.totalAssets, 0);
+  if (allRows.length === 0 || rowTotal === 0) {
+    target.innerHTML = emptyMarkup("ไม่มีข้อมูลให้แสดงในแผนผังสัดส่วน");
+    return;
+  }
+
+  const denominator = Number(totalAssets) > 0 ? Number(totalAssets) : rowTotal;
+  const missingRows = allRows.filter((row) => row.key === "__unknown__" || row.filterValue === "__missing__");
+  const knownRows = allRows.filter((row) => !missingRows.includes(row));
+  const topRows = knownRows.slice(0, 5);
+  const remainderRows = knownRows.slice(5);
+  const displayRows = [...topRows, ...missingRows];
+  if (remainderRows.length > 0) {
+    displayRows.push({
+      key: "__other__",
+      label: `${otherLabel} (${remainderRows.length} กลุ่ม)`,
+      totalAssets: remainderRows.reduce((sum, row) => sum + row.totalAssets, 0),
+      aggregate: true,
+    });
+  }
+  displayRows.sort((left, right) => right.totalAssets - left.totalAssets);
+
+  const positioned = layoutTreemap(displayRows);
+  const tiles = positioned.map(({ item, x, y, width, height }, index) => {
+    const share = denominator > 0 ? (item.totalAssets / denominator) * 100 : 0;
+    const ariaLabel = `${item.label}: ${formatCount(item.totalAssets)} สินทรัพย์ (${formatPercent(share)})${item.aggregate ? " รวมรายการที่เหลือ" : " เลือกเพื่อกรอง"}`;
+    const style = `left:${x.toFixed(3)}%;top:${y.toFixed(3)}%;width:${width.toFixed(3)}%;height:${height.toFixed(3)}%`;
+    const content = `<span class="treemap-tile-label">${escapeHtml(item.label)}</span><strong class="treemap-tile-count">${formatCount(item.totalAssets)}</strong><span class="treemap-tile-share">${formatPercent(share)}</span>`;
+    if (item.aggregate) {
+      return `<div class="treemap-tile treemap-tile-aggregate" style="${style}" role="img" aria-label="${escapeHtml(ariaLabel)}" title="${escapeHtml(ariaLabel)}">${content}</div>`;
+    }
+    const filterValue = item.filterValue ?? (item.key === "__unknown__" ? "__missing__" : item.label);
+    return `<button class="treemap-tile treemap-tile-tone-${index % 4}" type="button" style="${style}" data-drill-filter="${escapeHtml(filterKey)}" data-filter-value="${escapeHtml(filterValue)}" aria-label="${escapeHtml(ariaLabel)}" title="${escapeHtml(ariaLabel)}">${content}</button>`;
+  }).join("");
+  const detailsRows = allRows.map((row) => {
+    const share = denominator > 0 ? (row.totalAssets / denominator) * 100 : 0;
+    const filterValue = row.filterValue ?? (row.key === "__unknown__" ? "__missing__" : row.label);
+    return `<tr><th scope="row">${drillButton(row.label, filterKey, filterValue)}</th><td>${formatCount(row.totalAssets)}</td><td>${formatPercent(share)}</td></tr>`;
+  }).join("");
+
+  target.innerHTML = `<div class="treemap-stage" role="group" aria-label="${escapeHtml(caption)} · พื้นที่แทนผลรวม asset_count">
+    ${tiles}
+  </div>
+  <p class="treemap-note">พื้นที่แทนจำนวนจาก SUM(asset_count) · คลิกหมวดหมู่หรือแหล่งเงินเพื่อกรอง · รายการที่ไม่ทราบค่าจะแสดงแยก</p>
+  <details class="treemap-details">
+    <summary>ดูตัวเลขครบทุกกลุ่ม (${formatCount(allRows.length)} รายการ)</summary>
+    <div class="dashboard-table-wrap">
+      <table class="dashboard-data-table treemap-detail-table">
+        <caption class="sr-only">${escapeHtml(caption)} รายการทั้งหมด</caption>
+        <thead><tr><th scope="col">รายการ</th><th scope="col">จำนวนสินทรัพย์</th><th scope="col">สัดส่วน</th></tr></thead>
+        <tbody>${detailsRows}</tbody>
+      </table>
+    </div>
+  </details>`;
+}
+
 function renderTable(id, caption, columns, rows, { emptyTitle = "ไม่มีข้อมูลให้แสดง", limit = 100 } = {}) {
   const target = document.getElementById(id);
   if (!target) return;
@@ -249,16 +403,31 @@ function renderOverview(data, payload) {
   renderRankedBars("overview-age-distribution", ageRows, {
     labelKey: "label", countKey: "assets", filterKey: "ageBand", valueKey: "key", limit: 7, sort: false,
   });
-  renderRankedBars("overview-departments", data.topDepartments, {
-    labelKey: "label", countKey: "totalAssets", filterKey: "department", valueKey: "label", limit: 7,
-  });
-
-  const attention = (data.attentionAreas || []).filter((item) =>
-    ["damaged", "unavailable", "old", "missingLocation", "missingCriticalMetadata", "belowThreshold"].includes(item.key),
-  );
-  renderRankedBars("overview-attention", attention, {
-    labelKey: "label", countKey: "assets", valueKey: "key", limit: 6,
-  });
+  renderRateHeatmap("overview-issue-heatmap", "อัตราประเด็นสินทรัพย์ตามหน่วยงาน", payload.departments?.rows, [
+    {
+      label: "ไม่มีตำแหน่ง",
+      getRate: (row) => row.missingLocationRate,
+      getCount: (row) => row.missingLocationAssets,
+      getDenominator: (row) => row.totalAssets,
+    },
+    {
+      label: `อายุเกิน ${filters.ageThreshold} ปี`,
+      description: `อัตราอายุเกิน ${filters.ageThreshold} ปีคิดจากรายการที่ทราบอายุ`,
+      getRate: (row) => row.oldAssetRate,
+      getCount: (row) => row.assetsOlderThanThreshold,
+      getDenominator: (row) => row.assetsWithKnownAge,
+    },
+    {
+      label: "ชำรุด",
+      getRate: (row) => row.damageRate,
+      getCount: (row) => row.damagedAssets,
+      getDenominator: (row) => row.totalAssets,
+    },
+  ]);
+  const issueNote = document.getElementById("overview-issue-note");
+  if (issueNote) {
+    issueNote.textContent = `ตัวเลขใต้เปอร์เซ็นต์คือจำนวน / ฐาน · อายุเกิน ${filters.ageThreshold} ปีใช้เฉพาะรายการที่ทราบอายุเป็นฐาน ส่วนประเด็นอื่นใช้จำนวนสินทรัพย์ทั้งหมดของหน่วยงาน`;
+  }
   const history = payload.history;
   const historyTarget = document.getElementById("overview-history-content");
   if (!historyTarget) return;
@@ -288,8 +457,11 @@ function tableMarkup(caption, columns, rows) {
 }
 
 function renderPortfolio(data) {
-  renderRankedBars("portfolio-categories", data.categories, {
-    labelKey: "label", countKey: "totalAssets", rateKey: "assetShareRate", filterKey: "category", valueKey: "label", limit: 15,
+  renderTreemap("portfolio-categories", data.categories, {
+    filterKey: "category",
+    totalAssets: latestPayload?.overview?.totalAssets,
+    otherLabel: "หมวดหมู่ที่เหลือ",
+    caption: "Treemap สัดส่วนสินทรัพย์ตามหมวดหมู่",
   });
   renderRankedBars("portfolio-types", data.topTypes, {
     labelKey: "label", countKey: "totalAssets", rateKey: "assetShareRate", filterKey: "type", valueKey: "label", limit: 15,
@@ -337,17 +509,50 @@ function renderDepartments(data) {
   });
 }
 
-function renderLocations(data) {
-  const summary = document.getElementById("location-coverage-summary");
-  if (summary) {
-    summary.innerHTML = `
-      <dl class="location-coverage-list">
-        <div><dt>ตำแหน่งที่ระบุ</dt><dd>${formatCount(latestPayload.overview.locationAssignedAssets)}</dd></div>
-        <div><dt>รายละเอียดครบทั้งอาคาร ชั้น ห้อง และพื้นที่</dt><dd>${formatCount(latestPayload.overview.locationDetailCompleteAssets)}</dd></div>
-        <div><dt>ระบุแล้วแต่รายละเอียดไม่ครบ</dt><dd>${formatCount(latestPayload.overview.locationDetailsIncompleteAssets)}</dd></div>
-        <div><dt>ไม่มีตำแหน่งตามธงคลัง</dt><dd>${formatCount(latestPayload.overview.missingLocationAssets)}</dd></div>
-      </dl>`;
+function renderLocationCompleteness(data) {
+  const target = document.getElementById("location-completeness");
+  if (!target) return;
+  const total = Number(data?.totalAssets);
+  const segments = [
+    { key: "complete", label: "รายละเอียดครบ", count: Number(data?.locationDetailCompleteAssets) || 0 },
+    { key: "incomplete", label: "ระบุแล้วแต่รายละเอียดไม่ครบ", count: Number(data?.locationDetailsIncompleteAssets) || 0 },
+    { key: "missing", label: "ไม่มีตำแหน่งตามธงคลัง", count: Number(data?.missingLocationAssets) || 0 },
+    { key: "unknown", label: "ไม่ทราบสถานะตำแหน่ง", count: Number(data?.locationUnknownAssets) || 0 },
+  ];
+  const compositionTotal = segments.reduce((sum, segment) => sum + segment.count, 0);
+  if (!Number.isFinite(total) || total <= 0) {
+    target.innerHTML = emptyMarkup("ไม่มีสินทรัพย์ในชุดข้อมูลที่เลือก");
+    return;
   }
+  if (compositionTotal !== total) {
+    target.innerHTML = emptyMarkup("ข้อมูลสถานที่รวมไม่ตรงกับจำนวนสินทรัพย์", "แผนภูมิถูกพักไว้เพื่อไม่แสดงสัดส่วนที่คลาดเคลื่อน");
+    return;
+  }
+
+  const stack = segments.map((segment) => {
+    const share = (segment.count / total) * 100;
+    return `<span class="location-stack-segment location-stack-${segment.key}" style="width:${share.toFixed(3)}%" title="${escapeHtml(`${segment.label}: ${formatCount(segment.count)} (${formatPercent(share)})`)}"></span>`;
+  }).join("");
+  const legend = segments.map((segment) => {
+    const share = (segment.count / total) * 100;
+    const label = segment.count > 0
+      ? drillButton(segment.label, "locationStatus", segment.key)
+      : escapeHtml(segment.label);
+    return `<li class="location-stack-item">
+      <span class="location-stack-swatch location-stack-${segment.key}" aria-hidden="true"></span>
+      <span class="location-stack-label">${label}</span>
+      <strong>${formatCount(segment.count)}</strong>
+      <span class="location-stack-share">${formatPercent(share)}</span>
+    </li>`;
+  }).join("");
+
+  target.innerHTML = `<div class="location-completeness-stack" aria-hidden="true">${stack}</div>
+    <p class="location-stack-total">${formatCount(total)} รายการ · คำนวณสัดส่วนจาก SUM(asset_count)</p>
+    <ul class="location-stack-legend">${legend}</ul>`;
+}
+
+function renderLocations(data) {
+  renderLocationCompleteness(latestPayload?.overview);
   renderRankedBars("location-buildings", data.building, { labelKey: "label", countKey: "totalAssets", filterKey: "building", valueKey: "label", limit: 15 });
   renderRankedBars("location-floors", data.floor, { labelKey: "label", countKey: "totalAssets", limit: 15 });
   renderRankedBars("location-rooms", data.room, { labelKey: "label", countKey: "totalAssets", limit: 20 });
@@ -439,7 +644,12 @@ function renderAcquisition(data) {
     { label: "อัตราอายุเกินเกณฑ์", render: (row) => formatPercent(row.oldAssetRate) },
     { label: "พร้อมใช้งาน", render: (row) => formatPercent(row.availabilityRate) },
   ], data.years);
-  renderRankedBars("acquisition-sources", data.sources, { labelKey: "label", countKey: "totalAssets", filterKey: "source", valueKey: "label", limit: 15 });
+  renderTreemap("acquisition-sources", data.sources, {
+    filterKey: "source",
+    totalAssets: latestPayload?.overview?.totalAssets,
+    otherLabel: "แหล่งเงินที่เหลือ",
+    caption: "Treemap สัดส่วนสินทรัพย์ตามแหล่งเงิน",
+  });
   renderTable("acquisition-source-metrics", "ตัวชี้วัดสินทรัพย์ตามแหล่งเงิน", [
     { label: "แหล่งเงิน", render: (row) => drillButton(row.label, "source", row.filterValue) },
     { label: "จำนวน", render: (row) => formatCount(row.totalAssets) },
@@ -462,16 +672,38 @@ function renderGovernance(data) {
     { label: "ขาดข้อมูล", render: (row) => formatCount(row.missingAssets) },
     { label: "อัตราขาด", render: (row) => formatPercent(row.missingRate) },
   ], Object.values(data.qualityFields || {}));
-  renderTable("governance-quality-departments", "ความครบถ้วนของข้อมูลสำคัญตามหน่วยงาน", [
-    { label: "หน่วยงาน", render: (row) => drillButton(row.department, "department", row.departmentFilterValue) },
-    { label: "สินทรัพย์", render: (row) => formatCount(row.totalAssets) },
-    { label: "ข้อมูลสำคัญไม่ครบ", render: (row) => formatCount(row.missingCriticalMetadata) },
-    { label: "อัตราขาด", render: (row) => formatPercent(row.missingCriticalRate) },
-    { label: "รหัสขาด", render: (row) => formatPercent(row.missingByField.assetCode?.rate) },
-    { label: "ชื่อขาด", render: (row) => formatPercent(row.missingByField.assetName?.rate) },
-    { label: "หน่วยงานขาด", render: (row) => formatPercent(row.missingByField.department?.rate) },
-    { label: "ไม่มีตำแหน่ง", render: (row) => formatPercent(row.missingByField.location?.rate) },
-  ], data.qualityByDepartment);
+  renderRateHeatmap("governance-quality-departments", "อัตราข้อมูลที่ขาดตามหน่วยงาน", data.qualityByDepartment, [
+    {
+      label: "ไม่มีตำแหน่ง",
+      getRate: (row) => row.missingByField?.location?.rate,
+      getCount: (row) => row.missingByField?.location?.assets,
+      getDenominator: (row) => row.totalAssets,
+    },
+    {
+      label: "ไม่มีห้อง",
+      getRate: (row) => row.missingByField?.room?.rate,
+      getCount: (row) => row.missingByField?.room?.assets,
+      getDenominator: (row) => row.totalAssets,
+    },
+    {
+      label: "ไม่มีปีจัดซื้อ",
+      getRate: (row) => row.missingByField?.purchaseYear?.rate,
+      getCount: (row) => row.missingByField?.purchaseYear?.assets,
+      getDenominator: (row) => row.totalAssets,
+    },
+    {
+      label: "ไม่มียี่ห้อ",
+      getRate: (row) => row.missingByField?.brand?.rate,
+      getCount: (row) => row.missingByField?.brand?.assets,
+      getDenominator: (row) => row.totalAssets,
+    },
+    {
+      label: "ไม่มีรุ่น",
+      getRate: (row) => row.missingByField?.model?.rate,
+      getCount: (row) => row.missingByField?.model?.assets,
+      getDenominator: (row) => row.totalAssets,
+    },
+  ], { labelKey: "department", filterValueKey: "departmentFilterValue" });
   const summary = document.getElementById("governance-exception-summary");
   if (summary) {
     summary.textContent = `${formatCount(data.exceptionsTotal)} สินทรัพย์มีเงื่อนไขที่ควรตรวจสอบ · แสดง 50 รายการแรกตามลำดับความสำคัญ`;

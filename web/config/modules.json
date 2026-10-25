@@ -40,8 +40,16 @@
       "data_source": "mixed",
       "data_note": "ครุภัณฑ์และใบแจ้งซ่อมเดิมเป็นข้อมูลจริง ซ่อมครุภัณฑ์ ยืม-คืน และแจ้งซ่อมระบบใหม่ยังเป็นข้อมูลจำลอง",
       "views": [
-        { "id": "summary", "label": "สรุปปีงบประมาณ", "component": "annual-summary" },
-        { "id": "history", "label": "ย้อนหลังทุกปีงบ", "component": "annual-history" }
+        {
+          "id": "summary",
+          "label": "สรุปปีงบประมาณ",
+          "component": "annual-summary"
+        },
+        {
+          "id": "history",
+          "label": "ย้อนหลังทุกปีงบ",
+          "component": "annual-history"
+        }
       ]
     },
     {
@@ -52,7 +60,11 @@
       "data_source": "mixed",
       "data_note": "อายุครุภัณฑ์เป็นข้อมูลจริง ราคาซื้อ ค่าซ่อม และอายุการใช้งานตามหมวดเป็นค่าจำลอง/ค่าตั้งต้น",
       "views": [
-        { "id": "overview", "label": "ภาพรวม", "component": "invest-overview" }
+        {
+          "id": "overview",
+          "label": "ภาพรวม",
+          "component": "invest-overview"
+        }
       ]
     },
     {
@@ -63,7 +75,11 @@
       "data_source": "real",
       "data_note": "ข้อมูลจริงจากระบบครุภัณฑ์ (assets API)",
       "views": [
-        { "id": "overview", "label": "ภาพรวม", "component": "inventory-overview" }
+        {
+          "id": "overview",
+          "label": "ภาพรวม",
+          "component": "inventory-overview"
+        }
       ]
     },
     {
@@ -74,8 +90,18 @@
       "data_source": "mixed",
       "data_note": "ใบแจ้งซ่อมจริงถึง 14 ก.ค. 2569 หลังจากนั้นเป็นข้อมูลจำลองของระบบใหม่",
       "views": [
-        { "id": "overview", "label": "ภาพรวม", "component": "facility-overview" }
-      ]
+        {
+          "id": "overview",
+          "label": "ภาพรวม",
+          "component": "facility-overview"
+        },
+        {
+          "id": "jobs",
+          "label": "รายการแจ้งซ่อม",
+          "component": "facility-jobs"
+        }
+      ],
+      "badges": "facility.php?view=badges"
     },
     {
       "id": "repair",
@@ -85,9 +111,23 @@
       "data_source": "sample",
       "data_note": "ข้อมูลจำลอง ทั้งงานซ่อม ค่าซ่อม และราคาซื้อ (ระบบครุภัณฑ์ยังไม่มีราคา)",
       "views": [
-        { "id": "overview", "label": "ภาพรวม", "component": "repair-overview" },
-        { "id": "worth", "label": "คุ้มซ่อมไหม", "component": "repair-worth" }
-      ]
+        {
+          "id": "overview",
+          "label": "ภาพรวม",
+          "component": "repair-overview"
+        },
+        {
+          "id": "jobs",
+          "label": "รายการงานซ่อม",
+          "component": "repair-jobs"
+        },
+        {
+          "id": "worth",
+          "label": "คุ้มซ่อมไหม",
+          "component": "repair-worth"
+        }
+      ],
+      "badges": "repair.php?view=badges"
     },
     {
       "id": "borrow",
@@ -97,7 +137,11 @@
       "data_source": "sample",
       "data_note": "ข้อมูลจำลอง ระบบจริงยังไม่มีข้อมูลการยืม",
       "views": [
-        { "id": "overview", "label": "ภาพรวม", "component": "borrow-overview" }
+        {
+          "id": "overview",
+          "label": "ภาพรวม",
+          "component": "borrow-overview"
+        }
       ]
     }
   ]

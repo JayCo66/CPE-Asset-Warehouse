@@ -25,7 +25,7 @@ import {
   initExecutiveDashboard,
   refreshExecutiveDashboard,
   setInventoryDashboardPage,
-} from "./executive-dashboard.mjs";
+} from "./executive-dashboard.mjs?v=20261025.1";
 
 const dashboardData = {
   moduleNav: [
@@ -54,8 +54,8 @@ const ASSET_INVENTORY_API_ENDPOINT = new URL(
 ).href;
 const DASHBOARD_SECTION_FILES = [
   "sections/executive-filters.html",
+  "sections/executive-overview.html",
   "sections/executive-navigation.html",
-  "sections/overview.html",
   "sections/portfolio.html",
   "sections/departments.html",
   "sections/locations.html",
@@ -202,7 +202,10 @@ async function loadDashboardSections() {
   if (!container) throw new Error("ไม่พบพื้นที่สำหรับโหลดส่วนแดชบอร์ด");
 
   const responses = await Promise.all(
-    DASHBOARD_SECTION_FILES.map((file) => fetch(file, { headers: { Accept: "text/html" } })),
+    DASHBOARD_SECTION_FILES.map((file) => fetch(file, {
+      cache: "no-cache",
+      headers: { Accept: "text/html" },
+    })),
   );
   const failedResponse = responses.find((response) => !response.ok);
   if (failedResponse) throw new Error(`โหลดส่วนแดชบอร์ดไม่สำเร็จ (HTTP ${failedResponse.status})`);
@@ -352,6 +355,25 @@ function getCurrentDashboardPage() {
   return ["overview", "portfolio", "departments", "locations", "aging", "acquisition", "governance", "explorer"].includes(routeName)
     ? routeName
     : "overview";
+}
+
+function handleDashboardSectionClick(event) {
+  if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  if (!(event.target instanceof Element)) return;
+
+  const link = event.target.closest(".inventory-view-nav [data-dashboard-link]");
+  if (!link || link.dataset.dashboardLink !== getCurrentDashboardPage()) return;
+
+  event.preventDefault();
+  window.location.hash = "#/inventory/overview";
+}
+
+function scrollAssetExplorerIntoView() {
+  const explorer = elements.dashboardSections.querySelector('[data-dashboard-page="explorer"]');
+  if (!explorer) return;
+
+  const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+  window.requestAnimationFrame(() => explorer.scrollIntoView({ behavior, block: "start" }));
 }
 
 function getCurrentModuleId() {
@@ -655,7 +677,9 @@ function renderModuleView(moduleId = getCurrentModuleId()) {
     elements.modulePlaceholderDescription.textContent = activeModule.description;
     elements.modulePlaceholderTitle.focus({ preventScroll: true });
   } else {
-    setInventoryDashboardPage(getCurrentDashboardPage());
+    const pageId = getCurrentDashboardPage();
+    setInventoryDashboardPage(pageId);
+    if (pageId === "explorer") scrollAssetExplorerIntoView();
   }
 }
 
@@ -1053,6 +1077,7 @@ function exportAllMatchingAssetRows() {
 }
 
 function initInteractions() {
+  elements.dashboardSections.addEventListener("click", handleDashboardSectionClick);
   elements.assetApiSearch.addEventListener("input", () => {
     window.clearTimeout(assetApiSearchTimer);
     assetApiRequestId += 1;

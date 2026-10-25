@@ -43,6 +43,31 @@ python etl_warehouse.py
 | `raw/*.json` | ข้อมูลที่ดึงจาก API จริง ใช้กับ `--offline` |
 | `history/assets_YYYYMMDD.json` | snapshot ครุภัณฑ์ของแต่ละรอบ **ห้ามลบ** ไม่อย่างนั้นประวัติใน `fact_asset_inventory` หาย |
 
+### เพิ่มครุภัณฑ์ตัวอย่างสำหรับ snapshot
+
+`data/snapshot_demo_assets.json` มีครุภัณฑ์สังเคราะห์ 100 รายการที่ระบุชัดว่าเป็น DEMO ใช้เพิ่มรายการให้ snapshot ได้โดยไม่แก้ `data/assets_real.json` หรือ seed หลัก `seed_cpeasset.py` ให้สร้าง/seed ฐานข้อมูล `cpeasset` ก่อน แล้วค่อยนำเข้าชุดนี้:
+
+> ใช้กับฐานข้อมูลพัฒนา/ทดสอบในเครื่องเท่านั้น สคริปต์จะเพิ่มแถว DEMO ลงในฐานข้อมูลที่ระบุ ก่อน import จริงให้ตรวจผลด้วย `--dry-run` ก่อน
+
+```bash
+# ตรวจสอบข้อมูลและ preview โดยไม่เขียนฐานข้อมูล
+python scripts/import_snapshot_demo_assets.py --dry-run
+
+# นำเข้ารายการที่ยังไม่มี (ข้าม asset_code ที่มีอยู่แล้ว)
+python scripts/import_snapshot_demo_assets.py
+
+# สร้าง snapshot ของวันที่นี้
+python etl_warehouse.py --snapshot-date 2026-10-25
+```
+
+สคริปต์ import หา `type_id`, `category_id`, `department_id` และ `location_id` จากรหัส/ชื่อที่อยู่ใน JSON จึงใช้กับฐานข้อมูลที่ seed จากไฟล์ชุดเดียวกันได้ แม้เลข auto-increment ในเครื่องจะแตกต่างกัน การรัน import ซ้ำจะข้าม `asset_code` ที่มีอยู่แล้ว ส่วน `seed_cpeasset.py` จะล้างและเติมตารางต้นทางใหม่ทุกครั้ง ดังนั้นถ้ารัน seed หลัง import ต้อง import ชุด DEMO ซ้ำอีกครั้ง
+
+สคริปต์ import ใช้ MySQL client (`mysql.exe` / `mysql`) โดยค้นหาใน path ทั่วไปของ XAMPP/MySQL และใน `PATH`; ใช้ `--mysql-bin` เพื่อระบุ path เองได้ จึงไม่ต้องติดตั้ง PyMySQL เพื่อ import ชุดนี้
+
+ก่อนรัน ETL ให้ตรวจสอบว่า assets API เชื่อมกับ `cpeasset` ฐานข้อมูลเดียวกับที่เพิ่ง import รายการ DEMO
+
+จากนั้นโหลด `output/warehouse_load.sql` เข้า warehouse ตามขั้นตอนปกติ ถ้าใช้ Docker ให้นำเข้า DEMO ไปยัง source DB ที่พอร์ต `3308` ก่อน (เพิ่ม `--port 3308` ในคำสั่ง import) แล้วสั่ง `docker compose run --rm etl` เพื่อสร้างและโหลด warehouse รอบใหม่โดยใช้วันที่ดึง API หากต้องระบุวันที่เอง ให้ใช้ `docker compose run --rm etl sh docker/etl/run.sh --snapshot-date 2026-10-25` หากฐานข้อมูลมีรหัสผ่าน ให้ตั้ง `CPEASSET_DB_PASSWORD` แทนการใส่รหัสผ่านไว้ในคำสั่ง
+
 ---
 
 ## 1. Excel ใบแจ้งซ่อม
@@ -471,18 +496,19 @@ docker/
 
 ### dashboard_report.html (ไฟล์เดียว แบบเดียวกับ dashboard_borrow.html)
 
-หน้ารายงานประจำปี ขอเงินลงทุน ครุภัณฑ์ แจ้งซ่อมอาคาร ซ่อมครุภัณฑ์ และยืม-คืน รวมอยู่ในไฟล์ `dashboard_report.html` ที่ root ของ repo ดึงข้อมูลจาก `assets_api/report_*.php` ซึ่งอ่าน Data Warehouse อย่างเดียว
+งานส่วนของเรา คือ **แจ้งซ่อมอาคาร** และ **ซ่อมครุภัณฑ์** (ภาพรวม + คุ้มซ่อมไหม) อยู่ในไฟล์ `dashboard_report.html` ที่ root ของ repo ดึงข้อมูลจาก `assets_api/report_*.php` ซึ่งอ่าน Data Warehouse อย่างเดียว
 
 | ไฟล์ | หน้าที่ |
 |---|---|
 | `dashboard_report.html` | หน้าเว็บทั้งหมด (CSS/JS ในไฟล์เดียว, d3 จาก CDN) มีปุ่มสลับโหมดมืด/สว่าง ใช้ค่า `cpe_theme` ร่วมกับ `dashboard_borrow.html` |
 | `assets_api/report_common.php` | เชื่อมต่อ warehouse + ฟังก์ชันกลาง (วันทำการ, ราคาจำลอง, อายุการใช้งาน, ความคุ้มค่าการซ่อม) |
 | `assets_api/report_config.json` | เกณฑ์ทั้งหมด (SLA, เกณฑ์ซ่อม 50% + ครึ่งอายุ, อายุการใช้งานตามหมวด, วันหยุดราชการ) |
-| `assets_api/report_annual.php`, `report_invest.php`, `report_inventory.php`, `report_facility.php`, `report_repair.php`, `report_borrow.php` | ข้อมูลของแต่ละหน้า |
+| `assets_api/report_facility.php`, `report_repair.php` | ข้อมูลของแต่ละหน้า |
 
 - **XAMPP**: วาง repo ไว้ใน `htdocs` แล้วเปิด `http://localhost/<โฟลเดอร์>/dashboard_report.html` ตัวหน้าเรียก `assets_api/` ที่อยู่ข้างไฟล์ ถ้า API อยู่ที่อื่นให้เติม `?api=http://localhost/assets_api/` ท้าย URL
 - **ฐานข้อมูล**: `report_*.php` ใช้ `WAREHOUSE_DB_HOST` / `WAREHOUSE_DB_PORT` / `WAREHOUSE_DB_NAME` / `WAREHOUSE_DB_USER` / `WAREHOUSE_DB_PASS` ค่าเริ่มต้นคือ `localhost`, `3306`, `cpe_warehouse`, `root`, ไม่มีรหัสผ่าน (ชื่อฐานข้อมูลเดียวกับ `dw_borrow.php` ของหน้ายืม-คืน)
 - **Docker**: เปิด <http://localhost:8090/dashboard_report.html> (service `report-web`)
+- ครุภัณฑ์อยู่ที่ `src/asset-inv/` และยืม-คืนอยู่ที่ `dashboard_borrow.html` ของเพื่อนร่วมทีม ส่วนรายงานประจำปีและขอเงินลงทุนยังอยู่ในเว็บ `web/public` (Docker พอร์ต 8088)
 - เนื้อหาเหมือนหน้าใน `web/public` แต่เป็นไฟล์แยก แก้หน้าใดหน้าหนึ่งแล้วอีกหน้าจะไม่เปลี่ยนตาม
 
 ## ข้อจำกัดที่ควรรู้

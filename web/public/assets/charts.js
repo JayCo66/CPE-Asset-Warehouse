@@ -180,6 +180,66 @@
     });
   }
 
+  /** ชื่อยาวใต้แท่ง: ตัดเป็นไม่เกิน 2 บรรทัดตามความกว้าง ตัดหลัง "/" หรือช่องว่างก่อน
+   *  ถ้าต้องตัดกลางคำ ไม่ตัดหน้าสระหลัง/สระบนล่าง/วรรณยุกต์ และไม่ตัดหลังสระหน้า (เ แ โ ใ ไ) */
+  function wrapLabel(svg, text, cx, y, width) {
+    const t = svg.append("text").attr("x", cx).attr("y", y).attr("text-anchor", "middle");
+    const probe = t.append("tspan").attr("x", cx).text(text);
+    const fits = (s) => { probe.text(s); return probe.node().getComputedTextLength() <= width; };
+    if (fits(text)) return;
+    const noStart = /[ะ-ฺๅ็-๎]/, noEnd = /[เ-ไ]/;
+    const lines = [];
+    let line = "";
+    for (const part of text.split(/(?<=[/\s])/)) {   // ทีละคำ (แยกหลัง / และช่องว่าง)
+      if (fits(line + part)) { line += part; continue; }
+      if (line) { lines.push(line); line = ""; }
+      for (const ch of part) {
+        if (line && !noStart.test(ch) && !noEnd.test(line.slice(-1)) && !fits(line + ch)) { lines.push(line); line = ch; } else line += ch;
+      }
+    }
+    lines.push(line);
+    probe.remove();
+    lines.slice(0, 2).forEach((l, i) => t.append("tspan").attr("x", cx).attr("dy", i ? "1.25em" : 0)
+      .text(i === 1 && lines.length > 2 ? `${l.slice(0, -1)}…` : l));
+  }
+
+  /** แท่งเรียงคู่ต่อกลุ่มบนแกนเดียว (เทียบหลายกลุ่มพร้อมกัน) ; rows: [{name, ...}] ; series: [{key, label, color}]
+   *  delta(r) -> {text, cls} แสดงเหนือกลุ่ม ; shortName(r) ชื่อใต้แกน */
+  function grouped(box, rows, { series, yFmt, label, tipTitle, tipLines, delta, shortName = (r) => r.name }) {
+    box.querySelectorAll("svg").forEach((n) => n.remove());
+    const W = Math.max(box.clientWidth, 280), HH = 300, B = 46, T = 30;
+    const svg = d3.select(box).append("svg").attr("width", "100%").attr("height", HH).attr("viewBox", `0 0 ${W} ${HH}`)
+      .attr("role", "img").attr("aria-label", label || "");
+    const y = d3.scaleLinear([0, d3.max(rows, (r) => d3.max(series, (s) => +r[s.key] || 0)) || 1], [HH - B, T]).nice(4);
+    const left = yAxis(svg, y, yFmt, W);
+    const x0 = d3.scaleBand(rows.map((r) => r.name), [left, W - 2]).paddingInner(0.28).paddingOuter(0.12);
+    const x1 = d3.scaleBand(series.map((s) => s.key), [0, x0.bandwidth()]).padding(0.1);
+    rows.forEach((r) => series.forEach((s) => {
+      const v = +r[s.key] || 0;
+      svg.append("path").style("fill", s.color).attr("d", barPath(x0(r.name) + x1(s.key), y(v), x1.bandwidth(), y(0) - y(v), 3));
+    }));
+    svg.append("line").attr("x1", left).attr("x2", W).attr("y1", y(0)).attr("y2", y(0)).style("stroke", "var(--line-strong)");
+    rows.forEach((r) => {
+      const cx = x0(r.name) + x0.bandwidth() / 2;
+      wrapLabel(svg, shortName(r), cx, HH - B + 16, x0.step() - 4);
+      if (delta) {
+        const d = delta(r);
+        svg.append("text").attr("class", `delta-label ${d.cls}`).attr("x", cx).attr("text-anchor", "middle")
+          .attr("y", y(d3.max(series, (s) => +r[s.key] || 0)) - 7).text(d.text);
+      }
+    });
+    const tip = tooltip(box);
+    const hl = svg.insert("rect", ":first-child").style("fill", "var(--fill-hover)").attr("opacity", 0);
+    svg.append("g").selectAll("rect").data(rows).join("rect")
+      .attr("x", (r) => x0(r.name) - (x0.step() * x0.paddingInner()) / 2).attr("width", x0.step())
+      .attr("y", T).attr("height", HH - B - T).style("fill", "transparent")
+      .on("pointerenter pointermove", (ev, r) => {
+        hl.attr("x", x0(r.name) - 4).attr("width", x0.bandwidth() + 8).attr("y", T).attr("height", HH - B - T).attr("opacity", 1);
+        tip.show(x0(r.name) + x0.bandwidth() / 2, y(d3.max(series, (s) => +r[s.key] || 0)), tipTitle(r), tipLines(r));
+      })
+      .on("pointerleave", () => { hl.attr("opacity", 0); tip.hide(); });
+  }
+
   function legend(items) {
     const el = document.createElement("div"); el.className = "legend";
     items.forEach(([label, color]) => {
@@ -189,5 +249,5 @@
     return el;
   }
 
-  window.Charts = { bars, lines, compare, legend, css };
+  window.Charts = { bars, lines, compare, grouped, legend, css };
 })();
