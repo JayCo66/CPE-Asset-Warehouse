@@ -24,7 +24,7 @@ services:
       MYSQL_DATABASE: cpeasset
     volumes:
       - source_db_data:/var/lib/mysql
-      - "./DB warehouse project schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro"
+      - "./database/source_schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro"
       - ./docker/source-db/02-extend.sql:/docker-entrypoint-initdb.d/02-extend.sql:ro
     ports:
       - "3308:3306"
@@ -106,7 +106,7 @@ services:
       MYSQL_PASSWORD: ${DB_PASSWORD:-dashboard}
     volumes:
       - warehouse_db_data:/var/lib/mysql
-      - "./warehouse schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro"
+      - "./database/warehouse_schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro"
     ports:
       - "3307:3306"
     healthcheck:
@@ -144,8 +144,8 @@ services:
       DB_USER: root
       DB_PASS: ${SOURCE_DB_ROOT_PASSWORD:-root}
     volumes:
-      - ./dashboard_report.html:/var/www/html/dashboard_report.html:ro
-      - ./dashboard_borrow.html:/var/www/html/dashboard_borrow.html:ro
+      - ./src/maintenance/index.html:/var/www/html/dashboard_report.html:ro
+      - ./src/borrow/index.html:/var/www/html/dashboard_borrow.html:ro
       - ./assets_api:/var/www/html/assets_api:ro
     ports:
       - "${REPORT_WEB_PORT:-8090}:80"

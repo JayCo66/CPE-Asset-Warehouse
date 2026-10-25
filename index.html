@@ -99,9 +99,9 @@
     // owner = เจ้าของงาน (ไม่แสดงบนเมนู) ; theme = ใส่ hub-theme.css ให้หน้านั้นเป็นหน้าตาแบบหน้าเรา ; ไม่ได้แก้ไฟล์ของเจ้าของ
     const PAGES = [
       { id: "assets", label: "ทะเบียนสินทรัพย์", owner: "Sutham", src: "src/asset-inv/", hide: [".app-header", ".module-nav"], theme: true },
-      { id: "borrow", label: "ยืม-คืน", owner: "Boom", src: "dashboard_borrow.html", hide: [".app-header"], theme: true },   // เมนู 6 หัวข้อวิเคราะห์ไม่ซ่อน กลายเป็นแท็บย่อย
-      { id: "facility", label: "แจ้งซ่อมอาคาร", owner: "G1ilbert", src: "dashboard_report.html#/facility", hide: [".app-header", ".module-nav"], theme: false },
-      { id: "repair", label: "ซ่อมครุภัณฑ์", owner: "G1ilbert", src: "dashboard_report.html#/repair", hide: [".app-header", ".module-nav"], theme: false },
+      { id: "borrow", label: "ยืม-คืน", owner: "Boom", src: "src/borrow/", hide: [".app-header"], theme: true },   // เมนู 6 หัวข้อวิเคราะห์ไม่ซ่อน กลายเป็นแท็บย่อย
+      { id: "facility", label: "แจ้งซ่อมอาคาร", owner: "G1ilbert", src: "src/maintenance/#/facility", hide: [".app-header", ".module-nav"], theme: false },
+      { id: "repair", label: "ซ่อมครุภัณฑ์", owner: "G1ilbert", src: "src/maintenance/#/repair", hide: [".app-header", ".module-nav"], theme: false },
     ];
     // แต่ละคนเก็บธีมไว้คนละ key: ปุ่มบนหัวเขียนทุก key ให้ทุกหน้าเป็นธีมเดียวกัน
     const THEME_KEYS = ["cpe_theme", "cpe_dw_theme", "cpe-asset-inventory-theme"];

@@ -5,6 +5,7 @@
 # Local database exports
 abcpeasset.sql
 dashboard_borrow_backup.html
+backups/
 
 # ETL-generated output
 output/
