@@ -7,6 +7,7 @@ header('X-Content-Type-Options: nosniff');
 
 require_once __DIR__ . '/inventory_query.php';
 require_once __DIR__ . '/inventory_analytics.php';
+require_once __DIR__ . '/inventory_disposal.php';
 
 function warehouseDashboardRespond(bool $success, string $message, array $data = [], int $status = 200): never
 {
@@ -241,6 +242,7 @@ try {
     $snapshotOptions = warehouseDashboardSnapshotOptions($warehousePdo);
     if ($snapshotOptions === []) {
         $emptyAnalytics = warehouseInventoryAnalyticsFinalize(warehouseInventoryAnalyticsCreate($filters['ageThreshold']));
+        $emptyAnalytics['overview']['disposalEstimate'] = warehouseDashboardUnavailableDisposalEstimate();
         warehouseDashboardRespond(true, 'ยังไม่มีข้อมูล snapshot ในคลังสินทรัพย์', [
             'snapshot' => null,
             'snapshotOptions' => [],
@@ -259,6 +261,11 @@ try {
     }
 
     $analytics = warehouseDashboardFetchAnalytics($warehousePdo, $filters, $selectedSnapshot);
+    $analytics['overview']['disposalEstimate'] = warehouseDashboardDisposalEstimate(
+        $warehousePdo,
+        $filters,
+        $selectedSnapshot,
+    );
     $snapshot = null;
     foreach ($snapshotOptions as $option) {
         if ($option['key'] === $selectedSnapshot) {

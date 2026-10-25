@@ -106,50 +106,112 @@ function drillButton(label, filterKey, value) {
 }
 
 function renderMetrics(data) {
-  const primary = [
-    {
-      label: "สินทรัพย์ทั้งหมด",
-      value: formatCount(data.totalAssets),
-      note: "ผลรวม asset_count ในชุดข้อมูลที่เลือก",
-      tone: "primary",
-    },
-    {
-      label: "พร้อมใช้งาน",
-      value: formatCount(data.availableAssets),
-      note: `อัตราความพร้อม ${formatPercent(data.availabilityRate)}`,
-      tone: "success",
-    },
-    {
-      label: "ชำรุด",
-      value: formatCount(data.damagedAssets),
-      note: `อัตราความเสียหาย ${formatPercent(data.damageRate)}`,
-      tone: "danger",
-    },
-    {
-      label: "ครอบคลุมตำแหน่ง",
-      value: formatPercent(data.locationCoverageRate),
-      note: `ไม่มีตำแหน่ง ${formatCount(data.missingLocationAssets)} รายการ`,
-      tone: "info",
-    },
-  ];
-  setHtml("executive-metrics", primary.map((item) => `
-    <article class="metric-card metric-card-${item.tone}">
-      <span class="metric-label">${item.label}</span>
-      <strong class="metric-value">${item.value}</strong>
-      <span class="metric-footnote">${item.note}</span>
-    </article>
-  `).join(""));
+  const total = Math.max(0, Number(data.totalAssets) || 0);
+  const available = Math.max(0, Number(data.availableAssets) || 0);
+  const unavailable = Math.max(0, Number(data.unavailableAssets) || 0);
+  const unknown = Math.max(0, Number(data.availabilityUnknownAssets) || 0);
+  const readiness = document.getElementById("overview-readiness-rate");
+  if (readiness) readiness.textContent = formatPercent(data.availabilityRate);
 
-  const secondary = [
-    ["ไม่พร้อมใช้งาน", formatCount(data.unavailableAssets)],
-    ["ไม่ระบุความพร้อม", formatCount(data.availabilityUnknownAssets)],
-    ["อายุเฉลี่ย", data.averageAssetAge === null ? "—" : `${Number(data.averageAssetAge).toFixed(1)} ปี`],
-    [`อายุเกิน ${filters.ageThreshold} ปี`, formatCount(data.assetsOlderThanThreshold)],
-    ["ข้อมูลอายุครบ", formatPercent(data.ageCoverageRate)],
-  ];
-  setHtml("overview-secondary-metrics", secondary.map(([label, value]) => `
-    <div class="secondary-metric"><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>
-  `).join(""));
+  const meter = document.getElementById("overview-readiness-meter");
+  if (meter) {
+    meter.setAttribute(
+      "aria-label",
+      `อัตราความพร้อมใช้งาน ${formatPercent(data.availabilityRate)} · พร้อมใช้งาน ${formatCount(available)} · ไม่พร้อมใช้งาน ${formatCount(unavailable)} · ไม่ระบุ ${formatCount(unknown)} จาก ${formatCount(total)} รายการ`,
+    );
+    const setSegmentWidth = (id, count) => {
+      const segment = document.getElementById(id);
+      if (segment) segment.style.width = total > 0 ? `${Math.max(0, Math.min(100, (count / total) * 100))}%` : "0%";
+    };
+    setSegmentWidth("overview-readiness-ready-segment", available);
+    setSegmentWidth("overview-readiness-unavailable-segment", unavailable);
+    setSegmentWidth("overview-readiness-unknown-segment", unknown);
+  }
+
+  setHtml("overview-readiness-counts", `
+    <div>
+      <dt><span class="overview-status-dot is-ready" aria-hidden="true"></span>พร้อมใช้งาน</dt>
+      <dd>${drillButton(formatCount(available), "availability", "available")}</dd>
+    </div>
+    <div>
+      <dt><span class="overview-status-dot is-unavailable" aria-hidden="true"></span>ไม่พร้อมใช้งาน</dt>
+      <dd>${drillButton(formatCount(unavailable), "availability", "unavailable")}</dd>
+    </div>
+    ${unknown > 0 ? `<div>
+      <dt><span class="overview-status-dot is-unknown" aria-hidden="true"></span>ไม่ระบุความพร้อม</dt>
+      <dd>${drillButton(formatCount(unknown), "availability", "unknown")}</dd>
+    </div>` : ""}
+  `);
+
+  const damaged = Math.max(0, Number(data.damagedAssets) || 0);
+  const damagedStatus = getStatusCount(data, "ชำรุด");
+  const repairStatus = getStatusCount(data, "ส่งซ่อม");
+  const ageThreshold = Number.isFinite(Number(filters.ageThreshold)) ? Number(filters.ageThreshold) : 10;
+  const olderThanThreshold = Math.max(0, Number(data.assetsOlderThanThreshold) || 0);
+  const olderThanTotalRate = total > 0 ? (olderThanThreshold / total) * 100 : null;
+  const disposalEstimate = data.disposalEstimate;
+  const disposalValue = disposalEstimate?.eligibleAssets;
+  const hasDisposalEstimate = disposalEstimate?.available === true
+    && disposalValue !== null
+    && disposalValue !== undefined
+    && Number.isFinite(Number(disposalValue));
+  const disposalAssets = hasDisposalEstimate ? Math.max(0, Number(disposalValue)) : 0;
+  const disposalRate = hasDisposalEstimate && total > 0 ? (disposalAssets / total) * 100 : null;
+  setHtml("executive-metrics", `
+    <article class="overview-kpi-card">
+      <h3>ครุภัณฑ์ทั้งหมด</h3>
+      <strong class="overview-kpi-value">${formatCount(total)}</strong>
+      <p>ฐานในการคำนวณ KPI</p>
+    </article>
+    <article class="overview-kpi-card is-danger">
+      <h3>ชำรุด / ส่งซ่อม</h3>
+      <strong class="overview-kpi-value">${drillButton(formatCount(damaged), "damage", "damaged")}</strong>
+      <p>ชำรุด ${drillButton(formatCount(damagedStatus), "status", "ชำรุด")} · ส่งซ่อม ${drillButton(formatCount(repairStatus), "status", "ส่งซ่อม")}</p>
+    </article>
+    <article class="overview-kpi-card ${hasDisposalEstimate ? "is-info" : "is-unavailable"}">
+      <h3>ประมาณการเข้าข่ายพิจารณาทดแทน</h3>
+      <strong class="overview-kpi-value" aria-label="${hasDisposalEstimate ? "จำนวนเข้าข่ายพิจารณาทดแทนโดยประมาณ" : "ประมาณการเกณฑ์พิจารณาทดแทนยังไม่พร้อมใช้งาน"}">${hasDisposalEstimate ? formatCount(disposalAssets) : "—"}</strong>
+      <p>${hasDisposalEstimate ? `${formatPercent(disposalRate)} ของสินทรัพย์ตามตัวกรอง · ค่าซ่อมสะสมและอายุ · ราคาอ้างอิงจำลอง` : "ข้อมูลการซ่อมไม่พร้อมสำหรับการประมาณการ"}</p>
+    </article>
+    <article class="overview-kpi-card is-info">
+      <h3>อายุเกิน ${formatCount(ageThreshold)} ปี</h3>
+      <strong class="overview-kpi-value">${formatCount(olderThanThreshold)}</strong>
+      <p>${formatPercent(olderThanTotalRate)} ของครุภัณฑ์ทั้งหมด</p>
+    </article>
+  `);
+}
+
+function getStatusCount(data, statusName) {
+  const status = (Array.isArray(data.statusDistribution) ? data.statusDistribution : [])
+    .find((item) => item.key === statusName || item.label === statusName);
+  const count = Number(status?.assets);
+  return Number.isFinite(count) && count > 0 ? count : 0;
+}
+
+function renderUnavailableBreakdown(data) {
+  const target = document.getElementById("overview-unavailable-breakdown");
+  if (!target) return;
+
+  const rows = [
+    { label: "ชำรุด", status: "ชำรุด", tone: "is-damaged" },
+    { label: "ถูกยืม", status: "ถูกยืม", tone: "is-borrowed" },
+    { label: "ส่งซ่อม", status: "ส่งซ่อม", tone: "is-repair" },
+  ].map((row) => ({ ...row, count: getStatusCount(data, row.status) }));
+  const unavailable = Math.max(0, Number(data.unavailableAssets) || 0);
+  const categorized = rows.reduce((sum, row) => sum + row.count, 0);
+  if (unavailable > categorized) {
+    rows.push({ label: "สถานะอื่นหรือไม่ระบุ", status: null, tone: "is-unknown", count: unavailable - categorized });
+  }
+
+  target.innerHTML = `<ol class="unavailable-breakdown-list">${rows.map((row) => `
+    <li class="unavailable-breakdown-row ${row.tone}">
+      <span class="unavailable-breakdown-label">
+        <span class="overview-status-dot ${row.tone}" aria-hidden="true"></span>
+        ${row.status ? drillButton(row.label, "status", row.status) : escapeHtml(row.label)}
+      </span>
+      <strong>${formatCount(row.count)}</strong>
+    </li>
+  `).join("")}</ol>`;
 }
 
 function renderRankedBars(id, rows, {
@@ -386,12 +448,7 @@ function renderComboTable(id, caption, rows, firstFilter, secondFilter, firstLab
 
 function renderOverview(data, payload) {
   renderMetrics(data);
-  renderRankedBars("overview-status-distribution", data.statusDistribution, {
-    labelKey: "label", countKey: "assets", filterKey: "status", valueKey: "key", limit: 8,
-  });
-  renderRankedBars("overview-availability-distribution", data.availabilityDistribution, {
-    labelKey: "label", countKey: "assets", filterKey: "availability", valueKey: "key", limit: 3,
-  });
+  renderUnavailableBreakdown(data);
   const ageRows = Object.entries(payload.aging.ageDistribution || {}).map(([key, assets]) => ({
     key,
     label: AGE_LABELS[key] || key,
@@ -859,9 +916,21 @@ async function loadDashboard() {
 
 function clearDashboardData() {
   const metrics = document.getElementById("executive-metrics");
-  const secondary = document.getElementById("overview-secondary-metrics");
   if (metrics) metrics.replaceChildren();
-  if (secondary) secondary.replaceChildren();
+  const readiness = document.getElementById("overview-readiness-rate");
+  if (readiness) readiness.textContent = "—";
+  const readinessCounts = document.getElementById("overview-readiness-counts");
+  if (readinessCounts) readinessCounts.replaceChildren();
+  const readinessMeter = document.getElementById("overview-readiness-meter");
+  if (readinessMeter) readinessMeter.setAttribute("aria-label", "ยังไม่มีข้อมูลความพร้อมใช้งาน");
+  for (const id of [
+    "overview-readiness-ready-segment",
+    "overview-readiness-unavailable-segment",
+    "overview-readiness-unknown-segment",
+  ]) {
+    const segment = document.getElementById(id);
+    if (segment) segment.style.width = "0%";
+  }
   for (const element of document.querySelectorAll(".dashboard-chart, .dashboard-table-wrap, #overview-history-content")) {
     element.replaceChildren();
   }

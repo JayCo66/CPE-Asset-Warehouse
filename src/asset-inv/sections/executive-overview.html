@@ -17,23 +17,45 @@
       <span class="notice-date" id="dashboard-snapshot-date">—</span>
     </section>
 
-    <div class="metric-grid executive-metrics" id="executive-metrics" aria-label="ตัวชี้วัดภาพรวม"></div>
-    <dl class="executive-secondary-metrics" id="overview-secondary-metrics" aria-label="ตัวชี้วัดเพิ่มเติม"></dl>
+    <div class="overview-executive-layout">
+      <article class="panel overview-readiness-panel" aria-labelledby="overview-readiness-title">
+        <div class="overview-readiness-heading">
+          <h2 id="overview-readiness-title">อัตราความพร้อมใช้งานของครุภัณฑ์</h2>
+          <p>อ้างอิงสถานะความพร้อมในชุดข้อมูลที่เลือก</p>
+        </div>
+        <strong class="overview-readiness-rate" id="overview-readiness-rate">—</strong>
+        <div class="overview-readiness-meter" id="overview-readiness-meter" role="img" aria-label="ยังไม่มีข้อมูลความพร้อมใช้งาน">
+          <span class="overview-readiness-segment is-ready" id="overview-readiness-ready-segment"></span>
+          <span class="overview-readiness-segment is-unavailable" id="overview-readiness-unavailable-segment"></span>
+          <span class="overview-readiness-segment is-unknown" id="overview-readiness-unknown-segment"></span>
+        </div>
+        <dl class="overview-readiness-counts" id="overview-readiness-counts" aria-label="จำนวนตามสถานะความพร้อม"></dl>
+      </article>
+
+      <section class="overview-supporting-kpis" id="executive-metrics" aria-label="ตัวชี้วัดสนับสนุน"></section>
+    </div>
   </section>
 
   <section class="dashboard-page overview-content" aria-labelledby="overview-title">
-    <section class="dashboard-panel-grid overview-primary-grid" aria-label="สถานะ ความพร้อม และอายุสินทรัพย์">
+    <section class="dashboard-panel-grid overview-analytics-grid" aria-label="การกระจายตามอายุและเหตุผลของสินทรัพย์ไม่พร้อมใช้งาน">
       <article class="panel">
-        <div class="panel-heading"><h2>สถานะสินทรัพย์</h2></div>
-        <div id="overview-status-distribution" class="dashboard-chart"></div>
-      </article>
-      <article class="panel">
-        <div class="panel-heading"><h2>ความพร้อมใช้งาน</h2></div>
-        <div id="overview-availability-distribution" class="dashboard-chart"></div>
-      </article>
-      <article class="panel">
-        <div class="panel-heading"><h2>การกระจายตามอายุ</h2></div>
+        <div class="panel-heading">
+          <div>
+            <h2>การกระจายตามอายุ</h2>
+            <p class="panel-description">เลือกช่วงอายุเพื่อเปิดรายการสินทรัพย์</p>
+          </div>
+        </div>
         <div id="overview-age-distribution" class="dashboard-chart"></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-heading">
+          <div>
+            <h2>แยกเหตุผลของ “ไม่พร้อมใช้งาน”</h2>
+            <p class="panel-description">จำแนกตามสถานะสินทรัพย์ในชุดข้อมูลที่เลือก</p>
+          </div>
+        </div>
+        <div id="overview-unavailable-breakdown" class="dashboard-chart"></div>
       </article>
     </section>
 

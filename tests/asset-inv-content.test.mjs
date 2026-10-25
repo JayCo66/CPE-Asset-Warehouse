@@ -8,6 +8,8 @@ const analysisHtml = readFileSync(new URL("../src/asset-inv/sections/analysis.ht
 const dashboardApp = readFileSync(new URL("../src/asset-inv/app.js", import.meta.url), "utf8");
 const executiveDashboard = readFileSync(new URL("../src/asset-inv/executive-dashboard.mjs", import.meta.url), "utf8");
 const executiveFilters = readFileSync(new URL("../src/asset-inv/sections/executive-filters.html", import.meta.url), "utf8");
+const inventoryDashboardApi = readFileSync(new URL("../assets_api/asset_inventory_dashboard.php", import.meta.url), "utf8");
+const inventoryDisposalApi = readFileSync(new URL("../assets_api/inventory_disposal.php", import.meta.url), "utf8");
 
 function visibleMarkupText(markup) {
   return markup.replace(/<[^>]*>/gu, " ").replace(/\s+/gu, " ");
@@ -40,6 +42,29 @@ test("uses Thai copy for snapshot concepts across the inventory dashboard", () =
   assert.match(dashboardApp, /\["วันที่ชุดข้อมูล",\s*formatApiDate\(asset\.snapshot_date, true\)\]/u);
   assert.match(dashboardApp, /assetDetailUpdated\.textContent = `ข้อมูล ณ วันที่ \$\{formatApiDate\(asset\.snapshot_date, true\)\}`/u);
   assert.match(dashboardApp, /formatApiDate\(row\.snapshot_date\)/u);
+});
+
+test("uses a decision-first overview with API-backed readiness, aging, and unavailable reasons", () => {
+  assert.match(overviewHtml, /class="overview-executive-layout"/u);
+  assert.match(overviewHtml, /id="overview-readiness-rate"/u);
+  assert.match(overviewHtml, /id="overview-readiness-meter"/u);
+  assert.match(overviewHtml, /class="overview-supporting-kpis" id="executive-metrics"/u);
+  assert.match(overviewHtml, /id="overview-age-distribution"/u);
+  assert.match(overviewHtml, /id="overview-unavailable-breakdown"/u);
+  assert.doesNotMatch(overviewHtml, /overview-status-distribution|overview-availability-distribution/u);
+  assert.doesNotMatch(overviewHtml, /คิวประเด็นที่ต้องตรวจสอบ|ข้อเสนอแนะ|คำแนะนำ/u);
+
+  for (const metric of ["availabilityRate", "availableAssets", "unavailableAssets", "damagedAssets", "statusDistribution", "assetsOlderThanThreshold"]) {
+    assert.match(executiveDashboard, new RegExp(`data\\.${metric}`, "u"));
+  }
+  assert.match(executiveDashboard, /data\.disposalEstimate/u);
+  assert.match(executiveDashboard, /ค่าซ่อมสะสมและอายุ/u);
+  assert.match(executiveDashboard, /ราคาอ้างอิงจำลอง/u);
+  assert.match(inventoryDashboardApi, /warehouseDashboardDisposalEstimate/u);
+  assert.match(inventoryDashboardApi, /warehouseDashboardDisposalEstimate\(\s*\$warehousePdo,\s*\$filters,\s*\$selectedSnapshot/su);
+  assert.match(inventoryDisposalApi, /warehouseInventoryBuildWhere\(\$filters,\s*\$snapshotDateKey\)/u);
+  assert.match(inventoryDisposalApi, /fact_asset_maintenance/u);
+  assert.match(inventoryDisposalApi, /fai\.`asset_count`/u);
 });
 
 test("exposes the full building, floor, room, and area location filter path", () => {
