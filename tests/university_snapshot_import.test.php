@@ -107,25 +107,29 @@ importRunTest('rejects page-one changes during the paginated import', static fun
     }, 'A dataset that changes during collection must not be imported.');
 });
 
-importRunTest('allows only same-origin loopback snapshot requests with the import header', static function (): void {
+importRunTest('allows same-origin snapshot requests on a deployed host and rejects cross-origin requests', static function (): void {
     $request = [
-        'REMOTE_ADDR' => '127.0.0.1',
-        'HTTP_HOST' => 'localhost',
-        'HTTP_ORIGIN' => 'http://localhost',
+        'REMOTE_ADDR' => '203.0.113.20',
+        'HTTP_HOST' => 'dashboard.example.test',
+        'HTTP_ORIGIN' => 'https://dashboard.example.test',
+        'HTTPS' => 'on',
         'HTTP_SEC_FETCH_SITE' => 'same-origin',
         'HTTP_X_CPE_SNAPSHOT_IMPORT' => '1',
     ];
-    importExpectSame(true, warehouseUniversityLocalRequestAllowed($request), 'A same-origin local request should be authorized.');
+    importExpectSame(true, warehouseUniversitySameOriginRequestAllowed($request), 'A same-origin request from a deployed host should be allowed.');
 
-    $request['REMOTE_ADDR'] = '192.168.1.20';
-    importExpectSame(false, warehouseUniversityLocalRequestAllowed($request), 'Requests from the LAN must be rejected.');
-    $request['REMOTE_ADDR'] = '127.0.0.1';
     $request['HTTP_ORIGIN'] = 'https://attacker.example';
-    importExpectSame(false, warehouseUniversityLocalRequestAllowed($request), 'Cross-origin requests must be rejected.');
-    $request['HTTP_ORIGIN'] = 'https://localhost';
-    importExpectSame(false, warehouseUniversityLocalRequestAllowed($request), 'Cross-scheme requests must be rejected.');
-    $request['HTTP_ORIGIN'] = 'http://localhost:8080';
-    importExpectSame(false, warehouseUniversityLocalRequestAllowed($request), 'Cross-port requests must be rejected.');
+    importExpectSame(false, warehouseUniversitySameOriginRequestAllowed($request), 'Cross-origin requests must be rejected.');
+    $request['HTTP_ORIGIN'] = 'http://dashboard.example.test';
+    importExpectSame(false, warehouseUniversitySameOriginRequestAllowed($request), 'Cross-scheme requests must be rejected.');
+    $request['HTTP_ORIGIN'] = 'https://dashboard.example.test:8443';
+    importExpectSame(false, warehouseUniversitySameOriginRequestAllowed($request), 'Cross-port requests must be rejected.');
+    $request['HTTP_ORIGIN'] = 'https://dashboard.example.test';
+    $request['HTTP_SEC_FETCH_SITE'] = 'cross-site';
+    importExpectSame(false, warehouseUniversitySameOriginRequestAllowed($request), 'Cross-site fetch metadata must be rejected.');
+    $request['HTTP_SEC_FETCH_SITE'] = 'same-origin';
+    $request['HTTP_X_CPE_SNAPSHOT_IMPORT'] = '';
+    importExpectSame(false, warehouseUniversitySameOriginRequestAllowed($request), 'Requests without the import marker must be rejected.');
 });
 
 echo "Passed {$testCount} university snapshot import tests.\n";

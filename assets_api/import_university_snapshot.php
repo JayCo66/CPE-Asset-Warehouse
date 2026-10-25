@@ -274,14 +274,17 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     warehouseUniversityImportRespond(false, 'รองรับเฉพาะคำขอแบบ POST', [], 405);
 }
 
-if (!warehouseUniversityLocalRequestAllowed($_SERVER)) {
-    warehouseUniversityImportRespond(false, 'อนุญาตเฉพาะคำขอจากแดชบอร์ดในเครื่องเดียวกัน', [], 403);
+if (!warehouseUniversitySameOriginRequestAllowed($_SERVER)) {
+    warehouseUniversityImportRespond(false, 'คำขอต้องมาจากแหล่งเดียวกับแดชบอร์ด', [], 403);
 }
 
 set_time_limit(330);
 ignore_user_abort(true);
 
-$archiveDirectory = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'output' . DIRECTORY_SEPARATOR . 'history';
+$configuredArchiveDirectory = getenv('CPE_SNAPSHOT_ARCHIVE_DIR');
+$archiveDirectory = is_string($configuredArchiveDirectory) && trim($configuredArchiveDirectory) !== ''
+    ? trim($configuredArchiveDirectory)
+    : dirname(__DIR__) . DIRECTORY_SEPARATOR . 'output' . DIRECTORY_SEPARATOR . 'history';
 if (!is_dir($archiveDirectory) && !mkdir($archiveDirectory, 0770, true) && !is_dir($archiveDirectory)) {
     warehouseUniversityImportRespond(false, 'ไม่สามารถเตรียมพื้นที่จัดเก็บ snapshot ได้', [], 500);
 }

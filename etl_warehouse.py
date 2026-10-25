@@ -771,6 +771,28 @@ def load_history(history_dir, metadata=None):
         asset_ids = [asset.get("asset_id") for asset in assets if isinstance(asset, dict)]
         if len(asset_ids) != len(assets) or any(asset_id is None for asset_id in asset_ids) or len(set(asset_ids)) != len(asset_ids):
             raise ValueError(f"Snapshot archive has missing or duplicate asset IDs: {filename}")
+        for asset in assets:
+            preserved_fact = asset.get("_warehouse_fact")
+            if preserved_fact is None:
+                continue
+            if not isinstance(preserved_fact, dict):
+                raise ValueError(f"Snapshot archive has invalid preserved fact data: {filename}")
+            required_fact_fields = {
+                "acquisition_date_key", "is_available_flag", "is_damaged_flag",
+                "has_location_flag", "asset_age_years",
+            }
+            if not required_fact_fields.issubset(preserved_fact):
+                raise ValueError(f"Snapshot archive is missing preserved fact fields: {filename}")
+            for flag in ("is_available_flag", "is_damaged_flag", "has_location_flag"):
+                value = preserved_fact.get(flag)
+                if type(value) is not int or value not in (0, 1):
+                    raise ValueError(f"Snapshot archive has an invalid {flag}: {filename}")
+            age = preserved_fact.get("asset_age_years")
+            if age is not None and (type(age) is not int or age < 0):
+                raise ValueError(f"Snapshot archive has an invalid asset age: {filename}")
+            acquisition_key = preserved_fact.get("acquisition_date_key")
+            if acquisition_key is not None and (type(acquisition_key) is not int or not 10000101 <= acquisition_key <= 99991231):
+                raise ValueError(f"Snapshot archive has an invalid acquisition date key: {filename}")
         expected_count = file_metadata.get("asset_count", archive.get("asset_count", archive.get("total")))
         if expected_count is not None and int(expected_count) != len(assets):
             raise ValueError(f"Snapshot archive count differs from its metadata: {filename}")
@@ -1018,18 +1040,28 @@ def build_warehouse(excel, api, snapshots, as_of):
         })
         for a in snapshot["data"]:
             acq = acquisition_date(a)
+            # Imported relational archives can carry their exact snapshot fact values.
+            preserved_fact = a.get("_warehouse_fact") or {}
             tid = type_id_of(a)
             tcode = txt(a.get("type_code")) or type_code_of.get(tid) or ""
             status = txt(a["asset_status"])
             lk = loc_by_id.get(a["location_id"])
-            fai.append({"snapshot_date_key": dkey(snap), "snapshot_id": snapshot["snapshot_id"], "acquisition_date_key": dkey(acq),
+            acquisition_key = preserved_fact.get("acquisition_date_key", dkey(acq))
+            available_flag = preserved_fact.get("is_available_flag", int(status == "พร้อมใช้งาน"))
+            damaged_flag = preserved_fact.get("is_damaged_flag", int(status in ("ชำรุด", "ส่งซ่อม")))
+            location_flag = preserved_fact.get("has_location_flag", int(lk is not None))
+            asset_age = preserved_fact.get(
+                "asset_age_years",
+                max(0, int((snap - acq).days // 365.25)) if acq else None,
+            )
+            fai.append({"snapshot_date_key": dkey(snap), "snapshot_id": snapshot["snapshot_id"], "acquisition_date_key": acquisition_key,
                         "asset_key": ast.get(a["asset_id"]), "department_key": dep_by_id.get(a["department_id"]),
                         "type_key": typ.get(tid), "category_key": category_key_of(a), "location_key": lk,
-                        "asset_count": 1, "is_available_flag": int(status == "พร้อมใช้งาน"),
-                        "is_damaged_flag": int(status in ("ชำรุด", "ส่งซ่อม")),
+                        "asset_count": 1, "is_available_flag": available_flag,
+                        "is_damaged_flag": damaged_flag,
                         "is_below_threshold_flag": int(tcode.startswith(BELOW_THRESHOLD_PREFIX) or "ต่ำกว่าเกณฑ์" in (txt(a["type_name"]) or "")),
-                        "has_location_flag": int(lk is not None),
-                        "asset_age_years": max(0, int((snap - acq).days // 365.25)) if acq else None})
+                        "has_location_flag": location_flag,
+                        "asset_age_years": asset_age})
     no_acq = sum(1 for r in fai if r["acquisition_date_key"] is None)
     if no_acq:
         notes.append(f"fact_asset_inventory: {no_acq} แถวหาวันที่ได้มาไม่ได้ (ไม่มี purchase_date / ปีในรหัส / year_purchase)")

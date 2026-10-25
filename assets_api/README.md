@@ -61,14 +61,17 @@ There is no university-API fallback in the dashboard.
 The Asset Inventory snapshot selector sends a same-origin
 `POST /assets_api/import_university_snapshot.php`. The endpoint fetches only the
 fixed university asset URL, validates every page before persistence, and saves
-the new snapshot to `cpe_warehouse` and `output/history`. The browser never
-receives the university URL or database connection details.
+the new snapshot to `cpe_warehouse` and a local archive directory. The browser
+never receives the university URL or database connection details.
 
-This project has no server-side login or role system. For the current XAMPP
-deployment, the importer is restricted on the server to loopback clients,
-checks the request Origin and a custom same-origin header, and rejects other
-hosts. It is not suitable for a shared/LAN deployment until staff
-authentication and authorization are added. PHP's cURL extension is required.
+This project has no server-side login or role system. The importer checks the
+request Origin, Fetch Metadata, and a custom same-origin header, but does not
+authenticate staff. Anyone who can access the dashboard can trigger an import.
+PHP's cURL extension is required. Set `CPE_SNAPSHOT_ARCHIVE_DIR` to a persistent,
+writable directory outside the served site on deployments where the application
+directory is read-only. Share that storage with the ETL history directory so a
+full refresh can replay each imported capture. If unset, the importer uses
+`output/history` under the project root.
 
 Apply `database/migrations/20261025_add_inventory_snapshot_identity.sql`
 before using the updated Asset Inventory APIs. The additive migration is
@@ -78,8 +81,8 @@ fresh-install schema.
 
 The ETL stores snapshot IDs and labels in history metadata, preserves them
 through full refresh, and writes a separate archive file for each same-day
-capture. Keep `output/history` available. Generated archives are ignored by Git
-and should not be committed.
+capture. Keep the configured archive directory available to the ETL. Generated
+archives are ignored by Git and should not be committed.
 
 ## Local setup
 

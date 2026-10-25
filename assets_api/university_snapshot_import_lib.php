@@ -223,16 +223,14 @@ function warehouseUniversityAcquisitionDate(array $asset): ?DateTimeImmutable
     return null;
 }
 
-function warehouseUniversityLocalRequestAllowed(array $server): bool
+function warehouseUniversitySameOriginRequestAllowed(array $server): bool
 {
-    $remoteAddress = strtolower((string)($server['REMOTE_ADDR'] ?? ''));
     $host = strtolower((string)($server['HTTP_HOST'] ?? ''));
     $origin = (string)($server['HTTP_ORIGIN'] ?? '');
     $fetchSite = strtolower((string)($server['HTTP_SEC_FETCH_SITE'] ?? ''));
     $customHeader = (string)($server['HTTP_X_CPE_SNAPSHOT_IMPORT'] ?? '');
 
-    if (!in_array($remoteAddress, ['127.0.0.1', '::1', '::ffff:127.0.0.1'], true)
-        || preg_match('/^(localhost|127\.0\.0\.1|\[::1\])(?::\d{1,5})?$/D', $host) !== 1
+    if ($host === ''
         || $customHeader !== '1'
         || ($fetchSite !== '' && $fetchSite !== 'same-origin')) {
         return false;
@@ -245,8 +243,7 @@ function warehouseUniversityLocalRequestAllowed(array $server): bool
         || !is_array($hostParts)
         || !isset($originParts['scheme'], $originParts['host'])
         || !in_array(strtolower($originParts['scheme']), ['http', 'https'], true)
-        || !in_array(strtolower($originParts['host']), ['localhost', '127.0.0.1', '::1'], true)
-        || !in_array(strtolower((string)($hostParts['host'] ?? '')), ['localhost', '127.0.0.1', '::1'], true)
+        || !isset($hostParts['host'])
         || isset($originParts['user']) || isset($originParts['pass'])
         || isset($originParts['path']) || isset($originParts['query']) || isset($originParts['fragment'])
         || (isset($originParts['port']) && ($originParts['port'] < 1 || $originParts['port'] > 65535))
