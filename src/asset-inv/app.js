@@ -25,7 +25,7 @@ import {
   initExecutiveDashboard,
   refreshExecutiveDashboard,
   setInventoryDashboardPage,
-} from "./executive-dashboard.mjs?v=20261025.7";
+} from "./executive-dashboard.mjs?v=20261025.8";
 
 const dashboardData = {
   moduleNav: [
@@ -226,23 +226,10 @@ function installDashboardFilterPanels(container) {
     throw new Error("ไม่พบแม่แบบตัวกรองหรือส่วนแดชบอร์ดสำหรับติดตั้งตัวกรอง");
   }
 
-  const targets = [
-    { id: "overview", element: overview, label: overview.querySelector("h1")?.textContent.trim() || "ภาพรวม" },
-    ...pages.map((element) => ({
-      id: element.dataset.dashboardPage,
-      element,
-      label: element.querySelector("h1")?.textContent.trim() || element.dataset.dashboardPage,
-    })),
-  ];
-
-  for (const target of targets) {
-    const panel = template.cloneNode(true);
-    panel.dataset.filterScope = target.id;
-    panel.setAttribute("aria-label", `ตัวกรองข้อมูลร่วม · ${target.label}`);
-
+  const makeIdsUnique = (panel, suffix) => {
     const idMap = new Map();
     panel.querySelectorAll("[id]").forEach((element) => {
-      idMap.set(element.id, `${element.id}-${target.id}`);
+      idMap.set(element.id, `${element.id}-${suffix}`);
     });
     panel.querySelectorAll("[id]").forEach((element) => {
       element.id = idMap.get(element.id);
@@ -255,11 +242,39 @@ function installDashboardFilterPanels(container) {
         element.setAttribute(attribute, element.getAttribute(attribute).split(/\s+/).map((id) => idMap.get(id) || id).join(" "));
       });
     }
+  };
 
+  const globalSnapshotPanel = template.cloneNode(true);
+  globalSnapshotPanel.dataset.filterScope = "snapshot";
+  globalSnapshotPanel.setAttribute("aria-label", "เลือกชุดข้อมูลของแดชบอร์ด");
+  globalSnapshotPanel.querySelector(".dashboard-filter-details")?.remove();
+  globalSnapshotPanel.querySelector("[data-dashboard-request-state]")?.remove();
+  makeIdsUnique(globalSnapshotPanel, "snapshot");
+  const overviewHeading = overview.querySelector(".page-heading");
+  if (overviewHeading) overviewHeading.after(globalSnapshotPanel);
+  else overview.prepend(globalSnapshotPanel);
+
+  const requestState = template.querySelector("[data-dashboard-request-state]");
+  requestState?.remove();
+  if (requestState) globalSnapshotPanel.after(requestState);
+
+  const targets = pages.map((element) => ({
+    id: element.dataset.dashboardPage,
+    element,
+    label: element.querySelector("h1")?.textContent.trim() || element.dataset.dashboardPage,
+  }));
+
+  for (const target of targets) {
+    const panel = template.cloneNode(true);
+    panel.dataset.filterScope = target.id;
+    panel.setAttribute("aria-label", `ตัวกรองข้อมูลร่วม · ${target.label}`);
+    panel.querySelector(".snapshot-filter-row")?.remove();
+    makeIdsUnique(panel, target.id);
     const summaryLabel = panel.querySelector(".dashboard-filter-details > summary > span:first-child");
     if (summaryLabel) summaryLabel.textContent = `ตัวกรอง · ${target.label}`;
-    if (target.id !== "overview") panel.querySelector("[data-dashboard-request-state]")?.remove();
-    target.element.prepend(panel);
+    const heading = target.element.querySelector(".page-heading");
+    if (heading) heading.after(panel);
+    else target.element.prepend(panel);
   }
 
   template.remove();
@@ -419,7 +434,7 @@ function handleDashboardSectionClick(event) {
   const link = event.target.closest(".inventory-view-nav [data-dashboard-link]");
   if (!link) return;
 
-  requestedDashboardScrollTarget = "filters";
+  requestedDashboardScrollTarget = "section";
   if (link.dataset.dashboardLink !== getCurrentDashboardPage()) return;
 
   event.preventDefault();
@@ -427,19 +442,20 @@ function handleDashboardSectionClick(event) {
 }
 
 function expandDashboardFilters(pageId) {
-  const scopes = pageId === "overview" ? ["overview"] : ["overview", pageId];
-  for (const scope of scopes) {
-    const details = elements.dashboardSections.querySelector(`[data-filter-scope="${scope}"] .dashboard-filter-details`);
-    if (details) details.open = true;
-  }
+  if (pageId === "overview") return;
+  const details = elements.dashboardSections.querySelector(`[data-filter-scope="${pageId}"] .dashboard-filter-details`);
+  if (details) details.open = true;
 }
 
-function scrollDashboardFiltersIntoView(pageId) {
-  const filterPanel = elements.dashboardSections.querySelector(`.dashboard-filter-panel[data-filter-scope="${pageId}"]`);
-  if (!filterPanel) return;
+function scrollDashboardSectionIntoView(pageId) {
+  const section = pageId === "overview"
+    ? elements.dashboardSections.querySelector(".executive-overview")
+    : elements.dashboardSections.querySelector(`[data-dashboard-page="${pageId}"]`);
+  const heading = section?.querySelector(".page-heading");
+  if (!heading) return;
 
   const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
-  window.requestAnimationFrame(() => filterPanel.scrollIntoView({ behavior, block: "start" }));
+  window.requestAnimationFrame(() => heading.scrollIntoView({ behavior, block: "start" }));
 }
 
 function scrollAssetExplorerIntoView() {
@@ -757,8 +773,8 @@ function renderModuleView(moduleId = getCurrentModuleId()) {
     const scrollTarget = requestedDashboardScrollTarget;
     requestedDashboardScrollTarget = null;
     if (pageId === "explorer" && scrollTarget === "explorer") scrollAssetExplorerIntoView();
-    else if (scrollTarget === "filters" || hasRenderedInventoryDashboard || pageId !== "overview") {
-      scrollDashboardFiltersIntoView(pageId);
+    else if (scrollTarget === "section" || hasRenderedInventoryDashboard || pageId !== "overview") {
+      scrollDashboardSectionIntoView(pageId);
     }
     hasRenderedInventoryDashboard = true;
   }

@@ -1862,6 +1862,11 @@ tbody tr:hover td {
   gap: 10px 14px;
 }
 
+.dashboard-filter-panel[data-filter-scope="snapshot"] .snapshot-filter-row {
+  grid-template-columns: minmax(130px, auto) minmax(180px, 280px);
+  justify-content: start;
+}
+
 .snapshot-filter-row select,
 .dashboard-filter-grid select,
 .age-threshold-control input {
@@ -2560,6 +2565,10 @@ tbody tr:hover td {
   .snapshot-filter-row {
     grid-template-columns: 1fr;
     gap: 5px;
+  }
+
+  .dashboard-filter-panel[data-filter-scope="snapshot"] .snapshot-filter-row {
+    grid-template-columns: 1fr;
   }
 
   .dashboard-filter-grid {

@@ -964,18 +964,12 @@ function updateSnapshotLabel(payload) {
   const state = document.getElementById("dashboard-data-state");
   const detail = document.getElementById("dashboard-data-detail");
   if (!payload.snapshot) {
-    document.querySelectorAll("[data-dashboard-snapshot-context]").forEach((label) => {
-      label.textContent = "ยังไม่มีชุดข้อมูล";
-    });
     if (date) date.textContent = "—";
     if (state) state.textContent = "ไม่พบข้อมูลสินทรัพย์";
     if (detail) detail.textContent = "คลังไม่มีชุดข้อมูลสำหรับตัวกรองที่เลือก";
     return;
   }
   const snapshotDate = formatDate(payload.snapshot.date);
-  document.querySelectorAll("[data-dashboard-snapshot-context]").forEach((label) => {
-    label.textContent = `${formatCount(payload.overview?.totalAssets)} สินทรัพย์ตามตัวกรอง · ${snapshotDate}`;
-  });
   if (date) date.textContent = snapshotDate;
   if (state) state.textContent = "ข้อมูลเชื่อมต่อจากคลัง MySQL";
   if (detail) detail.textContent = "สรุปจำนวนสินทรัพย์ด้วย SUM(asset_count)";
