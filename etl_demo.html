@@ -1,0 +1,782 @@
+<!doctype html>
+<!-- etl_demo.html : จำลอง ETL ส่วน Excel (ใบแจ้งซ่อม Google Form) ทีละขั้น สำหรับนำเสนอ
+     อ่านไฟล์ในเบราว์เซอร์เท่านั้น ไม่ส่งข้อมูลออก ; กฎทุกข้อแปลงมาจาก run_excel() / parse_place() ใน etl_warehouse.py
+     ถ้าแก้กฎใน etl_warehouse.py ต้องแก้ที่นี่ด้วย (ตัวเลขทุกขั้นควรตรงกับ cleaning_log ของ Python) -->
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>จำลอง ETL · CPE Asset Warehouse</title>
+  <script>document.documentElement.setAttribute("data-theme", (() => { try { return localStorage.getItem("cpe_theme") || "dark"; } catch { return "dark"; } })());</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai+Looped:wght@400;500;600&display=swap">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    /* สีจาก docs/design-guide.md ; ขนาด/ระยะเดียวกับ dashboard_report.html */
+    :root {
+      --cpe-page-start: #1B1D1E; --cpe-page-end: #1D1F20; --cpe-surface: #181A1B;
+      --cpe-text: #E8E6E3; --cpe-text-muted: #CCC8C1;
+      --cpe-brand-blue: #0466C8; --cpe-action-start: #1E169C; --cpe-action-end: #460FA5;
+      --cpe-success: #009688; --cpe-info: #106BDA; --cpe-danger: #E43F0B;
+      --line: color-mix(in srgb, var(--cpe-text) 12%, transparent);
+      --line-strong: color-mix(in srgb, var(--cpe-text) 22%, transparent);
+      --fill-hover: color-mix(in srgb, var(--cpe-text) 6%, transparent);
+      --text-faint: color-mix(in srgb, var(--cpe-text-muted) 70%, transparent);
+      --hit-bg: color-mix(in srgb, var(--cpe-danger) 16%, var(--cpe-surface));
+      --font: "Leelawadee UI", "IBM Plex Sans Thai Looped", Tahoma, sans-serif;
+      --fs-xs: 0.75rem; --fs-sm: 0.8125rem; --fs-md: 0.9375rem; --fs-lg: 1.125rem; --fs-xl: 1.5rem; --fs-num: 2.5rem;
+      --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px; --sp-6: 32px;
+      --radius: 6px; --radius-pill: 999px; --content-max: 1280px;
+      --focus: 0 0 0 2px var(--cpe-page-start), 0 0 0 4px var(--cpe-info);
+      color-scheme: dark;
+    }
+    :root[data-theme="light"] {
+      --cpe-page-start: #F4F6F9; --cpe-page-end: #E9ECEF; --cpe-surface: #FFFFFF;
+      --cpe-text: #181A1B; --cpe-text-muted: #4B5563;
+      --cpe-success: #00796B; --cpe-info: #0466C8; --cpe-danger: #DC2626;
+      --hit-bg: color-mix(in srgb, var(--cpe-danger) 10%, var(--cpe-surface));
+      color-scheme: light;
+    }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    html, body { margin: 0; }
+    body {
+      font-family: var(--font); font-size: var(--fs-md); line-height: 1.55; color: var(--cpe-text-muted);
+      background: linear-gradient(180deg, var(--cpe-page-start) 0%, var(--cpe-page-end) 100%) fixed; min-height: 100vh;
+    }
+    h1, h2, h3 { color: var(--cpe-text); font-weight: 600; margin: 0; }
+    :focus-visible { outline: none; box-shadow: var(--focus); border-radius: 4px; }
+
+    .app-header {
+      display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); flex-wrap: wrap;
+      padding: var(--sp-3) max(var(--sp-4), calc((100vw - var(--content-max)) / 2));
+      background: var(--cpe-surface); border-bottom: 1px solid var(--line);
+    }
+    .app-brand { display: flex; align-items: baseline; gap: var(--sp-3); flex-wrap: wrap; }
+    .app-name { color: var(--cpe-text); font-weight: 600; font-size: var(--fs-lg); }
+    .app-sub { font-size: var(--fs-sm); color: var(--text-faint); }
+    .app-main { max-width: var(--content-max); margin: 0 auto; padding: var(--sp-5) var(--sp-4) var(--sp-6); }
+
+    .btn {
+      font: inherit; font-size: var(--fs-sm); color: var(--cpe-text); background: transparent; cursor: pointer; white-space: nowrap;
+      border: 1px solid var(--line-strong); border-radius: var(--radius); padding: var(--sp-2) var(--sp-3); min-height: 38px;
+    }
+    .btn:hover:not(:disabled) { background: var(--fill-hover); }
+    .btn:disabled { opacity: .45; cursor: default; }
+    .btn-primary { color: #FFFFFF; border-color: transparent; font-weight: 600; padding-inline: var(--sp-4);
+      background: linear-gradient(135deg, var(--cpe-action-start), var(--cpe-action-end)); box-shadow: 0 6px 18px rgba(16, 67, 178, .18); }
+    .btn-primary:hover:not(:disabled) { background: linear-gradient(135deg, #2921AE, #5915BB); }
+
+    /* ---------- วางไฟล์ ---------- */
+    .drop {
+      display: grid; justify-items: center; gap: var(--sp-3); text-align: center; padding: 72px var(--sp-5);
+      border: 2px dashed var(--line-strong); border-radius: var(--radius); background: var(--cpe-surface);
+    }
+    .drop.is-over { border-color: var(--cpe-brand-blue); background: color-mix(in srgb, var(--cpe-brand-blue) 10%, var(--cpe-surface)); }
+    .drop h1 { font-size: var(--fs-xl); }
+    .drop p { margin: 0; }
+    .drop-actions { display: flex; gap: var(--sp-2); flex-wrap: wrap; justify-content: center; }
+    .drop-note { font-size: var(--fs-sm); color: var(--text-faint); }
+    .drop-error { color: var(--cpe-danger); font-size: var(--fs-sm); }
+
+    /* ---------- ขั้นตอน ---------- */
+    .steps { margin-bottom: var(--sp-5); border-bottom: 1px solid var(--line); }
+    .steps ol { display: flex; gap: var(--sp-5); list-style: none; margin: 0; padding: 0; overflow-x: auto; scrollbar-width: none; }
+    .steps li {
+      flex: none; display: flex; align-items: center; gap: 6px; padding: var(--sp-2) 0; margin-bottom: -1px;
+      font-size: var(--fs-sm); white-space: nowrap; color: var(--text-faint); border-bottom: 2px solid transparent;
+    }
+    .steps li.done { color: var(--cpe-text-muted); }
+    .steps li[aria-current="step"] { color: var(--cpe-text); font-weight: 600; border-bottom-color: var(--cpe-brand-blue); }
+    .step-no { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; font-size: 11px;
+      border: 1px solid var(--line-strong); font-variant-numeric: tabular-nums; }
+    .steps li.done .step-no { background: var(--cpe-success); border-color: transparent; color: #FFFFFF; }
+    .steps li[aria-current="step"] .step-no { background: var(--cpe-brand-blue); border-color: transparent; color: #FFFFFF; }
+    .step-delta { font-size: var(--fs-xs); color: var(--cpe-danger); font-weight: 400; }
+
+    .step-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-4); flex-wrap: wrap; margin-bottom: var(--sp-4); }
+    .step-head h2 { font-size: var(--fs-xl); }
+    .step-rule { margin: var(--sp-1) 0 0; max-width: 80ch; }
+    .step-actions { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+
+    .stats {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); margin-bottom: var(--sp-4);
+      background: var(--cpe-surface); border: 1px solid var(--line); border-radius: var(--radius);
+    }
+    .stat { padding: var(--sp-4) var(--sp-5); display: grid; gap: var(--sp-1); align-content: start; border-right: 1px solid var(--line); min-width: 0; }
+    .stat:last-child { border-right: 0; }
+    .stat-label { font-size: var(--fs-md); }
+    .stat-value { color: var(--cpe-text); font-size: var(--fs-num); font-weight: 500; line-height: 1.2; font-variant-numeric: tabular-nums; }
+    .stat-value small { font-size: var(--fs-md); font-weight: 400; color: var(--cpe-text-muted); margin-left: 4px; }
+    .stat-value.is-hit { color: var(--cpe-danger); }
+    .stat-value.is-ok { color: var(--cpe-success); }
+    .stat-sub { font-size: var(--fs-sm); color: var(--text-faint); }
+
+    .toolbar { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); flex-wrap: wrap; margin-bottom: var(--sp-2); font-size: var(--fs-sm); }
+    .toolbar label { display: inline-flex; align-items: center; gap: var(--sp-2); cursor: pointer; }
+    .legend { display: flex; gap: var(--sp-4); flex-wrap: wrap; color: var(--text-faint); }
+    .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+
+    /* ---------- ตาราง ---------- */
+    .table-wrap { max-height: 62vh; overflow: auto; background: var(--cpe-surface); border: 1px solid var(--line); border-radius: var(--radius); }
+    table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
+    th { position: sticky; top: 0; z-index: 1; background: var(--cpe-surface); color: var(--text-faint); font-weight: 500; font-size: var(--fs-xs);
+      text-align: left; padding: var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--line-strong); white-space: nowrap; }
+    td { padding: 6px var(--sp-3); border-bottom: 1px solid var(--line); vertical-align: top; color: var(--cpe-text); }
+    td.clip { max-width: 22rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    td.nowrap { white-space: nowrap; }
+    td.dim { color: var(--text-faint); }
+    td.empty::before { content: "—"; color: var(--text-faint); }
+    tr.hit td { background: var(--hit-bg); }
+    tr.hit td:first-child { box-shadow: inset 3px 0 0 var(--cpe-danger); }
+    td.why { color: var(--cpe-danger); font-weight: 500; min-width: 9rem; max-width: 16rem; }
+    del { color: var(--cpe-danger); text-decoration-thickness: 1px; }
+    ins { color: var(--cpe-success); text-decoration: none; font-weight: 600; }
+    tr.leaving td { opacity: 0; transition: opacity .35s; }
+    tr.fixed td { animation: fixed 1.2s ease-out; }
+    @keyframes fixed { from { background: color-mix(in srgb, var(--cpe-success) 22%, var(--cpe-surface)); } }
+    .src { display: inline-block; padding: 0 6px; border-radius: var(--radius-pill); font-size: var(--fs-xs); background: var(--fill-hover); color: var(--cpe-text-muted); }
+
+    .sheets { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: var(--sp-3); margin-bottom: var(--sp-4); }
+    .sheet { padding: var(--sp-3) var(--sp-4); border: 1px solid var(--line); border-radius: var(--radius); background: var(--cpe-surface); font-size: var(--fs-sm); }
+    .sheet b { display: block; color: var(--cpe-text); font-size: var(--fs-md); font-weight: 600; }
+    .sheet.is-skip { opacity: .6; }
+
+    .funnel { display: grid; gap: var(--sp-2); margin: 0 0 var(--sp-5); padding: 0; list-style: none; }
+    .funnel li { display: grid; grid-template-columns: minmax(10rem, 16rem) 1fr 4.5rem; gap: var(--sp-3); align-items: center; font-size: var(--fs-sm); }
+    .funnel .bar { height: 10px; border-radius: 2px; background: var(--cpe-brand-blue); }
+    .funnel .num { text-align: right; color: var(--cpe-text); font-variant-numeric: tabular-nums; }
+    .funnel .cut { color: var(--cpe-danger); }
+
+    @media (max-width: 640px) {
+      .stat { border-right: 0; border-bottom: 1px solid var(--line); }
+      .stat:last-child { border-bottom: 0; }
+      .funnel li { grid-template-columns: 1fr 4rem; }
+      .funnel .bar-wrap { grid-column: 1 / -1; grid-row: 2; }
+    }
+    @media (prefers-reduced-motion: reduce) { tr.leaving td { transition: none; } tr.fixed td { animation: none; } }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-brand">
+      <span class="app-name">CPE Asset Warehouse</span>
+      <span class="app-sub">จำลอง ETL ใบแจ้งซ่อม (Excel)</span>
+    </div>
+    <button type="button" class="btn" id="theme-btn"></button>
+  </header>
+
+  <main class="app-main">
+    <section class="drop" id="drop" aria-labelledby="drop-title">
+      <h1 id="drop-title">วางไฟล์ใบแจ้งซ่อม .xlsx</h1>
+      <p>ลากไฟล์มาวางตรงนี้ หรือ</p>
+      <div class="drop-actions">
+        <button type="button" class="btn btn-primary" id="pick-btn">เลือกไฟล์</button>
+        <button type="button" class="btn" id="sample-btn">ใช้ไฟล์ใน data/</button>
+      </div>
+      <input type="file" id="file-input" accept=".xlsx" hidden>
+      <p class="drop-note">อ่านไฟล์ในเบราว์เซอร์เท่านั้น ไม่ส่งข้อมูลออก · ซ่อนชื่อผู้แจ้งและไม่แสดงเบอร์โทร</p>
+      <p class="drop-error" id="drop-error" role="alert" hidden></p>
+    </section>
+
+    <section id="run" hidden>
+      <nav class="steps" aria-label="ขั้นตอน ETL"><ol id="steps"></ol></nav>
+
+      <div class="step-head">
+        <div>
+          <h2 id="step-title" tabindex="-1"></h2>
+          <p class="step-rule" id="step-rule"></p>
+        </div>
+        <div class="step-actions">
+          <button type="button" class="btn" id="auto-btn">เล่นอัตโนมัติ</button>
+          <button type="button" class="btn" id="reset-btn">เริ่มใหม่</button>
+          <button type="button" class="btn btn-primary" id="main-btn"></button>
+        </div>
+      </div>
+
+      <div class="stats" id="stats"></div>
+      <div id="extra"></div>
+
+      <div class="toolbar">
+        <label><input type="checkbox" id="only-hit"> แสดงเฉพาะแถวที่เข้าเงื่อนไข</label>
+        <div class="legend" id="legend"></div>
+      </div>
+      <div class="table-wrap" id="table-wrap"><table><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
+    </section>
+  </main>
+
+  <script>
+  (() => {
+    // ไฟล์ตัวอย่างใน repo (เปิดหน้านี้ผ่าน http เช่น XAMPP / Docker เท่านั้น ; เปิดจากไฟล์ตรง ๆ ให้ลากไฟล์มาวางแทน)
+    const SAMPLE = "data/ใบแจ้งซ่อม คณะวิศวกรรมศาสตร์ กำแพงแสน (การ.xlsx";
+
+    // =====================================================================
+    // กฎ clean: แปลงจาก etl_warehouse.py (ชื่อฟังก์ชัน/ค่าคงที่ตรงกับฝั่ง Python)
+    // =====================================================================
+    const RAW = ["ts", "name", "dept", "status", "phone", "type", "place", "detail", "reported", "extra", "img"];
+    const SHEET1 = ["ts", "name", "status", "phone", "type", "place", "detail", "reported", "extra", "dept", "img"];
+    const TYPE_MAP = {
+      "ทดสอบระบบ": null, "ทดสอบระบบแจ้งซ่อม": null,
+      "งานคอมพิวเตอร์": "งานคอมพิวเตอร์", "คอมพิวเตอร์ประจำห้องเรียน": "งานคอมพิวเตอร์",
+      "หลอดไฟ/สตาร์ทเตอร์เสีย": "งานระบบไฟฟ้า/แสงสว่าง", "ห้องน้ำ ชาย และ หญิง": "งานสุขภัณฑ์",
+      "กล้องวงจรปิด": "งานกล้องวงจรปิด", "ระบบกล้องวงจรปิด": "งานกล้องวงจรปิด",
+      "หน้าต่าง,กระจก": "งานอาคาร/สถานที่", "ถังดับเพลิงแรงดันต่ำ": "งานอาคาร/สถานที่",
+      "โปรเจคเตอร์": "งานโสตทัศนูปกรณ์", "รถตู้คณะ ทะเบียน นค3495": "งานอื่นๆ",
+      "เครื่องถ่ายเอกสาร": "งานอื่นๆ", "Scan นิ้วมือ": "งานอื่นๆ",
+    };
+    const STD_TYPES = new Set(["งานระบบปรับอากาศ", "งานระบบไฟฟ้า/แสงสว่าง", "งานโสตทัศนูปกรณ์", "งานอาคาร/สถานที่",
+      "งานระบบโทรศัพท์", "งานระบบเครือข่าย/อินเตอร์เน็ต", "งานประปา", "งานสุขภัณฑ์"]);
+    const STATUS_STD = new Set(["เจ้าหน้าที่", "อาจารย์", "นิสิต", "ช่างเทคนิค", "แม่บ้าน"]);
+    const STATUS_MAP = { "เจ้าหน้าที่ห้องโลจิสติกส์": "เจ้าหน้าที่", "รองคณบดีฝ่ายบริหาร": "อาจารย์" };
+    const NULL_EXTRA = new Set(["-", "--", ".", "ไม่มี", "ไม่มีค่ะ", "ไม่มีครับ", "n/a", "na", "none", "null"]);
+    const MIN = 60 * 1000, DAY = 24 * 60 * MIN;
+    const DATE_FALLBACK_AFTER = 7 * DAY, DATE_FUTURE_TOLERANCE = 5 * MIN;
+
+    // \d ของ Python นับเลขไทยด้วย ; \b / \w ของ Python รู้จักตัวอักษรไทย จึงใช้ \p{L}\p{N} แทน
+    const D = "[0-9๐-๙]";
+    const W = "[\\p{L}\\p{N}_]";
+    const B = `(?:(?<=${W})(?!${W})|(?<!${W})(?=${W}))`;
+    const rx = (src, flags = "") => new RegExp(src.replaceAll("[\\d", "[0-9๐-๙").replaceAll("\\d", D), "u" + flags);
+    const toInt = (s) => parseInt(s.replace(/[๐-๙]/g, (c) => String(c.charCodeAt(0) - 0x0E50)), 10);
+    const nums = (s) => (s.match(rx("\\d+", "g")) || []).map(toInt);
+    const uniqPush = (arr, v) => { if (!arr.includes(v)) arr.push(v); };
+    const pyList = (a) => "[" + a.map((v) => (typeof v === "string" ? `'${v}'` : v)).join(", ") + "]";
+    const replaceFirst = (s, find, rep) => { const i = s.indexOf(find); return i < 0 ? s : s.slice(0, i) + rep + s.slice(i + find.length); };
+
+    const VALID_BUILDINGS = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    const NAMED_BUILDINGS = [
+      ["อาคาร\\s*กิจการนิสิต(?:ใหม่)?", "อาคารกิจการนิสิต"],
+      ["อาคาร\\s*สโมสรนิสิต(?:ใหม่)?", "อาคารกิจการนิสิต"],
+      ["อาคาร\\s*สโม(?!สร)", "อาคารกิจการนิสิต"],
+      ["(?<!ห้อง)(?<!หน้าห้อง)สโมสรนิสิตใหม่", "อาคารกิจการนิสิต"],
+      ["อาคาร\\s*[เอ]นกประสงค์|อาคารอเนกประสงค์", "อาคารเอนกประสงค์"],
+    ];
+    const AREAS = [
+      ["งานบริการ", "ห้องงานบริการการศึกษาและพัฒนานิสิต"], ["โลจิสติกส์", "สำนักประสานงานโลจิสติกส์"],
+      ["สำนักงานเลขา|office", "สำนักงานเลขานุการ"], ["server|เซิร์ฟเวอร์|เซิฟเวอร์", "ห้อง Server"],
+      ["ห้องน้ำ\\s*ชาย\\s*(?:และ|,)?\\s*(?:ห้องน้ำ)?\\s*หญิง", "ห้องน้ำชาย, ห้องน้ำหญิง"],
+      ["ห้องน้ำ\\s*หญิง", "ห้องน้ำหญิง"], ["ห้องน้ำ\\s*ชาย", "ห้องน้ำชาย"], ["ห้องน้ำ", "ห้องน้ำ"],
+      ["ห้องธุรการ|ธุรการ", "ห้องธุรการ"], ["ห้องพักรองคณบดี", "ห้องพักรองคณบดีฝ่ายบริหาร"],
+      ["ห้องพักอาจารย์", "ห้องพักอาจารย์"], ["ห้องประชุม\\s*(\\d*)", "ห้องประชุม"], ["ห้องสมุด", "ห้องสมุดคณะ"],
+      ["ห้องอ่านหนังสือ", "ห้องอ่านหนังสือ"], ["ห้องถ่ายเอกสาร|ร้านถ่ายเอกสาร", "ห้องถ่ายเอกสาร"],
+      ["ห้องคอมพิวเตอร์", "ห้องคอมพิวเตอร์"], ["ห้องเรียน", "ห้องเรียน"], ["ห้องโถง|โถง", "ห้องโถง"],
+      ["ศูนย์พลัง.?งาน", "ศูนย์พลังงาน"], ["ศูนย์ทดสอบประตู", "ศูนย์ทดสอบประตู หน้าต่าง และระบบผนังกระจก"],
+      ["หน่วยบริการสารสนเทศ|หน่วย\\s*it", "หน่วยบริการสารสนเทศ (IT)"], ["หน่วยวิเทศ", "หน่วยวิเทศสัมพันธ์"],
+      ["งานคลังและพัสดุ", "งานคลังและพัสดุ"], ["work\\s*shop|shop", "Workshop"], ["บันได", "บันได"],
+      ["ทางเชื่อม", "ทางเชื่อมระหว่างอาคาร"], ["ทางเดิน", "ทางเดิน"], ["ระเบียง", "ระเบียง"],
+      ["พื้นอิฐตัวหนอน", "พื้นอิฐตัวหนอน รอบอาคาร"], ["ถนน", "ถนน"], ["หน้าอาคาร", "หน้าอาคาร"],
+      ["หลังอาคาร", "หลังอาคาร"], ["รอบอาคาร", "รอบอาคาร"], ["ทั้งอาคาร", "ทั้งอาคาร"],
+      ["ภาควิชา\\s*วิศวกรรม\\s*(?:โยธา|เครื่องกล|อุตสาหการ|คอมพิวเตอร์|การอาหาร|เกษตร|ชลประทาน)", null],
+    ];
+    const UNIQUE_AREAS = new Set(["ห้องงานบริการการศึกษาและพัฒนานิสิต", "สำนักประสานงานโลจิสติกส์", "สำนักงานเลขานุการ", "ห้องสมุดคณะ",
+      "ห้องพักรองคณบดีฝ่ายบริหาร", "ศูนย์พลังงาน", "ศูนย์ทดสอบประตู หน้าต่าง และระบบผนังกระจก",
+      "หน่วยบริการสารสนเทศ (IT)", "หน่วยวิเทศสัมพันธ์", "งานคลังและพัสดุ"]);
+    const PROBLEM_WORDS = "ไม่|เปิด|เสีย|แอร์|เครื่อง|ระบบ|เบอร์|สัญญาณ|รถตู้|ทะเบียน|erp|ล็อก|ขัด|รั่ว|ดับ";
+    const TYPOS = [
+      ["[\\u200b\\u200c\\u200d\\ufeff]", ""], ["อาคารื", "อาคาร"], ["ตึก", "อาคาร"],
+      ["(?<![ก-๙])อ\\.\\s*(?=\\d)", "อาคาร "], ["ช้น|ชั้ั", "ชั้น"], ["หัองน้ำ", "ห้องน้ำ"],
+      ["ห้อ\\.อ\\.[ก-๙]+", ""], ["ศูนย์พลังาน", "ศูนย์พลังงาน"], ["บริการการศึกษษ", "บริการการศึกษา"],
+      ["(?<=[ก-๙])(?=E\\s?\\d)", " "],
+    ];
+
+    function placeText(p) {
+      const parts = [];
+      if (p.buildings.length) parts.push(p.buildings.join(", "));
+      if (p.floors.length) parts.push("ชั้น " + p.floors.join(", "));
+      if (p.rooms.length) parts.push("ห้อง " + p.rooms.join(", "));
+      let s = parts.join(" ");
+      if (p.area) s = p.rooms.length ? `${s} (${p.area})` : (s ? `${s} ${p.area}` : p.area);
+      return s;
+    }
+
+    function parsePlace(raw) {
+      const p = { raw: raw == null ? "" : String(raw), valid: false, buildings: [], floors: [], rooms: [], area: "", reason: "", dropped: "" };
+      let t = p.raw.replace(/\xa0/g, " ").replace(/\s+/g, " ").trim();
+      if (!t) { p.reason = "ว่าง"; return p; }
+      if (/รถตู้|ทะเบียน/.test(t)) { p.reason = "เป็นยานพาหนะ ไม่ใช่สถานที่"; return p; }
+      for (const [pat, rep] of TYPOS) t = t.replace(rx(pat, "gi"), rep);
+      t = t.replace(/(อาคาร|ชั้น|ห้อง)\s*(?=[0-9A-Za-z])/g, "$1 ");
+      t = t.replace(rx("(?<=\\d)(?=ชั้น|ห้อง)", "g"), " ");
+
+      const named = [];
+      for (const [pat, std] of NAMED_BUILDINGS) {
+        if (rx(pat, "i").test(t)) { uniqPush(named, std); t = t.replace(rx(pat, "gi"), " "); }
+      }
+      const lmRx = "(?:ติด|ข้าง|ใกล้)\\s*อาคาร\\s*\\d+";
+      const landmark = t.match(rx(lmRx, "g")) || [];
+      t = t.replace(rx(lmRx, "g"), " ");
+
+      const bnums = [];
+      for (const m of t.matchAll(rx("อาคาร\\s*(\\d+)", "g"))) {
+        const n = toInt(m[1]);
+        if (!VALID_BUILDINGS.has(n)) { p.reason = `อาคาร ${n} ไม่มีจริง`; return p; }
+        uniqPush(bnums, n);
+      }
+      t = t.replace(rx("อาคาร\\s*\\d+", "g"), " ");
+      t = t.replace(/อาคาร(?:ปฏิบัติการ)?/g, " ");
+
+      const floors = [];
+      if (t.includes("ชั้นล่าง")) { floors.push(1); t = t.replaceAll("ชั้นล่าง", " "); }
+      for (const m of [...t.matchAll(rx("ชั้น\\s*(\\d+(?:\\s*(?:,|และ|-|/)\\s*\\d+)*)", "g"))]) {
+        const vals = nums(m[1]);
+        if (vals.some((v) => v > 9)) { t = replaceFirst(t, m[0], " " + vals.join(" ") + " "); continue; }
+        vals.forEach((v) => uniqPush(floors, v));
+        t = replaceFirst(t, m[0], " ");
+      }
+      t = t.replace(/ชั้น/g, " ");
+
+      const rooms = [], rb = [], rf = [], spans = [];
+      for (const m of t.matchAll(rx("(?<![\\dA-Za-zก-๙])E?\\s?(\\d{4})(?!\\d)", "g"))) {
+        const c = m[1], b = toInt(c[0]), f = toInt(c[1]);
+        if (!VALID_BUILDINGS.has(b) || f === 0) continue;
+        spans.push([m.index, m.index + m[0].length]);
+        uniqPush(rooms, c); uniqPush(rb, b); uniqPush(rf, f);
+      }
+      for (const [i, j] of spans.reverse()) t = t.slice(0, i) + " " + t.slice(j);
+
+      if (named.length && !bnums.length && !rooms.length) {
+        const m = t.match(rx("ห้อง\\s*(\\d)\\s*/\\s*(\\d{1,2})|ห้อง\\s*(\\d)(\\d{2})(?!\\d)"));
+        if (m) {
+          const f = toInt(m[1] || m[3]);
+          rooms.push(`${f}${(m[2] || m[4]).padStart(2, "0")}`);
+          uniqPush(floors, f);
+          t = replaceFirst(t, m[0], " ");
+        }
+      }
+
+      if (rooms.length) {
+        if (bnums.length && rb.some((b) => !bnums.includes(b))) { p.reason = `อาคาร ${pyList(bnums)} ขัดกับรหัสห้อง ${pyList(rooms)}`; return p; }
+        if (floors.length && rf.some((f) => !floors.includes(f)) && !named.length) { p.reason = `ชั้น ${pyList(floors)} ขัดกับรหัสห้อง ${pyList(rooms)}`; return p; }
+        rb.forEach((b) => uniqPush(bnums, b));
+        rf.forEach((f) => uniqPush(floors, f));
+      }
+
+      p.buildings = [...bnums].sort((a, b) => a - b).map((b) => `อาคาร ${b}`).concat(named);
+      p.floors = [...floors].sort((a, b) => a - b);
+      p.rooms = rooms;
+
+      let rest = t.replace(/\([^)]*\)/g, (m) => " " + m.slice(1, -1) + " ");
+      rest = rest.replace(/[\s,/&]+/g, " ").trim();
+      let area = "";
+      for (const [pat, std] of AREAS) {
+        const m = rest.match(rx(pat, "i"));
+        if (!m) continue;
+        if (std === null) area = m[0].replace(/\s+/g, "");
+        else if (std === "ห้องประชุม" && m[1]) area = `ห้องประชุม ${m[1]}`;
+        else area = std;
+        rest = (rest.slice(0, m.index) + " " + rest.slice(m.index + m[0].length)).trim();
+        break;
+      }
+      let leftover = rest.replace(rx(`${B}(?:ห้อง|ที่|ของ|และ|ใน|ด้าน|หน้า|ฝั่ง|ฯ|\\d+)${B}|[ฯ]`, "g"), " ");
+      leftover = leftover.replace(/\s+/g, " ").replace(/^[ ,.-]+|[ ,.-]+$/g, "");
+      p.area = area;
+
+      const hasLoc = p.buildings.length > 0 || p.rooms.length > 0;
+      if (!hasLoc && !area) {
+        p.reason = rx(PROBLEM_WORDS, "i").test(p.raw) ? "เป็นอาการ/ปัญหา ไม่ใช่สถานที่" : "ไม่พบอาคาร/ห้อง/ชื่อพื้นที่ที่ระบุได้";
+        return p;
+      }
+      if (!hasLoc && !UNIQUE_AREAS.has(area)) { p.reason = `ระบุอาคารไม่ได้ ('${area}' มีหลายที่ ต้องมีอาคารหรือรหัสห้อง)`; return p; }
+      p.valid = true;
+      if (landmark.length) p.dropped = landmark.concat(p.dropped ? [p.dropped] : []).join(" ");
+      if (leftover && rx(PROBLEM_WORDS, "i").test(leftover)) p.dropped = leftover;
+      return p;
+    }
+
+    const blank = (v) => v == null || (typeof v === "number" && Number.isNaN(v)) || (typeof v === "string" && !v.trim());
+    const txt = (v) => (blank(v) ? null : String(v).replace(/\xa0/g, " ").replace(/\s+/g, " ").trim());
+    const cleanStatus = (s) => { const s0 = txt(s); return STATUS_STD.has(s0) ? s0 : (STATUS_MAP[s0] || "อื่นๆ"); };
+    const cleanType = (t) => { const t0 = txt(t); if (STD_TYPES.has(t0)) return t0; if (t0 in TYPE_MAP) return TYPE_MAP[t0]; return "งานอื่นๆ"; };
+    function isTest(r) {
+      if ((txt(r.name) || "").startsWith("ทดสอบ")) return true;
+      return ["type", "place", "detail", "extra"].some((c) => (txt(r[c]) || "").replaceAll("ศูนย์ทดสอบ", "").includes("ทดสอบ"));
+    }
+    const normCmp = (s) => (s || "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "").replace(/(ค่ะ|คะ|ครับ|นะคะ|นะครับ)+$/u, "");
+    function mergeDetail(d, extra) {
+      const e = txt(extra);
+      if (e !== null && NULL_EXTRA.has(e.toLowerCase())) return [d, "เพิ่มเติมเป็นค่าว่างแฝง (-, ไม่มี) ตัดทิ้ง"];
+      if (e === null) return [d, null];
+      const nd = normCmp(d), ne = normCmp(e);
+      if (!d) return [e, "รายละเอียดว่าง ใช้ข้อความเพิ่มเติมแทน"];
+      if (ne === nd || nd.includes(ne)) return [d, "ซ้ำกัน เก็บอันเดียว"];
+      if (ne.includes(nd)) return [e, "ซ้ำกัน เก็บอันที่ยาวกว่า"];
+      return [`${d} | ${e}`, "รวม 2 ช่อง คั่นด้วย |"];
+    }
+
+    // วันที่: Excel เก็บเป็นเลขวัน ; ใช้ Date แบบ UTC ทั้งหมดเพื่อไม่ให้เขตเวลาของเครื่องมาเลื่อนเวลา
+    const fromSerial = (n) => new Date(Math.round((n - 25569) * 86400) * 1000);
+    const utc = (y, mo, d, h = 0, mi = 0, s = 0) => new Date(Date.UTC(y, mo, d, h, mi, s));
+    const fmt = (d) => d ? `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")} ${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}` : "";
+    function parseReported(v) {
+      if (blank(v)) return null;
+      if (typeof v === "string") {
+        const m = v.match(/^\s*(\d{1,2})\/(\d{1,2})\/(\d{1,4})\s+(\d{1,2}):(\d{2})/);
+        if (!m) return null;
+        let [mo, dd, yy, hh, mi] = m.slice(1).map(Number);
+        if (yy < 100) yy += 2500;
+        return utc(yy, mo - 1, dd, hh, mi);
+      }
+      return typeof v === "number" ? fromSerial(v) : null;
+    }
+    const beToCe = (d) => (d.getUTCFullYear() > 2400
+      ? utc(d.getUTCFullYear() - 543, d.getUTCMonth(), d.getUTCDate(), d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds()) : d);
+    function fixReported(rep0, ts) {
+      const tsMin = utc(ts.getUTCFullYear(), ts.getUTCMonth(), ts.getUTCDate(), ts.getUTCHours(), ts.getUTCMinutes());
+      let rep = parseReported(rep0), rule = null;
+      if (rep) { const f = beToCe(rep); if (f.getTime() !== rep.getTime()) rule = "ปี พ.ศ. แปลงเป็น ค.ศ."; rep = f; }
+      if (!rep) { rep = tsMin; rule = "อ่านวันที่ไม่ได้ ใช้ประทับเวลา"; }
+      else if (rep - tsMin > DATE_FUTURE_TOLERANCE) { rep = tsMin; rule = "อยู่หลังเวลาส่งฟอร์ม ใช้ประทับเวลา"; }
+      else if (tsMin - rep > DATE_FALLBACK_AFTER) { rep = tsMin; rule = "เก่ากว่าเวลาส่งฟอร์มเกิน 7 วัน ใช้ประทับเวลา"; }
+      return [rep, rule];
+    }
+
+    // ค่าที่แสดงในตาราง เริ่มจากค่าใน Excel แล้วเปลี่ยนไปตามขั้นที่ทำแล้ว
+    function initView(r) {
+      r.v = { dept: txt(r.dept), status: txt(r.status), type: txt(r.type), place: txt(r.place),
+        detail: blank(r.detail) ? null : String(r.detail), extra: txt(r.extra),
+        reported: typeof r.reported === "number" ? fmt(fromSerial(r.reported)) : txt(r.reported) };
+      delete r.rep;
+    }
+
+    // =====================================================================
+    // Extract: 3 sheet -> แถวเดียวกัน (ฟอร์ม 1 ข้อมูลเริ่มแถว 4 คอลัมน์ B-L ; ฟอร์ม 3, 4 หัวตารางแถว 1)
+    // =====================================================================
+    function sheetRows(ws) {
+      const range = XLSX.utils.decode_range(ws["!ref"]);
+      range.s.r = 0; range.s.c = 0;
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null, blankrows: true, range: XLSX.utils.encode_range(range) });
+      while (rows.length && rows[rows.length - 1].every(blank)) rows.pop();   // pandas ตัดแถวว่างท้าย sheet
+      return rows;
+    }
+    function extract(wb) {
+      const need = ["การตอบแบบฟอร์ม 1", "การตอบแบบฟอร์ม 3", "การตอบแบบฟอร์ม 4"];
+      const missing = need.filter((n) => !wb.Sheets[n]);
+      if (missing.length) throw new Error(`ไม่พบ sheet: ${missing.join(", ")}`);
+      const out = [], sheets = [];
+      const add = (rows, cols, tag, firstRow) => {
+        rows.forEach((arr, i) => {
+          const r = { sheet: tag, row: firstRow + i };
+          cols.forEach((c, j) => { r[c] = arr[j] ?? null; });
+          out.push(r);
+        });
+        sheets.push({ tag, count: rows.length, firstRow });
+      };
+      add(sheetRows(wb.Sheets["การตอบแบบฟอร์ม 1"]).slice(3).map((a) => a.slice(1, 12)), SHEET1, "ฟอร์ม 1", 4);
+      add(sheetRows(wb.Sheets["การตอบแบบฟอร์ม 3"]).slice(1), RAW, "ฟอร์ม 3", 2);
+      add(sheetRows(wb.Sheets["การตอบแบบฟอร์ม 4"]).slice(1), RAW, "ฟอร์ม 4", 2);
+      out.forEach((r, i) => {
+        r.id = i;
+        r.ts = typeof r.ts === "number" ? fromSerial(r.ts) : new Date(r.ts);
+        initView(r);
+      });
+      return { rows: out, sheets, skipped: wb.SheetNames.filter((n) => !need.includes(n)) };
+    }
+
+    // =====================================================================
+    // ขั้นตอน: drop = ตัดแถวสีแดงออก ; fix = แก้ค่าในแถวสีแดง ; find(alive) คืน Map(id -> { why, col, to })
+    // =====================================================================
+    const STEPS = [
+      { key: "read", title: "อ่าน Excel", kind: "read",
+        rule: "รวม 3 sheet ของ Google Form เป็นตารางเดียว จัดคอลัมน์ให้ตรงกัน และจำว่าแต่ละแถวมาจาก sheet ไหน แถวที่เท่าไร" },
+      { key: "test", title: "ลบแถวทดสอบ", kind: "drop", short: "ทดสอบ",
+        rule: "ชื่อผู้แจ้งขึ้นต้นด้วย \"ทดสอบ\" หรือช่องประเภท/สถานที่/รายละเอียดมีคำว่า \"ทดสอบ\" (ยกเว้นชื่อหน่วยงาน \"ศูนย์ทดสอบ...\")",
+        find: (rows) => new Map(rows.filter(isTest).map((r) => [r.id, { why: "แถวทดสอบระบบ" }])) },
+      { key: "status", title: "จัดสถานภาพผู้แจ้ง", kind: "fix", col: "status",
+        rule: "จัดเข้า 5 ค่ามาตรฐาน: เจ้าหน้าที่ / อาจารย์ / นิสิต / ช่างเทคนิค / แม่บ้าน ; ค่าที่พิมพ์เองแปลงตามตาราง ที่เหลือเป็น \"อื่นๆ\"",
+        find: (rows) => new Map(rows.filter((r) => cleanStatus(r.status) !== txt(r.status))
+          .map((r) => [r.id, { col: "status", to: cleanStatus(r.status), why: "ไม่อยู่ในชุดมาตรฐาน" }])) },
+      { key: "type", title: "จัดประเภทงาน", kind: "fix", col: "type",
+        rule: "ข้อความที่ผู้แจ้งพิมพ์เองในช่อง \"อื่นๆ\" จัดเข้าประเภทมาตรฐาน เช่น \"หลอดไฟเสีย\" เป็นงานระบบไฟฟ้า ; ไม่รู้จักเป็น \"งานอื่นๆ\"",
+        find: (rows) => new Map(rows.filter((r) => cleanType(r.type) !== txt(r.type))
+          .map((r) => [r.id, { col: "type", to: cleanType(r.type), why: "พิมพ์เอง จัดเข้าประเภทมาตรฐาน" }])) },
+      { key: "badplace", title: "ลบสถานที่ที่ระบุไม่ได้", kind: "drop", short: "สถานที่",
+        rule: "สถานที่เป็นอาการเสีย, ชื่อที่มีหลายที่แต่ไม่บอกอาคาร (เช่น \"ห้องน้ำ\"), อาคารไม่มีจริง หรืออาคาร/ชั้นขัดกับรหัสห้อง",
+        find: (rows) => new Map(rows.filter((r) => !r.pl.valid).map((r) => [r.id, { why: r.pl.reason }])) },
+      { key: "place", title: "แยกสถานที่", kind: "fix", col: "place",
+        rule: "แยกข้อความอิสระเป็น อาคาร / ชั้น / ห้อง / ชื่อพื้นที่ ; รหัสห้อง E9203 = อาคาร 9 ชั้น 2 ห้อง 9203 ; ตัดอาการเสียที่ปนมาในช่องสถานที่",
+        find: (rows) => new Map(rows.filter((r) => placeText(r.pl) !== txt(r.place) || r.pl.dropped)
+          .map((r) => [r.id, { col: "place", to: placeText(r.pl), why: r.pl.dropped ? `ตัด "${r.pl.dropped}"` : "จัดรูปอาคาร-ชั้น-ห้อง" }])) },
+      { key: "detail", title: "รวมรายละเอียด", kind: "fix", col: "detail",
+        rule: "ตัดช่องว่างเกิน แล้วรวมช่อง \"รายละเอียดเพิ่มเติม\" เข้ากับ \"รายละเอียดของปัญหา\" ; ข้อความซ้ำเก็บอันเดียว ; \"-\" หรือ \"ไม่มี\" ตัดทิ้ง",
+        find: (rows) => new Map(rows.map((r) => {
+          const d = txt(r.detail), [merged, rule] = mergeDetail(d, r.extra), to = merged || "ไม่ระบุ";
+          const trimmed = d !== (blank(r.detail) ? null : String(r.detail));
+          return (rule || trimmed || to !== r.v.detail) ? [r.id, { col: "detail", to, why: rule || "ตัดช่องว่าง/ขึ้นบรรทัดใหม่" }] : null;
+        }).filter(Boolean)) },
+      { key: "date", title: "แก้วันที่แจ้ง", kind: "fix", col: "reported",
+        rule: "เทียบกับประทับเวลาที่ Google Form บันทึกให้: ปี พ.ศ. แปลงเป็น ค.ศ. ; อ่านไม่ได้ อยู่หลังเวลาส่ง หรือเก่ากว่าเกิน 7 วัน ใช้ประทับเวลาแทน",
+        find: (rows) => new Map(rows.map((r) => { const [rep, rule] = fixReported(r.reported, r.ts); r.rep = rep;
+          return rule ? [r.id, { col: "reported", to: fmt(rep), why: rule }] : null; }).filter(Boolean)) },
+      { key: "dup", title: "ลบใบที่ส่งซ้ำ", kind: "drop", short: "ซ้ำ",
+        rule: "ผู้แจ้งคนเดียวกัน สังกัด ประเภท สถานที่ และรายละเอียดเหมือนกันทุกช่อง ส่งห่างกันไม่เกิน 24 ชั่วโมง เก็บใบแรกไว้",
+        find: (rows) => {
+          const hits = new Map(), last = new Map();
+          for (const r of [...rows].sort((a, b) => a.ts - b.ts)) {
+            const key = [txt(r.name), r.v.dept || "ไม่ระบุ", r.v.type, r.v.place, r.v.detail].join("\u0001");
+            const prev = last.get(key);
+            if (prev && r.ts - prev.ts <= DAY) { hits.set(r.id, { why: `ซ้ำกับ ${prev.sheet} แถว ${prev.row}` }); continue; }
+            last.set(key, r);
+          }
+          return hits;
+        } },
+      { key: "result", title: "ผลลัพธ์", kind: "result",
+        rule: "ข้อมูลที่ clean แล้ว 9 คอลัมน์ เรียงตามวันที่แจ้ง พร้อมโหลดเข้า fact_general_maintenance ; ไม่มีชื่อและเบอร์โทรผู้แจ้ง" },
+    ];
+
+    // =====================================================================
+    // หน้าจอ
+    // =====================================================================
+    const $ = (id) => document.getElementById(id);
+    const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    const nf = (n) => n.toLocaleString("th-TH");
+    const mask = (name) => { const n = txt(name); return n ? n.slice(0, 2) + "•••" : ""; };
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    let S = null;   // { all, alive, sheets, skipped, step, phase: "find" | "done", hits, history: [{key, cut, fixed}] }
+    let timer = null;
+
+    const COLS = [
+      { key: "src", label: "แหล่ง · แถว", cell: (r) => `<span class="src">${esc(r.sheet)}</span> ${r.row}`, cls: "nowrap" },
+      { key: "ts", label: "ประทับเวลา", cell: (r) => esc(fmt(r.ts)), cls: "nowrap dim" },
+      { key: "name", label: "ผู้แจ้ง", cell: (r) => esc(mask(r.name)), cls: "nowrap dim" },
+      { key: "dept", label: "สังกัด", cls: "clip" },
+      { key: "status", label: "สถานภาพ", cls: "nowrap" },
+      { key: "type", label: "ประเภทงาน", cls: "clip" },
+      { key: "place", label: "สถานที่", cls: "clip" },
+      { key: "detail", label: "รายละเอียด", cls: "clip" },
+      { key: "extra", label: "เพิ่มเติม", cls: "clip" },
+      { key: "reported", label: "แจ้งซ่อมเมื่อ", cls: "nowrap" },
+    ];
+    const RESULT_COLS = [
+      ["แจ้งซ่อมเมื่อ", (r) => fmt(r.rep)], ["สังกัด", (r) => r.v.dept || "ไม่ระบุ"], ["สถานภาพผู้แจ้งซ่อม", (r) => r.v.status],
+      ["ประเภทงานซ่อมบำรุง", (r) => r.v.type], ["อาคาร", (r) => r.pl.buildings.join(", ")], ["ชั้น", (r) => r.pl.floors.join(", ")],
+      ["ห้อง", (r) => r.pl.rooms.join(", ")], ["ชื่อพื้นที่", (r) => r.pl.area], ["รายละเอียดของปัญหา", (r) => r.v.detail],
+    ];
+
+    function start(wb) {
+      const { rows, sheets, skipped } = extract(wb);
+      rows.forEach((r) => { r.pl = parsePlace(r.place); });
+      S = { all: rows, alive: rows, sheets, skipped, step: 0, phase: "done", hits: new Map(), history: [] };
+      $("drop").hidden = true;
+      $("run").hidden = false;
+      render();
+    }
+
+    function enterStep(i) {
+      S.step = i;
+      const st = STEPS[i];
+      S.hits = st.find ? st.find(S.alive) : new Map();
+      S.phase = st.find ? "find" : "done";
+      render();
+      $("step-title").focus({ preventScroll: true });
+      const first = $("tbody").querySelector("tr.hit");
+      if (first) first.scrollIntoView({ block: "nearest" });
+      else $("table-wrap").scrollTop = 0;
+    }
+
+    function apply() {
+      const st = STEPS[S.step];
+      const ids = [...S.hits.keys()];
+      if (st.kind === "drop") {
+        S.history.push({ key: st.key, cut: ids.length });
+        const go = () => { S.alive = S.alive.filter((r) => !S.hits.has(r.id)); S.hits = new Map(); S.phase = "done"; render(); };
+        $("tbody").querySelectorAll("tr.hit").forEach((tr) => tr.classList.add("leaving"));
+        reduced ? go() : setTimeout(go, 380);
+        animateCount(S.alive.length, S.alive.length - ids.length);
+      } else {
+        S.history.push({ key: st.key, fixed: ids.length });
+        for (const r of S.alive) {
+          const h = S.hits.get(r.id);
+          if (!h) continue;
+          r.v[h.col] = h.to;
+        }
+        if (st.key === "detail") S.alive.forEach((r) => { r.v.extra = null; });   // รวมเข้ารายละเอียดแล้ว
+        const fixedIds = new Set(ids);
+        S.hits = new Map(); S.phase = "done";
+        render(fixedIds);
+      }
+    }
+
+    function primary() {
+      const st = STEPS[S.step];
+      if (S.phase === "find" && S.hits.size) return apply();
+      if (S.phase === "find") { S.history.push({ key: st.key, cut: 0, fixed: 0 }); S.phase = "done"; }
+      if (S.step < STEPS.length - 1) enterStep(S.step + 1);
+    }
+
+    function render(fixedIds = new Set()) {
+      const st = STEPS[S.step];
+      // แถบขั้นตอน
+      $("steps").innerHTML = STEPS.map((s, i) => {
+        const h = S.history.find((x) => x.key === s.key);
+        const delta = h && h.cut ? ` <span class="step-delta">−${h.cut}</span>` : "";
+        return `<li class="${i < S.step ? "done" : ""}" ${i === S.step ? 'aria-current="step"' : ""}><span class="step-no">${i < S.step ? "✓" : i + 1}</span>${esc(s.title)}${delta}</li>`;
+      }).join("");
+      $("steps").querySelector('[aria-current="step"]')?.scrollIntoView({ block: "nearest", inline: "nearest" });
+
+      $("step-title").textContent = `${S.step + 1}. ${st.title}`;
+      $("step-rule").textContent = st.rule;
+
+      // ปุ่มหลัก
+      const btn = $("main-btn");
+      if (st.kind === "result") { btn.textContent = "ดาวน์โหลด CSV"; }
+      else if (S.phase === "find" && S.hits.size) btn.textContent = st.kind === "drop" ? `ตัดออก ${nf(S.hits.size)} แถว` : `แก้ ${nf(S.hits.size)} แถว`;
+      else btn.textContent = "ขั้นถัดไป →";
+
+      renderStats(st);
+      renderExtra(st);
+      renderTable(st, fixedIds);
+    }
+
+    function renderStats(st) {
+      const total = S.all.length, now = S.alive.length;
+      const cut = S.history.reduce((a, h) => a + (h.cut || 0), 0);
+      const fixed = S.history.reduce((a, h) => a + (h.fixed || 0), 0);
+      const hitLabel = st.kind === "drop" ? "ตรงเงื่อนไข (จะตัดออก)" : "ตรงเงื่อนไข (จะแก้)";
+      const stat = (label, value, cls = "", sub = "", id = "") =>
+        `<div class="stat"><div class="stat-label">${label}</div><div class="stat-value ${cls}" ${id ? `id="${id}"` : ""}>${value}</div>${sub ? `<div class="stat-sub">${sub}</div>` : ""}</div>`;
+      let html = stat("แถวตอนนี้", `${nf(now)}<small>แถว</small>`, st.kind === "result" ? "is-ok" : "", `จาก Excel ${nf(total)} แถว`, "now-count");
+      if (st.find) html += stat(hitLabel, `${nf(S.phase === "find" ? S.hits.size : 0)}<small>แถว</small>`, S.phase === "find" && S.hits.size ? "is-hit" : "",
+        S.phase === "find" ? breakdown() : (st.kind === "drop" ? "ตัดออกแล้ว" : "แก้แล้ว"));
+      html += stat("ตัดออกทั้งหมด", `${nf(cut)}<small>แถว</small>`);
+      html += stat("แก้ค่าทั้งหมด", `${nf(fixed)}<small>แถว</small>`);
+      $("stats").innerHTML = html;
+    }
+
+    // แยกจำนวนตามเหตุผล (เช่น ขั้นสถานที่ / รายละเอียด / วันที่ มีหลายกฎ)
+    function breakdown() {
+      const c = new Map();
+      S.hits.forEach((h) => { const k = h.why.replace(/\d+|\[.*?\]|'.*?'|".*?"/g, "#").replace(/^ตัด #$/, "ตัดอาการที่ปนมา").replace(/^ซ้ำกับ .*$/, "ส่งซ้ำ"); c.set(k, (c.get(k) || 0) + 1); });
+      if (c.size < 2) return "";
+      return [...c].sort((a, b) => b[1] - a[1]).map(([k, n]) => `${esc(k)} ${n}`).join(" · ");
+    }
+
+    function renderExtra(st) {
+      if (st.kind === "read") {
+        $("extra").innerHTML = `<div class="sheets">${S.sheets.map((s) =>
+          `<div class="sheet"><b>${esc(s.tag)} · ${nf(s.count)} แถว</b>${s.tag === "ฟอร์ม 1" ? "ข้อมูลเริ่มแถว 4 คอลัมน์ B–L ลำดับคอลัมน์ต่างจาก sheet อื่น" : "หัวตารางแถว 1"}</div>`).join("")}
+          ${S.skipped.map((n) => `<div class="sheet is-skip"><b>${esc(n.replace("การตอบแบบ", ""))} · ไม่ใช้</b>ไม่ใช่ใบแจ้งซ่อม</div>`).join("")}</div>`;
+      } else if (st.kind === "result") {
+        const steps = [{ title: "อ่าน Excel", left: S.all.length }];
+        let left = S.all.length;
+        for (const h of S.history) { const s = STEPS.find((x) => x.key === h.key); if (s.kind === "drop") { left -= h.cut; steps.push({ title: s.title, left, cut: h.cut }); } }
+        $("extra").innerHTML = `<ol class="funnel" aria-label="จำนวนแถวหลังแต่ละขั้น">${steps.map((s) => `<li><span>${esc(s.title)}${s.cut ? ` <span class="cut">−${s.cut}</span>` : ""}</span>
+          <span class="bar-wrap"><span class="bar" style="display:block;width:${(s.left / S.all.length * 100).toFixed(1)}%"></span></span><span class="num">${nf(s.left)}</span></li>`).join("")}</ol>`;
+      } else $("extra").innerHTML = "";
+    }
+
+    function renderTable(st, fixedIds) {
+      const onlyHit = $("only-hit").checked && S.phase === "find";
+      if (st.kind === "result") {
+        $("legend").innerHTML = "";
+        const rows = [...S.alive].sort((a, b) => a.rep - b.rep);
+        $("thead").innerHTML = `<tr>${RESULT_COLS.map(([h]) => `<th scope="col">${esc(h)}</th>`).join("")}</tr>`;
+        $("tbody").innerHTML = rows.map((r) => `<tr>${RESULT_COLS.map(([, f], i) => { const v = f(r);
+          return `<td class="${i === 0 ? "nowrap" : i === 8 ? "clip" : ""} ${v ? "" : "empty"}" ${i === 8 ? `title="${esc(v)}"` : ""}>${esc(v)}</td>`; }).join("")}</tr>`).join("");
+        return;
+      }
+      $("legend").innerHTML = S.phase === "find" && S.hits.size
+        ? (st.kind === "drop" ? `<span><i style="background:var(--cpe-danger)"></i>แถวที่จะถูกตัดออก</span>`
+          : `<span><i style="background:var(--cpe-danger)"></i>แถวที่จะแก้</span><span><del>ค่าเดิม</del> → <ins>ค่าใหม่</ins></span>`) : "";
+      const showWhy = S.phase === "find" && S.hits.size;
+      // ขั้นที่แก้ค่า: ย้ายคอลัมน์ที่ถูกแก้มาไว้หน้าสุด ไม่ต้องเลื่อนตารางไปหา
+      const cols = st.col ? [COLS[0], COLS.find((c) => c.key === st.col), ...COLS.slice(1).filter((c) => c.key !== st.col)] : COLS;
+      $("thead").innerHTML = `<tr>${showWhy ? '<th scope="col">เงื่อนไขที่ตรง</th>' : ""}${cols.map((c) => `<th scope="col">${c.label}</th>`).join("")}</tr>`;
+      const rows = onlyHit ? S.alive.filter((r) => S.hits.has(r.id)) : S.alive;
+      $("tbody").innerHTML = rows.map((r) => {
+        const h = S.phase === "find" ? S.hits.get(r.id) : null;
+        const tds = cols.map((c) => {
+          if (c.cell) return `<td class="${c.cls}">${c.cell(r)}</td>`;
+          const v = r.v[c.key];
+          if (h && h.col === c.key) return `<td class="${c.cls}" title="${esc(v)} → ${esc(h.to)}"><del>${esc(v ?? "ว่าง")}</del> → <ins>${esc(h.to ?? "ว่าง")}</ins></td>`;
+          return `<td class="${c.cls}${v ? "" : " empty"}" ${v ? `title="${esc(v)}"` : ""}>${esc(v)}</td>`;
+        }).join("");
+        return `<tr class="${h ? "hit" : ""}${fixedIds.has(r.id) ? " fixed" : ""}">${showWhy ? `<td class="why">${h ? esc(h.why) : ""}</td>` : ""}${tds}</tr>`;
+      }).join("");
+    }
+
+    function animateCount(from, to) {
+      const el = $("now-count");
+      if (!el || reduced) return;
+      const t0 = performance.now();
+      const tick = (t) => {
+        const k = Math.min(1, (t - t0) / 600);
+        el.innerHTML = `${nf(Math.round(from + (to - from) * k))}<small>แถว</small>`;
+        if (k < 1) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    }
+
+    function downloadCsv() {
+      const rows = [...S.alive].sort((a, b) => a.rep - b.rep);
+      const q = (v) => { const s = String(v ?? ""); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+      const csv = [RESULT_COLS.map(([h]) => h), ...rows.map((r) => RESULT_COLS.map(([, f]) => f(r)))].map((r) => r.map(q).join(",")).join("\r\n");
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }));
+      a.download = "repair_requests_clean.csv";
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    }
+
+    // ---------- เล่นอัตโนมัติ: แสดงแถวสีแดง -> ทำ -> ขั้นถัดไป ----------
+    function stopAuto() { clearTimeout(timer); timer = null; $("auto-btn").textContent = "เล่นอัตโนมัติ"; }
+    function autoTick() {
+      if (STEPS[S.step].kind === "result") return stopAuto();
+      const wait = S.phase === "find" && S.hits.size ? 2600 : 1400;
+      timer = setTimeout(() => { primary(); autoTick(); }, wait);
+    }
+
+    // ---------- เหตุการณ์ ----------
+    async function openFile(buf) {
+      $("drop-error").hidden = true;
+      try { start(XLSX.read(buf, { type: "array" })); enterStep(0); }
+      catch (e) { $("drop-error").textContent = `อ่านไฟล์ไม่ได้: ${e.message}`; $("drop-error").hidden = false; }
+    }
+    $("pick-btn").addEventListener("click", () => $("file-input").click());
+    $("file-input").addEventListener("change", async (e) => { const f = e.target.files[0]; if (f) openFile(await f.arrayBuffer()); });
+    $("sample-btn").addEventListener("click", async () => {
+      try {
+        const res = await fetch(encodeURI(SAMPLE));
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        openFile(await res.arrayBuffer());
+      } catch (e) {
+        $("drop-error").textContent = `โหลดไฟล์ใน data/ ไม่ได้ (${e.message}) เปิดหน้านี้ผ่าน http เช่น http://localhost/etl_demo.html หรือลากไฟล์มาวางแทน`;
+        $("drop-error").hidden = false;
+      }
+    });
+    const drop = $("drop");
+    ["dragenter", "dragover"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("is-over"); }));
+    ["dragleave", "drop"].forEach((ev) => drop.addEventListener(ev, () => drop.classList.remove("is-over")));
+    drop.addEventListener("drop", async (e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) openFile(await f.arrayBuffer()); });
+    document.addEventListener("dragover", (e) => e.preventDefault());
+    document.addEventListener("drop", (e) => e.preventDefault());
+
+    $("main-btn").addEventListener("click", () => { stopAuto(); STEPS[S.step].kind === "result" ? downloadCsv() : primary(); });
+    $("auto-btn").addEventListener("click", () => { if (timer) return stopAuto(); $("auto-btn").textContent = "หยุด"; autoTick(); });
+    $("reset-btn").addEventListener("click", () => { stopAuto(); S.all.forEach(initView); S.alive = S.all; S.history = []; enterStep(0); });
+    $("only-hit").addEventListener("change", () => render());
+    document.addEventListener("keydown", (e) => {
+      if (!S || $("run").hidden || e.target.closest("input, button")) return;
+      if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); stopAuto(); if (STEPS[S.step].kind !== "result") primary(); }
+    });
+
+    // ธีม: key เดียวกับ dashboard_report.html
+    const themeBtn = $("theme-btn");
+    const showTheme = () => {
+      const light = document.documentElement.getAttribute("data-theme") === "light";
+      themeBtn.textContent = light ? "โหมดมืด" : "โหมดสว่าง";
+      themeBtn.setAttribute("aria-label", light ? "สลับเป็นโหมดมืด" : "สลับเป็นโหมดสว่าง");
+    };
+    themeBtn.addEventListener("click", () => {
+      const next = document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", next);
+      try { localStorage.setItem("cpe_theme", next); } catch { /* ไม่มี storage ก็ใช้ได้ */ }
+      showTheme();
+    });
+    showTheme();
+    window.__etlDemo = () => S;   // ใช้ตรวจตัวเลขเทียบกับ Python
+  })();
+  </script>
+</body>
+</html>
