@@ -2068,7 +2068,7 @@
       chartDInst = new Chart(ctxD, {
         type: 'bar',
         data: {
-          labels: topDepts.map(d => d[0].length > 18 ? d[0].substring(0, 17) + '...' : d[0]),
+          labels: topDepts.map(d => d[0]),
           datasets: [{ label: 'จำนวนชิ้นที่ยืม', data: topDepts.map(d => d[1]), backgroundColor: '#106BDA', borderRadius: 4 }]
         },
         options: {
@@ -2465,8 +2465,8 @@
 
       const scatterPoints = rawScatter.map(p => ({
         ...p,
-        x: p.stock,
-        y: p.borrows
+        x: p.borrows, // Swapped: X-axis is now borrow frequency (จำนวนครั้งที่ถูกยืม)
+        y: p.stock    // Swapped: Y-axis is now inventory stock (จำนวนคงเหลือในคลัง)
       }));
 
       // Filter scatter by dept / category if active
@@ -2526,10 +2526,11 @@
                   return [
                     `${p.name}`,
                     `รหัส: ${p.code} | สังกัด: ${p.dept}`,
-                    `📦 สต็อกพร้อมใช้: ${p.x} ชิ้น`,
-                    `📋 ถูกยืม: ${p.y} ครั้ง (รวม ${p.days} วัน)`
+                    `📋 ถูกยืม: ${p.borrows} ครั้ง (รวม ${p.days} วัน)`,
+                    `📦 สต็อกพร้อมใช้: ${p.stock} ชิ้น`
                   ];
-                }
+                },
+                footer: () => '👆 คลิกเพื่อดูประวัติครุภัณฑ์ชิ้นนี้'
               }
             },
             legend: {
@@ -2537,15 +2538,28 @@
               labels: { color: textColor, boxWidth: 10, font: { size: 10 } }
             }
           },
+          onHover: (event, chartElement) => {
+            event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
+          },
+          onClick: (event, elements, chart) => {
+            if (elements && elements.length > 0) {
+              const el = elements[0];
+              const dataset = chart.data.datasets[el.datasetIndex];
+              const point = dataset.data[el.index];
+              if (point && point.name) {
+                openAssetModal(point.name);
+              }
+            }
+          },
           scales: {
             x: {
-              title: { display: true, text: 'จำนวนคงเหลือในคลัง (ชิ้น)', color: textColor, font: { size: 11 } },
+              title: { display: true, text: 'จำนวนครั้งที่ถูกยืม (ครั้ง)', color: textColor, font: { size: 11 } },
               grid: { color: gridColor },
-              ticks: { color: textColor },
+              ticks: { color: textColor, stepSize: 1 },
               beginAtZero: true
             },
             y: {
-              title: { display: true, text: 'จำนวนครั้งที่ถูกยืม (ครั้ง)', color: textColor, font: { size: 11 } },
+              title: { display: true, text: 'จำนวนคงเหลือในคลัง (ชิ้น)', color: textColor, font: { size: 11 } },
               grid: { color: gridColor },
               ticks: { color: textColor },
               beginAtZero: true
@@ -2615,7 +2629,7 @@
       chartFullInst = new Chart(ctxFull, {
         type: 'bar',
         data: {
-          labels: dormantDepts.map(d => d.department.length > 20 ? d.department.substring(0, 19) + '...' : d.department),
+          labels: dormantDepts.map(d => d.department),
           datasets: [{
             label: 'จำนวนครุภัณฑ์ที่ไม่เคยถูกยืมเลย (ชิ้น)',
             data: dormantDepts.map(d => d.count),
@@ -2632,7 +2646,7 @@
             legend: { position: 'top', labels: { color: textColor } }
           },
           scales: {
-            x: { grid: { display: false }, ticks: { color: textColor, font: { size: 11 } } },
+            x: { grid: { display: false }, ticks: { color: textColor, font: { size: 10 }, maxRotation: 35, minRotation: 20 } },
             y: { grid: { color: gridColor }, ticks: { color: textColor }, beginAtZero: true }
           }
         }
@@ -2953,7 +2967,7 @@
       chartDInst = new Chart(ctxD, {
         type: 'bar',
         data: {
-          labels: topDeptOverdue.map(d => d[0].length > 18 ? d[0].substring(0, 17) + '...' : d[0]),
+          labels: topDeptOverdue.map(d => d[0]),
           datasets: [{ label: 'จำนวนครั้งที่คืนล่าช้า', data: topDeptOverdue.map(d => d[1]), backgroundColor: '#106BDA', borderRadius: 4 }]
         },
         options: {
@@ -3040,7 +3054,7 @@
 
       document.getElementById('kpiTitle4').textContent = 'ภาควิชาที่ยืมคอมพิวเตอร์สูงสุด';
       document.getElementById('kpiIcon4').textContent = '💻';
-      document.getElementById('kpiVal4').textContent = 'วศ.เกษตร & วศ.ชลประทาน';
+      document.getElementById('kpiVal4').textContent = 'ภาควิชาวิศวกรรมเกษตร & ภาควิชาวิศวกรรมชลประทาน';
       document.getElementById('kpiSub4').textContent = 'เพื่อทำแบบจำลองและการจำลองผล';
 
       document.getElementById('kpiTitle5').textContent = 'คำขอเฉลี่ยต่อภาควิชา';
@@ -3070,7 +3084,7 @@
       chartAInst = new Chart(ctxA, {
         type: 'bar',
         data: {
-          labels: sortedDepts.map(d => d[0].length > 18 ? d[0].substring(0, 17) + '...' : d[0]),
+          labels: sortedDepts.map(d => d[0]),
           datasets: [{ label: 'จำนวนชิ้นที่ยืม', data: sortedDepts.map(d => d[1].count), backgroundColor: '#0466C8', borderRadius: 4 }]
         },
         options: {
@@ -3097,14 +3111,14 @@
       chartBInst = new Chart(ctxB, {
         type: 'bar',
         data: {
-          labels: top5Depts.map(d => d[0].length > 16 ? d[0].substring(0, 15) + '...' : d[0]),
+          labels: top5Depts.map(d => d[0]),
           datasets: catDatasets
         },
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { position: 'top', labels: { color: textColor, boxWidth: 10, padding: 6 } } },
           scales: {
-            x: { stacked: true, grid: { display: false }, ticks: { color: textColor, font: { size: 10 } } },
+            x: { stacked: true, grid: { display: false }, ticks: { color: textColor, font: { size: 10 }, maxRotation: 35, minRotation: 20 } },
             y: { stacked: true, grid: { color: gridColor }, ticks: { color: textColor }, beginAtZero: true }
           }
         }
@@ -3124,14 +3138,14 @@
       chartCInst = new Chart(ctxC, {
         type: 'bar',
         data: {
-          labels: top5Depts.map(d => d[0].length > 16 ? d[0].substring(0, 15) + '...' : d[0]),
+          labels: top5Depts.map(d => d[0]),
           datasets: roleDatasets
         },
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { position: 'top', labels: { color: textColor, boxWidth: 10 } } },
           scales: {
-            x: { stacked: true, grid: { display: false }, ticks: { color: textColor, font: { size: 10 } } },
+            x: { stacked: true, grid: { display: false }, ticks: { color: textColor, font: { size: 10 }, maxRotation: 35, minRotation: 20 } },
             y: { stacked: true, grid: { color: gridColor }, ticks: { color: textColor }, beginAtZero: true }
           }
         }
@@ -3144,14 +3158,14 @@
       chartDInst = new Chart(ctxD, {
         type: 'bar',
         data: {
-          labels: top5Depts.map(d => d[0].length > 16 ? d[0].substring(0, 15) + '...' : d[0]),
+          labels: top5Depts.map(d => d[0]),
           datasets: [{ label: 'ชิ้นเฉลี่ยต่อคำขอ', data: avgItems, backgroundColor: '#7C3AED', borderRadius: 4 }]
         },
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { display: false } },
           scales: {
-            x: { grid: { display: false }, ticks: { color: textColor, font: { size: 10 } } },
+            x: { grid: { display: false }, ticks: { color: textColor, font: { size: 10 }, maxRotation: 35, minRotation: 20 } },
             y: { grid: { color: gridColor }, ticks: { color: textColor }, beginAtZero: true }
           }
         }
@@ -3337,14 +3351,14 @@
       chartCInst = new Chart(ctxC, {
         type: 'bar',
         data: {
-          labels: topRepDept.map(d => d[0].length > 16 ? d[0].substring(0, 15) + '...' : d[0]),
+          labels: topRepDept.map(d => d[0]),
           datasets: [{ label: 'จำนวนเปลี่ยนเครื่อง', data: topRepDept.map(d => d[1]), backgroundColor: '#106BDA', borderRadius: 4 }]
         },
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { display: false } },
           scales: {
-            x: { grid: { display: false }, ticks: { color: textColor, font: { size: 10 } } },
+            x: { grid: { display: false }, ticks: { color: textColor, font: { size: 10 }, maxRotation: 30, minRotation: 20 } },
             y: { grid: { color: gridColor }, ticks: { color: textColor }, beginAtZero: true }
           }
         }
