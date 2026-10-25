@@ -41,7 +41,7 @@ SELECT
     SUM(f.`is_overdue_flag`) OVER (PARTITION BY f.`borrower_user_key`) AS `user_overdue_count`,
     ROUND(SUM(f.`is_overdue_flag`) OVER (PARTITION BY f.`borrower_user_key`) * 100.0 / NULLIF(COUNT(*) OVER (PARTITION BY f.`borrower_user_key`), 0), 1) AS `user_overdue_rate_pct`,
     SUM(CASE WHEN f.`return_condition` = 'ชำรุด' THEN 1 ELSE 0 END) OVER (PARTITION BY f.`borrower_user_key`) AS `user_damage_count`,
-    CASE WHEN COUNT(*) OVER (PARTITION BY f.`borrower_user_key`, f.`asset_key`) >= 2 THEN 1 ELSE 0 END AS `is_repeat_asset_flag`,
+    CASE WHEN COUNT(*) OVER (PARTITION BY f.`borrower_user_key`, f.`asset_key`) >= 3 THEN 1 ELSE 0 END AS `is_repeat_asset_flag`,
     CASE WHEN COUNT(*) OVER (PARTITION BY f.`borrow_request_id`) >= 3 THEN 1 ELSE 0 END AS `is_mass_borrow_flag`,
     CASE WHEN (SUM(f.`is_overdue_flag`) OVER (PARTITION BY f.`borrower_user_key`) * 100.0 / NULLIF(COUNT(*) OVER (PARTITION BY f.`borrower_user_key`), 0)) >= 50.0 
               AND COUNT(*) OVER (PARTITION BY f.`borrower_user_key`) >= 3 THEN 1 ELSE 0 END AS `is_chronic_overdue_flag`,
@@ -165,13 +165,13 @@ try {
     $data = array_map(function($r) {
         $anomalies = [];
         
-        // 1. Repeat asset
-        if ((int)$r['is_repeat_asset_flag'] === 1) {
+        // 1. Repeat asset (ผูกขาดเครื่องเดิมซ้ำ >= 3 ครั้ง)
+        if ((int)$r['is_repeat_asset_flag'] === 1 || (int)$r['repeat_asset_times'] >= 3) {
             $anomalies[] = [
                 'type' => 'REPEAT_ASSET',
                 'title' => 'ผูกขาดเครื่องเดิมซ้ำ',
                 'severity' => 'HIGH',
-                'detail' => "ผู้ใช้ยืมครุภัณฑ์ชิ้นนี้ซ้ำรวม {$r['repeat_asset_times']} ครั้ง"
+                'detail' => "ผู้ใช้ยืมครุภัณฑ์ชิ้นนี้ซ้ำรวม {$r['repeat_asset_times']} ครั้ง (≥3)"
             ];
         }
 

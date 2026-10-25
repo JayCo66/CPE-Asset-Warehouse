@@ -488,7 +488,6 @@
       transition: var(--transition);
       position: relative;
       overflow: hidden;
-      min-width: 0;
     }
     .kpi-card::before {
       content: '';
@@ -519,14 +518,11 @@
     }
 
     .kpi-value {
-      font-size: 19px;
+      font-size: 26px;
       font-weight: 700;
       color: var(--cpe-text);
-      line-height: 1.25;
+      line-height: 1.2;
       font-feature-settings: "tnum";
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
 
     .kpi-sub {
@@ -1009,7 +1005,7 @@
           <span id="kpiTitle1">ครุภัณฑ์ยอดนิยมอันดับ 1</span>
           <span class="kpi-icon" id="kpiIcon1">🏆</span>
         </div>
-        <div class="kpi-value" id="kpiVal1">-</div>
+        <div class="kpi-value" id="kpiVal1" style="font-size: 19px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">-</div>
         <div class="kpi-sub" id="kpiSub1">ยืม 0 ครั้ง | 0 คนไม่ซ้ำ</div>
       </div>
 
@@ -1019,7 +1015,7 @@
           <span id="kpiTitle2">ประเภทที่ต้องการมากที่สุด</span>
           <span class="kpi-icon" id="kpiIcon2">📦</span>
         </div>
-        <div class="kpi-value" id="kpiVal2">-</div>
+        <div class="kpi-value" id="kpiVal2" style="font-size: 19px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">-</div>
         <div class="kpi-sub" id="kpiSub2">สัดส่วน 0% ของการยืมทั้งหมด</div>
       </div>
 
@@ -1049,7 +1045,7 @@
           <span id="kpiTitle5">ช่วงความต้องการสูงสุด (Peak)</span>
           <span class="kpi-icon" id="kpiIcon5">📈</span>
         </div>
-        <div class="kpi-value" id="kpiVal5">-</div>
+        <div class="kpi-value" id="kpiVal5" style="font-size: 19px;">-</div>
         <div class="kpi-sub" id="kpiSub5">0 ชิ้นยืมในเดือนนี้</div>
       </div>
     </div>
@@ -1734,6 +1730,16 @@
         const headerActions = document.getElementById('tableHeaderActions');
         if (headerActions) {
           headerActions.innerHTML = '<span id="tableRecordCount" style="font-size: 13px; color: var(--cpe-text-dim)">แสดง 0 ครุภัณฑ์</span>';
+        }
+      }
+
+      // Reset KPI Card click handlers when switching topics
+      for (let i = 1; i <= 5; i++) {
+        const card = document.getElementById(`kpiCard${i}`);
+        if (card) {
+          card.style.cursor = 'default';
+          card.onclick = null;
+          card.removeAttribute('title');
         }
       }
 
@@ -3660,6 +3666,32 @@
       document.getElementById('kpiVal5').textContent = 'ปานกลาง (Medium)';
       document.getElementById('kpiSub5').textContent = 'มีครุภัณฑ์ที่ต้องตรวจสอบเป็นพิเศษ';
 
+      // Make Topic 6 KPI cards clickable with tooltips
+      const kpiCard1 = document.getElementById('kpiCard1');
+      if (kpiCard1) {
+        kpiCard1.style.cursor = 'pointer';
+        kpiCard1.title = '👆 คลิกเพื่อดูรายการคำขอที่มีรายงานชำรุด';
+        kpiCard1.onclick = () => openRiskBorrowModal('DAMAGED');
+      }
+      const kpiCard2 = document.getElementById('kpiCard2');
+      if (kpiCard2) {
+        kpiCard2.style.cursor = 'pointer';
+        kpiCard2.title = '👆 คลิกเพื่อดูรายการคำขอที่มีการเปลี่ยนเครื่องทดแทน';
+        kpiCard2.onclick = () => openRiskBorrowModal('REPLACED');
+      }
+      const kpiCard3 = document.getElementById('kpiCard3');
+      if (kpiCard3) {
+        kpiCard3.style.cursor = 'pointer';
+        kpiCard3.title = '👆 คลิกเพื่อดูรายการคำขอที่ส่งคืนล่าช้า';
+        kpiCard3.onclick = () => openRiskBorrowModal('OVERDUE');
+      }
+      const kpiCard4 = document.getElementById('kpiCard4');
+      if (kpiCard4) {
+        kpiCard4.style.cursor = 'pointer';
+        kpiCard4.title = '👆 คลิกเพื่อดูรายการคำขอที่มีพฤติกรรมผูกขาดเครื่องซ้ำ (≥3 ครั้ง)';
+        kpiCard4.onclick = () => openRiskBorrowModal('REPEAT');
+      }
+
       // Chart Titles
       document.getElementById('chartTitleA').textContent = '📊 สัดส่วนสัญญาณเตือนและปัจจัยเสี่ยง (Risk Distribution)';
       document.getElementById('chartTitleB').textContent = '⚠️ ประเภทครุภัณฑ์ที่มีรายงานชำรุดสูงสุด (Damaged by Category)';
@@ -3668,8 +3700,14 @@
       document.getElementById('chartTitleC').textContent = '🔄 ภาควิชาที่มีรายการเปลี่ยนเครื่องทดแทนสูงสุด';
       document.getElementById('chartTitleD').textContent = '⏱️ วันที่เกินกำหนดเฉลี่ยในกลุ่มที่มีรายงานชำรุด';
 
+      // Combine risk records (damaged, replaced, and repeat monopoly) without duplicates
+      const repeatRecords = filteredRecords.filter(r => (repeatMap[`${r.user?.key}_${r.assetCode}`] || 0) >= 3);
+      const riskMapUnique = new Map();
+      [...damagedList, ...replacedList, ...repeatRecords].forEach(r => riskMapUnique.set(r.fact_id, r));
+      const riskList = Array.from(riskMapUnique.values());
+
       renderChartsTopicRisk(damagedList, replacedList, overdueList, repeatCount);
-      renderTableTopicRisk(damagedList.concat(replacedList));
+      renderTableTopicRisk(riskList, repeatMap);
     }
 
     function renderChartsTopicRisk(damagedList, replacedList, overdueList, repeatCount) {
@@ -3874,8 +3912,8 @@
       });
     }
 
-    function renderTableTopicRisk(riskList) {
-      document.getElementById('tablePanelTitle').textContent = '📋 รายการครุภัณฑ์ที่มีสัญญาณเตือนความเสี่ยงและชำรุด (Risk & Anomaly Ledger)';
+    function renderTableTopicRisk(riskList, repeatMap) {
+      document.getElementById('tablePanelTitle').textContent = '📋 รายการครุภัณฑ์ที่มีสัญญาณเตือนความเสี่ยงและพฤติกรรมผิดปกติ (Risk & Anomaly Ledger)';
       document.getElementById('tableHeadRow').innerHTML = `
         <tr>
           <th style="width: 50px; text-align: center;">ลำดับ</th>
@@ -3885,34 +3923,52 @@
           <th>ผู้ยืม</th>
           <th>สังกัด</th>
           <th>สภาพตอนคืน</th>
-          <th>การเปลี่ยนเครื่อง</th>
+          <th>สัญญาณเตือน / Anomaly</th>
           <th style="text-align: center;">เจาะลึก</th>
         </tr>
       `;
 
-      renderGenericTable(riskList, (r, rank) => `
-        <tr>
-          <td style="text-align:center;"><span class="rank-badge">${rank}</span></td>
-          <td style="font-family: monospace;">#${r.request_id}</td>
-          <td><strong>${r.assetName}</strong></td>
-          <td>
-            <span class="tag-category" onclick="openCategoryInventoryModal('${encodeURIComponent(r.assetCategory)}')" style="cursor: pointer;" title="คลิกเพื่อดูครุภัณฑ์ในหมวดนี้จาก Asset Inventory">
-              ${r.assetCategory} ↗
-            </span>
-          </td>
-          <td>${r.user?.name || '-'}</td>
-          <td>
-            <span style="cursor: pointer; text-decoration: underline dotted;" onclick="openDepartmentBorrowModal('${encodeURIComponent(r.deptName)}')">
-              ${r.deptName}
-            </span>
-          </td>
-          <td><span class="badge-status ${r.return_condition==='ชำรุด'?'status-danger':'status-ready'}">${r.return_condition || 'ปกติ'}</span></td>
-          <td>${r.is_replaced===1 ? '<strong style="color:var(--cpe-info)">🔄 เปลี่ยนเครื่อง</strong>' : '-'}</td>
-          <td style="text-align:center;">
-            <button class="btn-inspect" onclick="openAssetModal('${encodeURIComponent(r.assetName)}')">เจาะลึก 🔍</button>
-          </td>
-        </tr>
-      `);
+      renderGenericTable(riskList, (r, rank) => {
+        const repCount = repeatMap ? (repeatMap[`${r.user?.key}_${r.assetCode}`] || 0) : 0;
+        const isRepeat = repCount >= 3;
+        let anomalyBadges = [];
+        if (r.return_condition === 'ชำรุด') {
+          anomalyBadges.push('<span class="badge-status status-danger" style="margin-right:3px;">⚠️ ชำรุด</span>');
+        }
+        if (r.is_replaced === 1) {
+          anomalyBadges.push('<span class="badge-status" style="background: rgba(16, 107, 218, 0.15); color: #106BDA; margin-right:3px;">🔄 เปลี่ยนเครื่อง</span>');
+        }
+        if (isRepeat) {
+          anomalyBadges.push(`<span class="badge-status" style="background: rgba(124, 58, 237, 0.15); color: #9061F9; font-weight: 600; cursor: pointer;" onclick="openRiskBorrowModal('REPEAT')" title="คลิกดูประวัติการผูกขาดเครื่องนี้">🔒 ผูกขาดซ้ำ (${repCount} ครั้ง)</span>`);
+        }
+        if (anomalyBadges.length === 0) {
+          anomalyBadges.push('<span style="color:var(--cpe-text-muted)">-</span>');
+        }
+
+        return `
+          <tr>
+            <td style="text-align:center;"><span class="rank-badge">${rank}</span></td>
+            <td style="font-family: monospace;">#${r.request_id}</td>
+            <td><strong>${r.assetName}</strong></td>
+            <td>
+              <span class="tag-category" onclick="openCategoryInventoryModal('${encodeURIComponent(r.assetCategory)}')" style="cursor: pointer;" title="คลิกเพื่อดูครุภัณฑ์ในหมวดนี้จาก Asset Inventory">
+                ${r.assetCategory} ↗
+              </span>
+            </td>
+            <td>${r.user?.name || '-'}</td>
+            <td>
+              <span style="cursor: pointer; text-decoration: underline dotted;" onclick="openDepartmentBorrowModal('${encodeURIComponent(r.deptName)}')">
+                ${r.deptName}
+              </span>
+            </td>
+            <td><span class="badge-status ${r.return_condition==='ชำรุด'?'status-danger':'status-ready'}">${r.return_condition || 'ปกติ'}</span></td>
+            <td><div style="display: flex; flex-wrap: wrap; gap: 4px;">${anomalyBadges.join('')}</div></td>
+            <td style="text-align:center;">
+              <button class="btn-inspect" onclick="openAssetModal('${encodeURIComponent(r.assetName)}')">เจาะลึก 🔍</button>
+            </td>
+          </tr>
+        `;
+      });
     }
 
     // -------------------------------------------------------------------------
@@ -4752,14 +4808,6 @@
     document.getElementById('btnNextPage').addEventListener('click', () => {
       currentPage++;
       renderActiveTopic();
-    });
-
-    // Auto-tooltip on KPI hover for full text
-    document.addEventListener('mouseover', (e) => {
-      const kpiVal = e.target.closest('.kpi-value');
-      if (kpiVal && kpiVal.textContent) {
-        kpiVal.title = kpiVal.textContent.trim();
-      }
     });
 
     // Initial load

@@ -666,8 +666,14 @@
       "item_status": "อนุมัติ",
       "return_condition": "ปกติ",
       "reason": "ใช้ในกิจกรรมการเรียนการสอน/วิชาการ",
-      "risk_level": "LOW",
+      "risk_level": "HIGH",
       "anomalies": [
+        {
+          "type": "REPEAT_ASSET",
+          "title": "ผูกขาดเครื่องเดิมซ้ำ",
+          "severity": "HIGH",
+          "detail": "ผู้ใช้ยืมครุภัณฑ์ชิ้นนี้ซ้ำรวม 3 ครั้ง (≥3)"
+        },
         {
           "type": "MACHINE_REPLACED",
           "title": "มีการเปลี่ยนเครื่องทดแทน",
@@ -676,7 +682,7 @@
         }
       ],
       "anomaly_metrics": {
-        "repeat_asset_times": 1,
+        "repeat_asset_times": 3,
         "items_in_request": 2,
         "user_total_borrows": 11,
         "user_overdue_count": 0,
@@ -1377,7 +1383,7 @@
         "name": "เครื่องปริ้นเตอร์ EPson สีดำ IE ธุรการ",
         "brand": "-",
         "type_name": "ครุภัณฑ์คอมพิวเตอร์ (รับโอนหน่วยงานภายใน)",
-        "category_name": "ครุภัณฑ์คอมพิวเตอร์"
+        "category_name": "ครุภ��ณฑ์คอมพิวเตอร์"
       }
     },
     {
@@ -1566,7 +1572,7 @@
           "type": "REPEAT_ASSET",
           "title": "ผูกขาดเครื่องเดิมซ้ำ",
           "severity": "HIGH",
-          "detail": "ผู้ใช้ยืมครุภัณฑ์ชิ้นนี้ซ้ำรวม 2 ครั้ง"
+          "detail": "ผู้ใช้ยืมครุภัณฑ์ชิ้นนี้ซ้ำรวม 3 ครั้ง (≥3)"
         },
         {
           "type": "MASS_BORROW",
@@ -1588,7 +1594,7 @@
         }
       ],
       "anomaly_metrics": {
-        "repeat_asset_times": 2,
+        "repeat_asset_times": 3,
         "items_in_request": 4,
         "user_total_borrows": 8,
         "user_overdue_count": 4,
@@ -2523,7 +2529,7 @@
           "type": "REPEAT_ASSET",
           "title": "ผูกขาดเครื่องเดิมซ้ำ",
           "severity": "HIGH",
-          "detail": "ผู้ใช้ยืมครุภัณฑ์ชิ้นนี้ซ้ำรวม 2 ครั้ง"
+          "detail": "ผู้ใช้ยืมครุภัณฑ์ชิ้นนี้ซ้ำรวม 3 ครั้ง (≥3)"
         },
         {
           "type": "CHRONIC_OVERDUE",
@@ -2533,7 +2539,7 @@
         }
       ],
       "anomaly_metrics": {
-        "repeat_asset_times": 2,
+        "repeat_asset_times": 3,
         "items_in_request": 2,
         "user_total_borrows": 8,
         "user_overdue_count": 4,
@@ -2716,15 +2722,8 @@
       "item_status": "อนุมัติ",
       "return_condition": "ปกติ",
       "reason": "ใช้ในกิจกรรมการเรียนการสอน/วิชาการ",
-      "risk_level": "HIGH",
-      "anomalies": [
-        {
-          "type": "REPEAT_ASSET",
-          "title": "ผูกขาดเครื่องเดิมซ้ำ",
-          "severity": "HIGH",
-          "detail": "ผู้ใช้ยืมครุภัณฑ์ชิ้นนี้ซ้ำรวม 2 ครั้ง"
-        }
-      ],
+      "risk_level": "NORMAL",
+      "anomalies": [],
       "anomaly_metrics": {
         "repeat_asset_times": 2,
         "items_in_request": 1,
@@ -2884,7 +2883,7 @@
           "type": "REPEAT_ASSET",
           "title": "ผูกขาดเครื่องเดิมซ้ำ",
           "severity": "HIGH",
-          "detail": "ผู้ใช้ยืมครุภัณฑ์ชิ้นนี้ซ้ำรวม 2 ครั้ง"
+          "detail": "ผู้ใช้ยืมครุภัณฑ์ชิ้นนี้ซ้ำรวม 3 ครั้ง (≥3)"
         },
         {
           "type": "MASS_BORROW",
@@ -2900,7 +2899,7 @@
         }
       ],
       "anomaly_metrics": {
-        "repeat_asset_times": 2,
+        "repeat_asset_times": 3,
         "items_in_request": 4,
         "user_total_borrows": 19,
         "user_overdue_count": 7,
@@ -3602,7 +3601,7 @@
           "type": "REPEAT_ASSET",
           "title": "ผูกขาดเครื่องเดิมซ้ำ",
           "severity": "HIGH",
-          "detail": "ผู้ใช้ยืมครุภัณฑ์ชิ้นนี้ซ้ำรวม 2 ครั้ง"
+          "detail": "ผู้ใช้ยืมครุภัณฑ์ชิ้นนี้ซ้ำรวม 3 ครั้ง (≥3)"
         },
         {
           "type": "MASS_BORROW",
@@ -3612,7 +3611,7 @@
         }
       ],
       "anomaly_metrics": {
-        "repeat_asset_times": 2,
+        "repeat_asset_times": 3,
         "items_in_request": 3,
         "user_total_borrows": 19,
         "user_overdue_count": 7,
@@ -3953,10 +3952,17 @@
       "item_status": "อนุมัติ",
       "return_condition": "ปกติ",
       "reason": "ใช้ในกิจกรรมการเรียนการสอน/วิชาการ",
-      "risk_level": "NORMAL",
-      "anomalies": [],
+      "risk_level": "HIGH",
+      "anomalies": [
+        {
+          "type": "REPEAT_ASSET",
+          "title": "ผูกขาดเครื่องเดิมซ้ำ",
+          "severity": "HIGH",
+          "detail": "ผู้ใช้ยืมครุภัณฑ์ชิ้นนี้ซ้ำรวม 3 ครั้ง (≥3)"
+        }
+      ],
       "anomaly_metrics": {
-        "repeat_asset_times": 1,
+        "repeat_asset_times": 3,
         "items_in_request": 2,
         "user_total_borrows": 10,
         "user_overdue_count": 1,
@@ -3974,13 +3980,13 @@
       },
       "dept_name": "สำนักงานเลขานุการคณะ",
       "asset": {
-        "key": 252,
-        "id": 252,
-        "code": "2-K0505-FA18-74400010002/058-62",
-        "name": "เครื่องคอมพิวเตอร์ระบบปฏิบัติการ Mac ตัวที่8",
+        "key": 1727,
+        "id": 1728,
+        "code": "1-K0508-FA17-66800140001/001-58",
+        "name": "ชุดอุปกรณ์ทดลองการเกิดวอเตอร์แฮมเมอร์และเสร์จ ชป.- ระวี",
         "brand": "-",
-        "type_name": "ครุภัณฑ์คอมพิวเตอร์",
-        "category_name": "ครุภัณฑ์คอมพิวเตอร์"
+        "type_name": "ครุภัณฑ์วิทยาศาสตร์หรือการแพทย์",
+        "category_name": "ครุภัณฑ์วิทยาศาสตร์หรือการแพทย์"
       }
     },
     {
@@ -4168,15 +4174,8 @@
       "item_status": "อนุมัติ",
       "return_condition": "ปกติ",
       "reason": "ใช้ในกิจกรรมการเรียนการสอน/วิชาการ",
-      "risk_level": "HIGH",
-      "anomalies": [
-        {
-          "type": "REPEAT_ASSET",
-          "title": "ผูกขาดเครื่องเดิมซ้ำ",
-          "severity": "HIGH",
-          "detail": "ผู้ใช้ยืมครุภัณฑ์ชิ้นนี้ซ้ำรวม 2 ครั้ง"
-        }
-      ],
+      "risk_level": "NORMAL",
+      "anomalies": [],
       "anomaly_metrics": {
         "repeat_asset_times": 2,
         "items_in_request": 1,
@@ -4446,7 +4445,7 @@
           "type": "REPEAT_ASSET",
           "title": "ผูกขาดเครื่องเดิมซ้ำ",
           "severity": "HIGH",
-          "detail": "ผู้ใช้ยืมครุภัณฑ์ชิ้นนี้ซ้ำรวม 2 ครั้ง"
+          "detail": "ผู้ใช้ยืมครุภัณฑ์ชิ้นนี้ซ้ำรวม 3 ครั้ง (≥3)"
         },
         {
           "type": "MASS_BORROW",
@@ -4456,7 +4455,7 @@
         }
       ],
       "anomaly_metrics": {
-        "repeat_asset_times": 2,
+        "repeat_asset_times": 3,
         "items_in_request": 3,
         "user_total_borrows": 10,
         "user_overdue_count": 1,
@@ -4689,10 +4688,17 @@
       "item_status": "อนุมัติ",
       "return_condition": "ปกติ",
       "reason": "ใช้ในกิจกรรมการเรียนการสอน/วิชาการ",
-      "risk_level": "NORMAL",
-      "anomalies": [],
+      "risk_level": "HIGH",
+      "anomalies": [
+        {
+          "type": "REPEAT_ASSET",
+          "title": "ผูกขาดเครื่องเดิมซ้ำ",
+          "severity": "HIGH",
+          "detail": "ผู้ใช้ยืมครุภัณฑ์ชิ้นนี้ซ้ำรวม 3 ครั้ง (≥3)"
+        }
+      ],
       "anomaly_metrics": {
-        "repeat_asset_times": 1,
+        "repeat_asset_times": 3,
         "items_in_request": 1,
         "user_total_borrows": 11,
         "user_overdue_count": 0,
@@ -4710,10 +4716,10 @@
       },
       "dept_name": "ภาควิชาวิศวกรรมชลประทาน",
       "asset": {
-        "key": 259,
-        "id": 259,
-        "code": "2-K0505-FA18-74400010002/065-62",
-        "name": "เครื่องคอมพิวเตอร์ระบบปฏิบัติการ Mac ตัวที่15",
+        "key": 268,
+        "id": 268,
+        "code": "2-K0505-FA18-74400010002/074-62",
+        "name": "เครื่องคอมพิวเตอร์ระบบปฏิบัติการ Mac ตัวที่24",
         "brand": "-",
         "type_name": "ครุภัณฑ์คอมพิวเตอร์",
         "category_name": "ครุภัณฑ์คอมพิวเตอร์"
@@ -6955,11 +6961,11 @@
           "type": "REPEAT_ASSET",
           "title": "ผูกขาดเครื่องเดิมซ้ำ",
           "severity": "HIGH",
-          "detail": "ผู้ใช้ยืมครุภัณฑ์ชิ้นนี้ซ้ำรวม 2 ครั้ง"
+          "detail": "ผู้ใช้ยืมครุภัณฑ์ชิ้นนี้ซ้ำรวม 3 ครั้ง (≥3)"
         }
       ],
       "anomaly_metrics": {
-        "repeat_asset_times": 2,
+        "repeat_asset_times": 3,
         "items_in_request": 2,
         "user_total_borrows": 10,
         "user_overdue_count": 1,
@@ -9764,6 +9770,12 @@
       "risk_level": "HIGH",
       "anomalies": [
         {
+          "type": "REPEAT_ASSET",
+          "title": "ผูกขาดเครื่องเดิมซ้ำ",
+          "severity": "HIGH",
+          "detail": "ผู้ใช้ยืมครุภัณฑ์ชิ้นนี้ซ้ำรวม 3 ครั้ง (≥3)"
+        },
+        {
           "type": "CHRONIC_OVERDUE",
           "title": "ประวัติคืนล่าช้าเรื้อรัง",
           "severity": "HIGH",
@@ -9771,7 +9783,7 @@
         }
       ],
       "anomaly_metrics": {
-        "repeat_asset_times": 1,
+        "repeat_asset_times": 3,
         "items_in_request": 1,
         "user_total_borrows": 8,
         "user_overdue_count": 4,
@@ -9789,10 +9801,10 @@
       },
       "dept_name": "ภาควิชาวิศวกรรมเกษตร",
       "asset": {
-        "key": 1728,
-        "id": 1729,
-        "code": "1-K0508-FA17-66850080002/ผ.52-1",
-        "name": "เครื่องวัดความชื้นในดิน",
+        "key": 3609,
+        "id": 3610,
+        "code": "2-K0511-FA17-66300100000/ร.50-3",
+        "name": "ชุดทดสอบดิน",
         "brand": "-",
         "type_name": "ครุภัณฑ์วิทยาศาสตร์หรือการแพทย์",
         "category_name": "ครุภัณฑ์วิทยาศาสตร์หรือการแพทย์"
@@ -10706,6 +10718,12 @@
       "risk_level": "HIGH",
       "anomalies": [
         {
+          "type": "REPEAT_ASSET",
+          "title": "ผูกขาดเครื่องเดิมซ้ำ",
+          "severity": "HIGH",
+          "detail": "ผู้ใช้ยืมครุภัณฑ์ชิ้นนี้ซ้ำรวม 3 ครั้ง (≥3)"
+        },
+        {
           "type": "MASS_BORROW",
           "title": "ยืมอุปกรณ์จำนวนมากพร้อมกัน",
           "severity": "MEDIUM",
@@ -10725,7 +10743,7 @@
         }
       ],
       "anomaly_metrics": {
-        "repeat_asset_times": 1,
+        "repeat_asset_times": 3,
         "items_in_request": 3,
         "user_total_borrows": 19,
         "user_overdue_count": 7,
@@ -10743,10 +10761,10 @@
       },
       "dept_name": "ภาควิชาวิศวกรรมอุตสาหการ",
       "asset": {
-        "key": 3336,
-        "id": 3337,
-        "code": "1-K0511-FA17-36050040004/001-65",
-        "name": "ตู้อบไฟฟ้า ตำบลกำแพงแสน อำเภอกำแพงแสน จังหวัดนครปฐม",
+        "key": 3337,
+        "id": 3338,
+        "code": "1-K0511-FA17-36050040005/001-65",
+        "name": "ตู้อบลมร้อน ตำบลกำแพงแสน อำเภอกำแพงแสน จังหวัดนครปฐม",
         "brand": "-",
         "type_name": "ครุภัณฑ์วิทยาศาสตร์หรือการแพทย์",
         "category_name": "ครุภัณฑ์วิทยาศาสตร์หรือการแพทย์"
@@ -11197,7 +11215,7 @@
         "key": 2954,
         "id": 2955,
         "code": "1-K0503-FA17-66800120004/001-67",
-        "name": "เครื่องวัดปริมาณก๊าซเอธิลีน ก๊าซคาร์บอนไดออกไซต์ และก๊าซออกซิเจนแบบพกพา",
+        "name": "เครื่อง��ัดปริมาณก๊าซเอธิลีน ก๊าซคาร์บอนไดออกไซต์ และก๊าซออกซิเจนแบบพกพา",
         "brand": "-",
         "type_name": "ครุภัณฑ์วิทยาศาสตร์หรือการแพทย์",
         "category_name": "ครุภัณฑ์วิทยาศาสตร์หรือการแพทย์"
@@ -12551,10 +12569,17 @@
       "item_status": "อนุมัติ",
       "return_condition": "รอตรวจคืน",
       "reason": "ใช้ในกิจกรรมการเรียนการสอน/วิชาการ",
-      "risk_level": "NORMAL",
-      "anomalies": [],
+      "risk_level": "HIGH",
+      "anomalies": [
+        {
+          "type": "REPEAT_ASSET",
+          "title": "ผูกขาดเครื่องเดิมซ้ำ",
+          "severity": "HIGH",
+          "detail": "ผู้ใช้ยืมครุภัณฑ์ชิ้นนี้ซ้ำรวม 3 ครั้ง (≥3)"
+        }
+      ],
       "anomaly_metrics": {
-        "repeat_asset_times": 1,
+        "repeat_asset_times": 3,
         "items_in_request": 1,
         "user_total_borrows": 11,
         "user_overdue_count": 0,
@@ -12572,10 +12597,10 @@
       },
       "dept_name": "ภาควิชาวิศวกรรมชลประทาน",
       "asset": {
-        "key": 195,
-        "id": 195,
-        "code": "2-K0505-FA18-74400010002/002-63",
-        "name": "เครื่องคอมพิวเตอร์ระบบปฏิบัติการ Mac2",
+        "key": 268,
+        "id": 268,
+        "code": "2-K0505-FA18-74400010002/074-62",
+        "name": "เครื่องคอมพิวเตอร์ระบบปฏิบัติการ Mac ตัวที่24",
         "brand": "-",
         "type_name": "ครุภัณฑ์คอมพิวเตอร์",
         "category_name": "ครุภัณฑ์คอมพิวเตอร์"
