@@ -946,32 +946,30 @@ function renderDashboard(payload) {
 }
 
 function setRequestState(kind, message = "") {
-  const state = document.getElementById("dashboard-request-state");
-  const detail = document.getElementById("dashboard-request-message");
-  const retry = document.getElementById("dashboard-retry");
-  if (!state || !detail) return;
-  state.hidden = kind === "ready";
-  state.className = `api-state dashboard-request-state api-state-${kind === "empty" ? "empty" : kind}`;
-  state.setAttribute("role", kind === "error" ? "alert" : "status");
-  detail.textContent = message;
-  if (retry) retry.hidden = kind !== "error";
-  state.dataset.state = kind;
+  document.querySelectorAll("[data-dashboard-request-state]").forEach((state) => {
+    const detail = state.querySelector("[data-dashboard-request-message]");
+    const retry = state.querySelector("[data-dashboard-retry]");
+    if (!detail) return;
+    state.hidden = kind === "ready";
+    state.className = `api-state dashboard-request-state api-state-${kind === "empty" ? "empty" : kind}`;
+    state.setAttribute("role", kind === "error" ? "alert" : "status");
+    detail.textContent = message;
+    if (retry) retry.hidden = kind !== "error";
+    state.dataset.state = kind;
+  });
 }
 
 function updateSnapshotLabel(payload) {
-  const label = document.getElementById("dashboard-snapshot-context");
   const date = document.getElementById("dashboard-snapshot-date");
   const state = document.getElementById("dashboard-data-state");
   const detail = document.getElementById("dashboard-data-detail");
   if (!payload.snapshot) {
-    if (label) label.textContent = "ยังไม่มีชุดข้อมูล";
     if (date) date.textContent = "—";
     if (state) state.textContent = "ไม่พบข้อมูลสินทรัพย์";
     if (detail) detail.textContent = "คลังไม่มีชุดข้อมูลสำหรับตัวกรองที่เลือก";
     return;
   }
   const snapshotDate = formatDate(payload.snapshot.date);
-  if (label) label.textContent = `${formatCount(payload.overview?.totalAssets)} สินทรัพย์ตามตัวกรอง · ${snapshotDate}`;
   if (date) date.textContent = snapshotDate;
   if (state) state.textContent = "ข้อมูลเชื่อมต่อจากคลัง MySQL";
   if (detail) detail.textContent = "สรุปจำนวนสินทรัพย์ด้วย SUM(asset_count)";
@@ -991,19 +989,17 @@ function updateSelect(select, values, selected, allLabel, mapValue = (value) => 
 
 function populateFilterOptions(payload) {
   const options = payload.filterOptions || {};
-  const snapshotSelect = document.getElementById("dashboard-filter-snapshot");
-  if (snapshotSelect) {
-    const latestDate = payload.snapshotOptions?.[0]?.date;
-    const snapshotOptions = [
-      ["latest", `ชุดข้อมูลล่าสุด${latestDate ? ` · ${formatDate(latestDate)}` : ""}`],
-      ...(payload.snapshotOptions || []).map((snapshot) => [String(snapshot.key), formatDate(snapshot.date)]),
-    ];
-    const selected = String(filters.snapshot);
+  const latestDate = payload.snapshotOptions?.[0]?.date;
+  const snapshotOptions = [
+    ["latest", `ชุดข้อมูลล่าสุด${latestDate ? ` · ${formatDate(latestDate)}` : ""}`],
+    ...(payload.snapshotOptions || []).map((snapshot) => [String(snapshot.key), formatDate(snapshot.date)]),
+  ];
+  document.querySelectorAll('[data-dashboard-filter="snapshot"]').forEach((snapshotSelect) => {
     snapshotSelect.innerHTML = snapshotOptions.map(([value, label]) =>
       `<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`,
     ).join("");
-    snapshotSelect.value = selected;
-  }
+    snapshotSelect.value = String(filters.snapshot);
+  });
   const selectOptions = [
     ["department", options.departments, FILTER_LABELS.department, "ไม่ระบุหน่วยงาน"],
     ["category", options.categories, FILTER_LABELS.category, "ไม่ระบุหมวดหมู่"],
@@ -1019,13 +1015,15 @@ function populateFilterOptions(payload) {
     ["acquisitionFiscalYear", options.acquisitionFiscalYears, FILTER_LABELS.acquisitionFiscalYear, "ไม่ระบุปีงบประมาณจัดหา"],
   ];
   for (const [key, values, label, missingLabel] of selectOptions) {
-    updateSelect(
-      document.querySelector(`[data-dashboard-filter="${key}"]`),
-      values || [],
-      filters[key],
-      label,
-      (value) => [value, value === "__missing__" ? missingLabel : value],
-    );
+    document.querySelectorAll(`[data-dashboard-filter="${key}"]`).forEach((select) => {
+      updateSelect(
+        select,
+        values || [],
+        filters[key],
+        label,
+        (value) => [value, value === "__missing__" ? missingLabel : value],
+      );
+    });
   }
   updateFilterCount();
 }
@@ -1034,8 +1032,16 @@ function updateFilterCount() {
   const count = Object.entries(filters).filter(([key, value]) =>
     key !== "snapshot" && key !== "ageThreshold" && value !== FILTER_DEFAULTS[key],
   ).length;
-  const target = document.getElementById("dashboard-filter-count");
-  if (target) target.textContent = count === 0 ? "ยังไม่ได้กรอง" : `ใช้ตัวกรอง ${count} รายการ`;
+  document.querySelectorAll("[data-dashboard-filter-count]").forEach((target) => {
+    target.textContent = count === 0 ? "ยังไม่ได้กรอง" : `ใช้ตัวกรอง ${count} รายการ`;
+  });
+}
+
+function syncFilterControls() {
+  document.querySelectorAll("[data-dashboard-filter]").forEach((select) => {
+    const value = filters[select.dataset.dashboardFilter];
+    if (value !== undefined) select.value = String(value);
+  });
 }
 
 async function loadDashboard() {
@@ -1096,6 +1102,7 @@ function clearDashboardData() {
 function applyFilterAndRefresh(key, value, { navigateToExplorer = false } = {}) {
   if (!Object.hasOwn(FILTER_DEFAULTS, key)) return;
   filters[key] = key === "ageThreshold" ? Number(value) : String(value);
+  syncFilterControls();
   updateFilterCount();
   loadDashboard();
   onFiltersChange({ ...filters });
@@ -1108,6 +1115,7 @@ function applyDrillFiltersAndRefresh(nextFilters) {
     !Object.hasOwn(FILTER_DEFAULTS, key) || value === null || value === undefined || value === "",
   )) return;
   for (const [key, value] of entries) filters[key] = String(value);
+  syncFilterControls();
   updateFilterCount();
   loadDashboard();
   onFiltersChange({ ...filters });
@@ -1116,20 +1124,24 @@ function applyDrillFiltersAndRefresh(nextFilters) {
 
 export function initExecutiveDashboard({ onFilterChange = () => {} } = {}) {
   onFiltersChange = onFilterChange;
-  document.querySelectorAll("[data-dashboard-filter]").forEach((select) => {
-    select.addEventListener("change", () => applyFilterAndRefresh(select.dataset.dashboardFilter, select.value));
+  const dashboardSections = document.getElementById("dashboard-sections");
+  dashboardSections?.addEventListener("change", (event) => {
+    const select = event.target.closest("[data-dashboard-filter]");
+    if (select) applyFilterAndRefresh(select.dataset.dashboardFilter, select.value);
   });
-  document.getElementById("dashboard-filter-reset")?.addEventListener("click", () => {
-    filters = { ...FILTER_DEFAULTS };
-    document.querySelectorAll("[data-dashboard-filter]").forEach((select) => {
-      if (select.dataset.dashboardFilter === "snapshot") select.value = "latest";
-      else select.value = "all";
-    });
-    const threshold = document.getElementById("age-threshold-input");
-    if (threshold) threshold.value = "10";
-    updateFilterCount();
-    loadDashboard();
-    onFiltersChange({ ...filters });
+  dashboardSections?.addEventListener("click", (event) => {
+    const resetButton = event.target.closest("[data-dashboard-filter-reset]");
+    if (resetButton) {
+      filters = { ...FILTER_DEFAULTS };
+      syncFilterControls();
+      const threshold = document.getElementById("age-threshold-input");
+      if (threshold) threshold.value = "10";
+      updateFilterCount();
+      loadDashboard();
+      onFiltersChange({ ...filters });
+      return;
+    }
+    if (event.target.closest("[data-dashboard-retry]")) loadDashboard();
   });
   document.getElementById("age-threshold-input")?.addEventListener("change", (event) => {
     const value = Number.parseInt(event.currentTarget.value, 10);
@@ -1139,7 +1151,6 @@ export function initExecutiveDashboard({ onFilterChange = () => {} } = {}) {
     }
     applyFilterAndRefresh("ageThreshold", value);
   });
-  document.getElementById("dashboard-retry")?.addEventListener("click", loadDashboard);
   document.getElementById("dashboard-sections")?.addEventListener("click", (event) => {
     const sortButton = event.target.closest("[data-department-sort]");
     if (sortButton) {

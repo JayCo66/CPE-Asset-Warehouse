@@ -25,7 +25,7 @@ import {
   initExecutiveDashboard,
   refreshExecutiveDashboard,
   setInventoryDashboardPage,
-} from "./executive-dashboard.mjs?v=20261025.6";
+} from "./executive-dashboard.mjs?v=20261025.8";
 
 const dashboardData = {
   moduleNav: [
@@ -92,6 +92,8 @@ const assetDetailState = {
 let assetDetailRequestId = 0;
 let assetApiRequestId = 0;
 let assetApiSearchTimer;
+let requestedDashboardScrollTarget = null;
+let hasRenderedInventoryDashboard = false;
 
 let elements;
 
@@ -212,7 +214,70 @@ async function loadDashboardSections() {
 
   const sections = await Promise.all(responses.map((response) => response.text()));
   container.innerHTML = sections.join("\n");
+  installDashboardFilterPanels(container);
   container.removeAttribute("aria-busy");
+}
+
+function installDashboardFilterPanels(container) {
+  const template = container.querySelector(".dashboard-filter-panel");
+  const overview = container.querySelector(".executive-overview");
+  const pages = [...container.querySelectorAll("[data-dashboard-page]")];
+  if (!template || !overview || pages.length === 0) {
+    throw new Error("ไม่พบแม่แบบตัวกรองหรือส่วนแดชบอร์ดสำหรับติดตั้งตัวกรอง");
+  }
+
+  const makeIdsUnique = (panel, suffix) => {
+    const idMap = new Map();
+    panel.querySelectorAll("[id]").forEach((element) => {
+      idMap.set(element.id, `${element.id}-${suffix}`);
+    });
+    panel.querySelectorAll("[id]").forEach((element) => {
+      element.id = idMap.get(element.id);
+    });
+    panel.querySelectorAll("[for]").forEach((element) => {
+      if (idMap.has(element.htmlFor)) element.htmlFor = idMap.get(element.htmlFor);
+    });
+    for (const attribute of ["aria-controls", "aria-describedby", "aria-labelledby"]) {
+      panel.querySelectorAll(`[${attribute}]`).forEach((element) => {
+        element.setAttribute(attribute, element.getAttribute(attribute).split(/\s+/).map((id) => idMap.get(id) || id).join(" "));
+      });
+    }
+  };
+
+  const globalSnapshotPanel = template.cloneNode(true);
+  globalSnapshotPanel.dataset.filterScope = "snapshot";
+  globalSnapshotPanel.setAttribute("aria-label", "เลือกชุดข้อมูลของแดชบอร์ด");
+  globalSnapshotPanel.querySelector(".dashboard-filter-details")?.remove();
+  globalSnapshotPanel.querySelector("[data-dashboard-request-state]")?.remove();
+  makeIdsUnique(globalSnapshotPanel, "snapshot");
+  const overviewHeading = overview.querySelector(".page-heading");
+  if (overviewHeading) overviewHeading.after(globalSnapshotPanel);
+  else overview.prepend(globalSnapshotPanel);
+
+  const requestState = template.querySelector("[data-dashboard-request-state]");
+  requestState?.remove();
+  if (requestState) globalSnapshotPanel.after(requestState);
+
+  const targets = pages.map((element) => ({
+    id: element.dataset.dashboardPage,
+    element,
+    label: element.querySelector("h1")?.textContent.trim() || element.dataset.dashboardPage,
+  }));
+
+  for (const target of targets) {
+    const panel = template.cloneNode(true);
+    panel.dataset.filterScope = target.id;
+    panel.setAttribute("aria-label", `ตัวกรองข้อมูลร่วม · ${target.label}`);
+    panel.querySelector(".snapshot-filter-row")?.remove();
+    makeIdsUnique(panel, target.id);
+    const summaryLabel = panel.querySelector(".dashboard-filter-details > summary > span:first-child");
+    if (summaryLabel) summaryLabel.textContent = `ตัวกรอง · ${target.label}`;
+    const heading = target.element.querySelector(".page-heading");
+    if (heading) heading.after(panel);
+    else target.element.prepend(panel);
+  }
+
+  template.remove();
 }
 
 async function loadAssetDetailSection() {
@@ -361,15 +426,40 @@ function handleDashboardSectionClick(event) {
   if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
   if (!(event.target instanceof Element)) return;
 
+  if (event.target.closest(".overview-explorer-action, [data-drill-filter], [data-drill-filters]")) {
+    requestedDashboardScrollTarget = "explorer";
+    return;
+  }
+
   const link = event.target.closest(".inventory-view-nav [data-dashboard-link]");
-  if (!link || link.dataset.dashboardLink !== getCurrentDashboardPage()) return;
+  if (!link) return;
+
+  requestedDashboardScrollTarget = "section";
+  if (link.dataset.dashboardLink !== getCurrentDashboardPage()) return;
 
   event.preventDefault();
   window.location.hash = "#/inventory/overview";
 }
 
+function expandDashboardFilters(pageId) {
+  if (pageId === "overview") return;
+  const details = elements.dashboardSections.querySelector(`[data-filter-scope="${pageId}"] .dashboard-filter-details`);
+  if (details) details.open = true;
+}
+
+function scrollDashboardSectionIntoView(pageId) {
+  const section = pageId === "overview"
+    ? elements.dashboardSections.querySelector(".executive-overview")
+    : elements.dashboardSections.querySelector(`[data-dashboard-page="${pageId}"]`);
+  const heading = section?.querySelector(".page-heading");
+  if (!heading) return;
+
+  const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+  window.requestAnimationFrame(() => heading.scrollIntoView({ behavior, block: "start" }));
+}
+
 function scrollAssetExplorerIntoView() {
-  const explorer = elements.dashboardSections.querySelector('[data-dashboard-page="explorer"]');
+  const explorer = elements.dashboardSections.querySelector("#asset-register");
   if (!explorer) return;
 
   const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
@@ -679,7 +769,14 @@ function renderModuleView(moduleId = getCurrentModuleId()) {
   } else {
     const pageId = getCurrentDashboardPage();
     setInventoryDashboardPage(pageId);
-    if (pageId === "explorer") scrollAssetExplorerIntoView();
+    expandDashboardFilters(pageId);
+    const scrollTarget = requestedDashboardScrollTarget;
+    requestedDashboardScrollTarget = null;
+    if (pageId === "explorer" && scrollTarget === "explorer") scrollAssetExplorerIntoView();
+    else if (scrollTarget === "section" || hasRenderedInventoryDashboard || pageId !== "overview") {
+      scrollDashboardSectionIntoView(pageId);
+    }
+    hasRenderedInventoryDashboard = true;
   }
 }
 
