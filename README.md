@@ -14,7 +14,7 @@ pip install -r requirements.txt
 python etl_warehouse.py
 ```
 
-หรือรันทั้งระบบ (ฐานข้อมูลต้นทาง + API + ETL + warehouse + เว็บ) ด้วย Docker ดู[ส่วนที่ 3](#3-รันทั้งระบบบนเครื่อง-docker)
+หรือรันทั้งระบบ (ฐานข้อมูลต้นทาง + API + ETL + warehouse + เว็บ) ด้วย Docker ดู[ส่วนที่ 3](#3-รันทั้งระบบบนเครื่อง-docker) ; ใช้ XAMPP เปิดหน้ารวม `index.html` ดู [docs/xampp-setup.md](docs/xampp-setup.md)
 
 ค่า default อ่านใบแจ้งซ่อมจากไฟล์ `.xlsx` ในโฟลเดอร์ `data/` และดึงครุภัณฑ์จาก assets API จริง ถ้าเรียก API ไม่ได้จะใช้ `data/assets_real.json` แทนอัตโนมัติ ถ้าจะใช้ไฟล์ใบแจ้งซ่อมอื่นใส่ path ต่อท้าย เช่น `python etl_warehouse.py "ใบแจ้งซ่อม.xlsx" -o output`
 
