@@ -1,0 +1,113 @@
+/* hub-theme.css : index.html ใส่ไฟล์นี้ให้หน้าของ Boom และ Sutham ตอนเปิดผ่านหน้ารวม ให้ทุกหน้าหน้าตาเดียวกับ dashboard_report.html
+   ไม่ได้แก้ไฟล์ของเจ้าของ: เปิดหน้าเหล่านั้นตรง ๆ ยังเป็นดีไซน์เดิม ; ทุก rule ขึ้นต้นด้วย class ที่หน้ารวมใส่ให้ <html> (.hub-borrow / .hub-assets) */
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai+Looped:wght@400;500;600&display=swap");
+
+/* ---------- ค่ากลาง: ฟอนต์แบบมีหัว + สี/เส้น/มุมแบบหน้าเรา ---------- */
+.hub-embed {
+  --hub-font: "Leelawadee UI", "IBM Plex Sans Thai Looped", Tahoma, sans-serif;
+  --hub-line: color-mix(in srgb, var(--cpe-text) 12%, transparent);
+  --hub-line-strong: color-mix(in srgb, var(--cpe-text) 22%, transparent);
+  --hub-fill-hover: color-mix(in srgb, var(--cpe-text) 6%, transparent);
+  --hub-faint: color-mix(in srgb, var(--cpe-text-muted) 70%, transparent);
+  --cpe-page-start: #1B1D1E; --cpe-page-end: #1D1F20; --cpe-surface: #181A1B;
+  --cpe-text: #E8E6E3; --cpe-text-muted: #CCC8C1;
+  font-family: var(--hub-font);
+}
+.hub-embed[data-theme="light"] {
+  --cpe-page-start: #F4F6F9; --cpe-page-end: #E9ECEF; --cpe-surface: #FFFFFF;
+  --cpe-text: #181A1B; --cpe-text-muted: #4B5563;
+}
+.hub-embed body { font-family: var(--hub-font); font-size: 15px; line-height: 1.55; color: var(--cpe-text-muted); }
+.hub-embed button, .hub-embed input, .hub-embed select, .hub-embed textarea { font-family: inherit; }
+.hub-embed h1, .hub-embed h2, .hub-embed h3, .hub-embed h4 { color: var(--cpe-text); font-weight: 600; letter-spacing: 0; line-height: 1.3; }
+
+/* ================= ยืม-คืน (Boom) ================= */
+.hub-borrow {
+  --cpe-border: var(--hub-line);
+  --cpe-surface-elevated: var(--hub-fill-hover);
+  --cpe-surface-subtle: transparent;
+  --cpe-text-dim: var(--hub-faint);
+  --radius-sm: 6px; --radius-md: 6px; --radius-lg: 6px;
+  --shadow-sm: none; --shadow-md: none; --shadow-lg: none;
+}
+.hub-borrow body { padding-bottom: 32px; }
+.hub-borrow .floating-nav-container,
+.hub-borrow .container { max-width: 1280px; padding: 0 16px; }
+.hub-borrow .floating-nav-container { margin-top: 24px; }
+.hub-borrow .container { margin-top: 24px; }
+
+/* เมนู 6 หัวข้อ = แท็บย่อยแบบขีดเส้นใต้ เหมือนแท็บ ภาพรวม / รายการ ของหน้าเรา */
+.hub-borrow .floating-nav {
+  display: flex; gap: 24px; padding: 0; overflow-x: auto; scrollbar-width: none;
+  background: transparent; border: 0; border-bottom: 1px solid var(--hub-line); border-radius: 0; box-shadow: none;
+}
+.hub-borrow .floating-nav::-webkit-scrollbar { display: none; }
+.hub-borrow .nav-module-pill {
+  flex: none; width: auto; padding: 8px 0; border-radius: 0; border-bottom: 2px solid transparent; margin-bottom: -1px;
+  background: transparent; color: var(--cpe-text-muted); font-size: 13px; font-weight: 400; box-shadow: none;
+}
+.hub-borrow .nav-module-pill:hover { background: transparent; color: var(--cpe-text); }
+.hub-borrow .nav-module-pill.active { background: transparent; color: var(--cpe-text); font-weight: 600; border-bottom-color: var(--cpe-brand-blue); box-shadow: none; }
+.hub-borrow .nav-module-pill .pill-text { font-size: 13px; overflow: visible; }
+.hub-borrow .nav-module-pill .pill-badge,
+.hub-borrow .nav-module-pill:not(.active) .pill-badge {
+  padding: 0 8px; border: 0; border-radius: 999px; font-size: 12px; font-weight: 400;
+  background: var(--hub-fill-hover); color: var(--cpe-text-muted); font-variant-numeric: tabular-nums;
+}
+.hub-borrow .nav-module-pill.active .pill-badge { background: color-mix(in srgb, var(--cpe-brand-blue) 30%, transparent); color: var(--cpe-text); }
+
+/* หัวเรื่องของแต่ละหัวข้อ: วางบนพื้นหน้า ไม่อยู่ในกล่อง เหมือนหัวโมดูลของหน้าเรา */
+.hub-borrow .context-header { background: transparent; border: 0; padding: 0; box-shadow: none; }
+.hub-borrow .context-title h2 { font-size: 1.5rem; }
+.hub-borrow .context-title p, .hub-borrow .context-question { font-size: 13px; }
+
+/* ตัวเลขหลัก: แถบเดียวมีเส้นคั่น ไม่ใช่การ์ดแยกกัน */
+.hub-borrow .kpi-grid { gap: 0; background: var(--cpe-surface); border: 1px solid var(--hub-line); border-radius: 6px; overflow: hidden; }
+.hub-borrow .kpi-card { padding: 16px 24px; background: transparent; border: 0; border-right: 1px solid var(--hub-line); border-radius: 0; box-shadow: none; }
+.hub-borrow .kpi-card:last-child { border-right: 0; }
+.hub-borrow .kpi-card:hover { transform: none; box-shadow: none; }
+.hub-borrow .kpi-card::before, .hub-borrow .kpi-icon { display: none; }
+.hub-borrow .kpi-title { font-size: 15px; font-weight: 400; color: var(--cpe-text-muted); margin-bottom: 4px; }
+.hub-borrow .kpi-value { font-size: 2.5rem; font-weight: 500; }
+.hub-borrow .kpi-sub { font-size: 13px; }
+
+/* กล่องสรุป / กราฟ / ตาราง: พื้นเรียบ เส้นบาง มุม 6px */
+.hub-borrow .insight-card { background: var(--cpe-surface); border: 1px solid var(--hub-line); box-shadow: none; }
+.hub-borrow .insight-icon-box { display: none; }
+.hub-borrow .insight-tag { background: var(--hub-fill-hover); color: var(--cpe-text-muted); border: 0; }
+.hub-borrow .chart-panel, .hub-borrow .table-panel, .hub-borrow .filter-toolbar, .hub-borrow .modal-window { border-color: var(--hub-line); box-shadow: none; }
+/* กราฟคู่: เดิมคอลัมน์กว้างอย่างน้อย 540px ทำให้จอแคบเลื่อนข้างได้ ; ใช้กริดแบบหน้าเราแทน */
+.hub-borrow .charts-grid-2col { grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr)); }
+.hub-borrow .chart-panel { min-width: 0; }
+.hub-borrow .chart-title-block h3, .hub-borrow .table-title { font-size: 1.25rem; font-weight: 600; }
+.hub-borrow .form-control, .hub-borrow .btn-reset, .hub-borrow .btn-inspect, .hub-borrow .pagination-btn { border-radius: 6px; border-color: var(--hub-line-strong); }
+.hub-borrow .btn-chart-toggle, .hub-borrow .table-sub-tab-btn { border-radius: 6px; }
+.hub-borrow th { font-weight: 500; font-size: 12px; color: var(--hub-faint); }
+
+@media (max-width: 640px) {
+  .hub-borrow .kpi-card { border-right: 0; border-bottom: 1px solid var(--hub-line); }
+  .hub-borrow .kpi-card:last-child { border-bottom: 0; }
+}
+
+/* ================= ทะเบียนสินทรัพย์ (Sutham) ================= */
+.hub-assets {
+  --cpe-border: var(--hub-line);
+  --cpe-border-strong: var(--hub-line-strong);
+  --cpe-floating-tool: var(--cpe-surface);
+  --radius-panel: 6px; --radius-control: 6px;
+  --shadow-panel: none;
+}
+.hub-assets[data-theme="light"] { --cpe-surface-raised: #F4F6F9; --cpe-surface-soft: #EEF1F5; }
+.hub-assets .app-shell { width: min(100% - 32px, 1280px); padding-top: 24px; }
+.hub-assets h1, .hub-assets .executive-page-heading h1 { font-size: 1.5rem; }
+.hub-assets h2 { font-size: 1.25rem; }
+.hub-assets strong, .hub-assets b { font-weight: 600; }
+.hub-assets .metric-card, .hub-assets .panel, .hub-assets [class*="-card"] { border-radius: 6px; box-shadow: none; }
+.hub-assets .metric-card-primary { background: var(--cpe-surface); border-color: var(--hub-line); }
+.hub-assets .overview-kpi-value, .hub-assets .metric-value { font-size: 2.5rem; font-weight: 500; letter-spacing: 0; }
+.hub-assets .button { font-weight: 400; font-size: 13px; min-height: 38px; }
+.hub-assets .button-primary { background: var(--cpe-brand-blue); box-shadow: none; }
+.hub-assets .button-primary:hover { background: var(--cpe-brand-blue-deep); }
+.hub-assets .button-secondary { background: transparent; border-color: var(--hub-line-strong); }
+.hub-assets .eyebrow, .hub-assets .panel-kicker { letter-spacing: 0; }
+.hub-assets .app-footer { display: none; }

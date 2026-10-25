@@ -23,7 +23,7 @@
   --text-faint: color-mix(in srgb, var(--cpe-text-muted) 70%, transparent);
   --series-muted: color-mix(in srgb, var(--cpe-text-muted) 45%, transparent);
 
-  --font: "IBM Plex Sans Thai", "IBM Plex Sans", "Leelawadee UI", "Noto Sans Thai", Tahoma, sans-serif;
+  --font: "Leelawadee UI", "IBM Plex Sans Thai Looped", Tahoma, sans-serif;   /* ไทยแบบมีหัว เหมือนหน้าทะเบียนสินทรัพย์ */
   --fs-xs: 0.75rem;
   --fs-sm: 0.8125rem;
   --fs-md: 0.9375rem;
