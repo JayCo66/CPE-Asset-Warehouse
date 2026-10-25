@@ -488,6 +488,7 @@
       transition: var(--transition);
       position: relative;
       overflow: hidden;
+      min-width: 0;
     }
     .kpi-card::before {
       content: '';
@@ -518,11 +519,14 @@
     }
 
     .kpi-value {
-      font-size: 26px;
+      font-size: 19px;
       font-weight: 700;
       color: var(--cpe-text);
-      line-height: 1.2;
+      line-height: 1.25;
       font-feature-settings: "tnum";
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .kpi-sub {
@@ -1005,7 +1009,7 @@
           <span id="kpiTitle1">ครุภัณฑ์ยอดนิยมอันดับ 1</span>
           <span class="kpi-icon" id="kpiIcon1">🏆</span>
         </div>
-        <div class="kpi-value" id="kpiVal1" style="font-size: 19px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">-</div>
+        <div class="kpi-value" id="kpiVal1">-</div>
         <div class="kpi-sub" id="kpiSub1">ยืม 0 ครั้ง | 0 คนไม่ซ้ำ</div>
       </div>
 
@@ -1015,7 +1019,7 @@
           <span id="kpiTitle2">ประเภทที่ต้องการมากที่สุด</span>
           <span class="kpi-icon" id="kpiIcon2">📦</span>
         </div>
-        <div class="kpi-value" id="kpiVal2" style="font-size: 19px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">-</div>
+        <div class="kpi-value" id="kpiVal2">-</div>
         <div class="kpi-sub" id="kpiSub2">สัดส่วน 0% ของการยืมทั้งหมด</div>
       </div>
 
@@ -1045,7 +1049,7 @@
           <span id="kpiTitle5">ช่วงความต้องการสูงสุด (Peak)</span>
           <span class="kpi-icon" id="kpiIcon5">📈</span>
         </div>
-        <div class="kpi-value" id="kpiVal5" style="font-size: 19px;">-</div>
+        <div class="kpi-value" id="kpiVal5">-</div>
         <div class="kpi-sub" id="kpiSub5">0 ชิ้นยืมในเดือนนี้</div>
       </div>
     </div>
@@ -4748,6 +4752,14 @@
     document.getElementById('btnNextPage').addEventListener('click', () => {
       currentPage++;
       renderActiveTopic();
+    });
+
+    // Auto-tooltip on KPI hover for full text
+    document.addEventListener('mouseover', (e) => {
+      const kpiVal = e.target.closest('.kpi-value');
+      if (kpiVal && kpiVal.textContent) {
+        kpiVal.title = kpiVal.textContent.trim();
+      }
     });
 
     // Initial load
