@@ -9,7 +9,7 @@
   <script>document.documentElement.setAttribute("data-theme", (() => { try { return localStorage.getItem("cpe_theme") || "dark"; } catch { return "dark"; } })());</script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai+Looped:wght@400;500;600&display=swap">
   <style>
 /* Layout: compact header -> floating module nav (sticky) -> module head -> optional local nav -> content.
    Colors come only from docs/design-guide.md; borders/fills are those same tokens at lower opacity. */
@@ -36,7 +36,7 @@
   --text-faint: color-mix(in srgb, var(--cpe-text-muted) 70%, transparent);
   --series-muted: color-mix(in srgb, var(--cpe-text-muted) 45%, transparent);
 
-  --font: "IBM Plex Sans Thai", "IBM Plex Sans", "Leelawadee UI", "Noto Sans Thai", Tahoma, sans-serif;
+  --font: "Leelawadee UI", "IBM Plex Sans Thai Looped", Tahoma, sans-serif;   /* ไทยแบบมีหัว เหมือนหน้าทะเบียนสินทรัพย์ */
   --fs-xs: 0.75rem;
   --fs-sm: 0.8125rem;
   --fs-md: 0.9375rem;
