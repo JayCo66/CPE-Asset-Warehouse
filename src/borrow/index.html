@@ -517,12 +517,16 @@
       font-size: 18px;
     }
 
-    .kpi-value {
-      font-size: 26px;
+    .kpi-value,
+    .hub-borrow .kpi-value {
+      font-size: 17px !important;
       font-weight: 700;
       color: var(--cpe-text);
-      line-height: 1.2;
+      line-height: 1.25;
       font-feature-settings: "tnum";
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .kpi-sub {
@@ -1005,7 +1009,7 @@
           <span id="kpiTitle1">ครุภัณฑ์ยอดนิยมอันดับ 1</span>
           <span class="kpi-icon" id="kpiIcon1">🏆</span>
         </div>
-        <div class="kpi-value" id="kpiVal1" style="font-size: 19px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">-</div>
+        <div class="kpi-value" id="kpiVal1" style="font-size: 17px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">-</div>
         <div class="kpi-sub" id="kpiSub1">ยืม 0 ครั้ง | 0 คนไม่ซ้ำ</div>
       </div>
 
@@ -1015,7 +1019,7 @@
           <span id="kpiTitle2">ประเภทที่ต้องการมากที่สุด</span>
           <span class="kpi-icon" id="kpiIcon2">📦</span>
         </div>
-        <div class="kpi-value" id="kpiVal2" style="font-size: 19px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">-</div>
+        <div class="kpi-value" id="kpiVal2" style="font-size: 17px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">-</div>
         <div class="kpi-sub" id="kpiSub2">สัดส่วน 0% ของการยืมทั้งหมด</div>
       </div>
 
@@ -1025,7 +1029,7 @@
           <span id="kpiTitle3">จำนวนครั้งที่ยืมทั้งหมด</span>
           <span class="kpi-icon" id="kpiIcon3">📋</span>
         </div>
-        <div class="kpi-value" id="kpiVal3">0</div>
+        <div class="kpi-value" id="kpiVal3" style="font-size: 17px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">0</div>
         <div class="kpi-sub" id="kpiSub3">0 ใบคำขอ</div>
       </div>
 
@@ -1035,7 +1039,7 @@
           <span id="kpiTitle4">จำนวนผู้ยืมที่ไม่ซ้ำ (Unique)</span>
           <span class="kpi-icon" id="kpiIcon4">👥</span>
         </div>
-        <div class="kpi-value" id="kpiVal4">0</div>
+        <div class="kpi-value" id="kpiVal4" style="font-size: 17px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">0</div>
         <div class="kpi-sub" id="kpiSub4">เฉลี่ย 0 ครั้ง/คน</div>
       </div>
 
@@ -1045,7 +1049,7 @@
           <span id="kpiTitle5">ช่วงความต้องการสูงสุด (Peak)</span>
           <span class="kpi-icon" id="kpiIcon5">📈</span>
         </div>
-        <div class="kpi-value" id="kpiVal5" style="font-size: 19px;">-</div>
+        <div class="kpi-value" id="kpiVal5" style="font-size: 17px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">-</div>
         <div class="kpi-sub" id="kpiSub5">0 ชิ้นยืมในเดือนนี้</div>
       </div>
     </div>

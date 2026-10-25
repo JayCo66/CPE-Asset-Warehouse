@@ -518,7 +518,7 @@
     list.addEventListener("scroll", updateOverflow, { passive: true });
     window.addEventListener("resize", updateOverflow);
 
-    const THEME_CSS = new URL("hub-theme.css", location.href).href;
+    const THEME_CSS = new URL("hub-theme.css?v=" + Date.now(), location.href).href;
 
     // ใส่ style ของหน้ารวมให้หน้าใน iframe (Theme Synchronization)
     function dressPage(frame, page) {
