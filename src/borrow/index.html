@@ -1061,7 +1061,7 @@
         <div class="chart-header">
           <div class="chart-title-block">
             <h3 id="chartTitleA">📊 สัดส่วนความต้องการตามประเภทครุภัณฑ์ (Category Share)</h3>
-            <span style="font-size: 11px; color: var(--cpe-brand-blue); display: inline-flex; align-items: center; gap: 4px; margin-top: 3px;">
+            <span id="chartSubHintA" style="font-size: 11px; color: var(--cpe-brand-blue); display: inline-flex; align-items: center; gap: 4px; margin-top: 3px;">
               <span>💡 คลิกที่ชิ้นส่วนกราฟเพื่อเปิดดูรายการครุภัณฑ์จริงในหมวดนี้จากทะเบียนสินทรัพย์ (Asset Inventory)</span>
             </span>
           </div>
@@ -1513,6 +1513,37 @@
 
     const DOW_NAMES = ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์', 'อาทิตย์'];
 
+    // สีประจำวันตามประเพณีไทย: จันทร์เหลือง, อังคารชมพู, พุธเขียว, พฤหัสส้ม, ศุกร์ฟ้า, เสาร์ม่วง, อาทิตย์แดง
+    const DOW_COLORS = {
+      'จันทร์': '#FFC107',     // เหลือง (Yellow - CPE Amber/Gold Token)
+      'อังคาร': '#EC4899',     // ชมพู (Pink - Vibrant Pink)
+      'พุธ': '#10B981',        // เขียว (Green - Emerald Green)
+      'พฤหัสบดี': '#F97316',    // ส้ม (Orange - Vibrant Orange)
+      'ศุกร์': '#0EA5E9',       // ฟ้า (Sky Blue - Clear Sky Blue)
+      'เสาร์': '#8B5CF6',      // ม่วง (Purple)
+      'อาทิตย์': '#EF4444'     // แดง (Red)
+    };
+
+    const DOW_BORDER_COLORS = {
+      'จันทร์': '#D97706',
+      'อังคาร': '#DB2777',
+      'พุธ': '#059669',
+      'พฤหัสบดี': '#EA580C',
+      'ศุกร์': '#0284C7',
+      'เสาร์': '#7C3AED',
+      'อาทิตย์': '#DC2626'
+    };
+
+    const DOW_BG_LIGHT = {
+      'จันทร์': 'rgba(255, 193, 7, 0.15)',
+      'อังคาร': 'rgba(236, 72, 153, 0.15)',
+      'พุธ': 'rgba(16, 185, 129, 0.15)',
+      'พฤหัสบดี': 'rgba(249, 115, 22, 0.15)',
+      'ศุกร์': 'rgba(14, 165, 233, 0.15)',
+      'เสาร์': 'rgba(139, 92, 246, 0.15)',
+      'อาทิตย์': 'rgba(239, 68, 68, 0.15)'
+    };
+
     function getDayOfWeek(dateStr) {
       if (!dateStr) return 'ไม่ระบุ';
       const d = new Date(dateStr);
@@ -1961,6 +1992,8 @@
 
       // Chart Titles
       document.getElementById('chartTitleA').textContent = '📊 สัดส่วนความต้องการตามประเภทครุภัณฑ์ (Category Share)';
+      const hintA1 = document.getElementById('chartSubHintA');
+      if (hintA1) hintA1.innerHTML = '<span>💡 คลิกที่ชิ้นส่วนกราฟเพื่อเปิดดูรายการครุภัณฑ์จริงในหมวดนี้จากทะเบียนสินทรัพย์ (Asset Inventory)</span>';
       document.getElementById('chartTitleB').textContent = '🏆 10 ครุภัณฑ์ที่เป็นที่ต้องการสูงสุด (Top 10 Equipment)';
       setSortBtnLabels('จำนวนครั้งที่ยืม', 'ผู้ยืมไม่ซ้ำ (Unique)');
       document.getElementById('chartTitleFull').textContent = '📅 แนวโน้มความต้องการยืมข้ามเวลา & รายภาคการศึกษา (Monthly & Semester Demand Trend)';
@@ -2334,6 +2367,8 @@
 
       // Chart Titles
       document.getElementById('chartTitleA').textContent = '📊 ปริมาณการยืมจำแนกตามวันในสัปดาห์ (Day of Week Distribution)';
+      const hintA2 = document.getElementById('chartSubHintA');
+      if (hintA2) hintA2.innerHTML = '<span>💡 คลิกที่แท่งกราฟเพื่อดูรายการคำขอเบิกยืมที่เกิดขึ้นในวันนั้นๆ</span>';
       document.getElementById('chartTitleB').textContent = '⏱️ การกระจายของระยะเวลาการยืม (Borrow Duration Distribution)';
       setSortBtnLabels('มุมมองสัปดาห์', 'มุมมองเดือน');
       document.getElementById('chartTitleFull').textContent = '📅 แนวโน้มความต้องการยืมตลอดทั้งปีเทียบกับช่วงสอบ & โครงงาน';
@@ -2350,14 +2385,20 @@
       // Chart A: Day of Week Bar
       if (chartAInst) chartAInst.destroy();
       const ctxA = document.getElementById('chartCanvasA').getContext('2d');
+      const dowKeys = Object.keys(dowMap);
+      const dowColors = dowKeys.map(k => DOW_COLORS[k] || '#0466C8');
+      const dowBorders = dowKeys.map(k => DOW_BORDER_COLORS[k] || '#0353A4');
+
       chartAInst = new Chart(ctxA, {
         type: 'bar',
         data: {
-          labels: Object.keys(dowMap),
+          labels: dowKeys,
           datasets: [{
             label: 'จำนวนครั้งที่ยืม',
             data: Object.values(dowMap),
-            backgroundColor: ['#0466C8', '#106BDA', '#009688', '#FFC107', '#7C3AED'],
+            backgroundColor: dowColors,
+            borderColor: dowBorders,
+            borderWidth: 1.5,
             borderRadius: 6
           }]
         },
@@ -2494,7 +2535,7 @@
         type: 'bar',
         data: {
           labels: topMonCats.map(c => c[0]),
-          datasets: [{ label: 'จำนวนครั้งที่ยืมวันจันทร์', data: topMonCats.map(c => c[1]), backgroundColor: '#7C3AED', borderRadius: 4 }]
+          datasets: [{ label: 'จำนวนครั้งที่ยืมวันจันทร์', data: topMonCats.map(c => c[1]), backgroundColor: DOW_COLORS['จันทร์'] || '#FFC107', borderRadius: 4 }]
         },
         options: {
           indexAxis: 'y', responsive: true, maintainAspectRatio: false,
@@ -2539,10 +2580,17 @@
         </tr>
       `;
 
-      renderGenericTable(filteredRecords, (r, rank) => `
+      renderGenericTable(filteredRecords, (r, rank) => {
+        const dayColor = DOW_COLORS[r.dayOfWeek] || 'var(--cpe-brand-blue)';
+        const dayBg = DOW_BG_LIGHT[r.dayOfWeek] || 'rgba(4, 102, 200, 0.12)';
+        return `
         <tr>
           <td style="text-align:center;"><span class="rank-badge">${rank}</span></td>
-          <td><strong style="color:var(--cpe-brand-blue); cursor:pointer;" onclick="openDayBorrowModal('${r.dayOfWeek}')" title="คลิกดูรายการยืมวัน${r.dayOfWeek}">วัน${r.dayOfWeek} ↗</strong></td>
+          <td>
+            <span class="badge-status" style="background:${dayBg}; color:${dayColor}; font-weight:600; cursor:pointer;" onclick="openDayBorrowModal('${r.dayOfWeek}')" title="คลิกดูรายการยืมวัน${r.dayOfWeek}">
+              วัน${r.dayOfWeek} ↗
+            </span>
+          </td>
           <td>${r.borrowDate}</td>
           <td><strong>${r.assetName}</strong></td>
           <td>
@@ -2561,7 +2609,8 @@
             <button class="btn-inspect" onclick="openAssetModal('${encodeURIComponent(r.assetName)}')">เจาะลึก 🔍</button>
           </td>
         </tr>
-      `);
+      `;
+      });
     }
 
     // Helper for common timeline
