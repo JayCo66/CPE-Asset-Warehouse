@@ -1044,10 +1044,6 @@
           <div class="chart-title-block">
             <h3 id="chartTitleB">🏆 10 ครุภัณฑ์ที่เป็นที่ต้องการสูงสุด (Top 10 Equipment)</h3>
           </div>
-          <div class="chart-controls" id="chartControlsB">
-            <button class="btn-chart-toggle active" id="btnSort1" data-sort="1">จำนวนครั้งที่ยืม</button>
-            <button class="btn-chart-toggle" id="btnSort2" data-sort="2">ผู้ยืมไม่ซ้ำ (Unique)</button>
-          </div>
         </div>
         <div class="chart-container">
           <canvas id="chartCanvasB"></canvas>
@@ -1590,6 +1586,13 @@
     // =========================================================================
     // TOPIC 1: EQUIPMENT DEMAND
     // =========================================================================
+    function setSortBtnLabels(text1, text2) {
+      const b1 = document.getElementById('btnSort1');
+      if (b1) b1.textContent = text1;
+      const b2 = document.getElementById('btnSort2');
+      if (b2) b2.textContent = text2;
+    }
+
     function renderTopicDemand() {
       const total = filteredRecords.length;
 
@@ -1642,8 +1645,7 @@
       // Chart Titles
       document.getElementById('chartTitleA').textContent = '📊 สัดส่วนความต้องการตามประเภทครุภัณฑ์ (Category Share)';
       document.getElementById('chartTitleB').textContent = '🏆 10 ครุภัณฑ์ที่เป็นที่ต้องการสูงสุด (Top 10 Equipment)';
-      document.getElementById('btnSort1').textContent = 'จำนวนครั้งที่ยืม';
-      document.getElementById('btnSort2').textContent = 'ผู้ยืมไม่ซ้ำ (Unique)';
+      setSortBtnLabels('จำนวนครั้งที่ยืม', 'ผู้ยืมไม่ซ้ำ (Unique)');
       document.getElementById('chartTitleFull').textContent = '📅 แนวโน้มความต้องการยืมข้ามเวลา & รายภาคการศึกษา (Monthly & Semester Demand Trend)';
       document.getElementById('chartTitleC').textContent = '👤 สัดส่วนผู้ยืมตามสถานภาพในแต่ละประเภทครุภัณฑ์';
       document.getElementById('chartTitleD').textContent = '🏢 ภาควิชา/สังกัดที่มีความต้องการยืมสูงสุด (Top Departments)';
@@ -1687,8 +1689,20 @@
         data: {
           labels: topList.map(a => a.name.length > 25 ? a.name.substring(0, 24) + '...' : a.name),
           datasets: [
-            { label: 'จำนวนครั้งที่ยืม', data: topList.map(a => a.count), backgroundColor: '#0466C8', borderRadius: 4 },
-            { label: 'ผู้ยืมไม่ซ้ำ (Unique)', data: topList.map(a => a.users), backgroundColor: '#7C3AED', borderRadius: 4 }
+            {
+              label: 'จำนวนครั้งที่ยืม',
+              data: topList.map(a => a.count),
+              backgroundColor: '#0466C8',
+              hoverBackgroundColor: '#0353A4',
+              borderRadius: 4
+            },
+            {
+              label: 'ผู้ยืมไม่ซ้ำ (Unique)',
+              data: topList.map(a => a.users),
+              backgroundColor: '#F59E0B',
+              hoverBackgroundColor: '#D97706',
+              borderRadius: 4
+            }
           ]
         },
         options: {
@@ -1897,8 +1911,7 @@
       // Chart Titles
       document.getElementById('chartTitleA').textContent = '📊 ปริมาณการยืมจำแนกตามวันในสัปดาห์ (Day of Week Distribution)';
       document.getElementById('chartTitleB').textContent = '⏱️ การกระจายของระยะเวลาการยืม (Borrow Duration Distribution)';
-      document.getElementById('btnSort1').textContent = 'มุมมองสัปดาห์';
-      document.getElementById('btnSort2').textContent = 'มุมมองเดือน';
+      setSortBtnLabels('มุมมองสัปดาห์', 'มุมมองเดือน');
       document.getElementById('chartTitleFull').textContent = '📅 แนวโน้มความต้องการยืมตลอดทั้งปีเทียบกับช่วงสอบ & โครงงาน';
       document.getElementById('chartTitleC').textContent = '👥 วันที่ยืมยอดนิยมจำแนกตามสถานภาพผู้ยืม (Role vs Day)';
       document.getElementById('chartTitleD').textContent = '📦 หมวดหมู่ครุภัณฑ์ที่ยืมมากที่สุดในวันจันทร์ (Peak Day)';
@@ -2159,8 +2172,7 @@
       document.getElementById('chartTitleA').textContent = '📊 ความถี่การยืม vs จำนวนคงเหลือในคลัง (Borrow Frequency vs Stock Matrix)';
 
       document.getElementById('chartTitleB').textContent = '🍩 สัดส่วนสถานะการใช้งานคลังครุภัณฑ์ (Inventory Utilization)';
-      document.getElementById('btnSort1').textContent = 'สัดส่วนทั้งระบบ';
-      document.getElementById('btnSort2').textContent = 'Top 10 ใช้น้อย (1-2 ครั้ง)';
+      setSortBtnLabels('สัดส่วนทั้งระบบ', 'Top 10 ใช้น้อย (1-2 ครั้ง)');
 
       document.getElementById('chartTitleFull').textContent = '🏢 ปริมาณครุภัณฑ์ที่ไม่เคยถูกยืม (Dormant Assets) จำแนกตามสังกัด & ภาควิชา';
 
@@ -2552,8 +2564,7 @@
       // Chart Titles
       document.getElementById('chartTitleA').textContent = '📊 สัดส่วนการส่งคืนตรงเวลา vs ส่งคืนล่าช้า';
       document.getElementById('chartTitleB').textContent = '⏰ ปริมาณการคืนล่าช้าจำแนกตามหมวดหมู่ครุภัณฑ์';
-      document.getElementById('btnSort1').textContent = 'จำนวนครั้งล่าช้า';
-      document.getElementById('btnSort2').textContent = 'อัตราส่วน %';
+      setSortBtnLabels('จำนวนครั้งล่าช้า', 'อัตราส่วน %');
       document.getElementById('chartTitleFull').textContent = '📅 แนวโน้มจำนวนครั้งที่ส่งคืนล่าช้าข้ามเวลา (Overdue Trend)';
       document.getElementById('chartTitleC').textContent = '⏳ การกระจายตัวของจำนวนวันที่เกินกำหนด (Overdue Days)';
       document.getElementById('chartTitleD').textContent = '🏢 ภาควิชา/สังกัดที่มีรายการคืนล่าช้าสะสมสูงสุด';
@@ -2767,8 +2778,7 @@
       // Chart Titles
       document.getElementById('chartTitleA').textContent = '📊 ปริมาณการยืมจำแนกตามภาควิชา (Department Volume)';
       document.getElementById('chartTitleB').textContent = '📦 หมวดหมู่ครุภัณฑ์ที่แต่ละภาควิชาต้องการ (Dept x Category)';
-      document.getElementById('btnSort1').textContent = 'เรียงตามปริมาณ';
-      document.getElementById('btnSort2').textContent = 'เรียงตามจำนวนคำขอ';
+      setSortBtnLabels('เรียงตามปริมาณ', 'เรียงตามจำนวนคำขอ');
       document.getElementById('chartTitleFull').textContent = '📅 ปริมาณการยืมของ 5 ภาควิชาหลักเปรียบเทียบตามช่วงเวลา';
       document.getElementById('chartTitleC').textContent = '👤 สัดส่วนบทบาทผู้ยืมใน 5 ภาควิชาหลัก (Role Distribution)';
       document.getElementById('chartTitleD').textContent = '📋 สัดส่วนจำนวนชิ้นเฉลี่ยต่อคำขอของแต่ละภาควิชา';
@@ -2960,8 +2970,7 @@
       // Chart Titles
       document.getElementById('chartTitleA').textContent = '📊 สัดส่วนสัญญาณเตือนและปัจจัยเสี่ยง (Risk Distribution)';
       document.getElementById('chartTitleB').textContent = '⚠️ ประเภทครุภัณฑ์ที่มีรายงานชำรุดสูงสุด (Damaged by Category)';
-      document.getElementById('btnSort1').textContent = 'จำนวนชำรุด';
-      document.getElementById('btnSort2').textContent = 'สัดส่วน %';
+      setSortBtnLabels('จำนวนชำรุด', 'สัดส่วน %');
       document.getElementById('chartTitleFull').textContent = '📅 แนวโน้มการเกิดความเสียหายและเปลี่ยนเครื่องทดแทนตามช่วงเวลา';
       document.getElementById('chartTitleC').textContent = '🔄 ภาควิชาที่มีรายการเปลี่ยนเครื่องทดแทนสูงสุด';
       document.getElementById('chartTitleD').textContent = '⏱️ วันที่เกินกำหนดเฉลี่ยในกลุ่มที่มีรายงานชำรุด';
@@ -3272,20 +3281,21 @@
     // Sort toggle buttons
     const btnSort1 = document.getElementById('btnSort1');
     const btnSort2 = document.getElementById('btnSort2');
+    if (btnSort1 && btnSort2) {
+      btnSort1.addEventListener('click', () => {
+        currentSortMode = '1';
+        btnSort1.classList.add('active');
+        btnSort2.classList.remove('active');
+        renderActiveTopic();
+      });
 
-    btnSort1.addEventListener('click', () => {
-      currentSortMode = '1';
-      btnSort1.classList.add('active');
-      btnSort2.classList.remove('active');
-      renderActiveTopic();
-    });
-
-    btnSort2.addEventListener('click', () => {
-      currentSortMode = '2';
-      btnSort2.classList.add('active');
-      btnSort1.classList.remove('active');
-      renderActiveTopic();
-    });
+      btnSort2.addEventListener('click', () => {
+        currentSortMode = '2';
+        btnSort2.classList.add('active');
+        btnSort1.classList.remove('active');
+        renderActiveTopic();
+      });
+    }
 
     // Pagination
     document.getElementById('btnPrevPage').addEventListener('click', () => {
