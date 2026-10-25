@@ -1,0 +1,57 @@
+<section class="executive-overview" aria-label="ภาพรวมสินทรัพย์">
+  <section class="executive-overview-summary" aria-labelledby="overview-title">
+    <header class="page-heading executive-page-heading">
+      <div>
+        <h1 id="overview-title">ภาพรวมสินทรัพย์</h1>
+        <p class="page-intro">สถานะ ความพร้อม ตำแหน่ง และอายุของสินทรัพย์จากชุดข้อมูลที่เลือก</p>
+      </div>
+      <a class="button button-secondary overview-explorer-action" href="#/inventory/explorer">เปิดค้นหาสินทรัพย์</a>
+    </header>
+
+    <section class="data-notice" id="dashboard-data-notice" aria-label="แหล่งข้อมูล" role="status" aria-live="polite">
+      <span class="notice-icon" aria-hidden="true">i</span>
+      <p>
+        <strong id="dashboard-data-state">กำลังตรวจสอบแหล่งข้อมูล</strong>
+        <span id="dashboard-data-detail">กำลังเชื่อมต่อคลังสินทรัพย์</span>
+      </p>
+      <span class="notice-date" id="dashboard-snapshot-date">—</span>
+    </section>
+
+    <div class="metric-grid executive-metrics" id="executive-metrics" aria-label="ตัวชี้วัดภาพรวม"></div>
+    <dl class="executive-secondary-metrics" id="overview-secondary-metrics" aria-label="ตัวชี้วัดเพิ่มเติม"></dl>
+  </section>
+
+  <section class="dashboard-page overview-content" aria-labelledby="overview-title">
+    <section class="dashboard-panel-grid overview-primary-grid" aria-label="สถานะ ความพร้อม และอายุสินทรัพย์">
+      <article class="panel">
+        <div class="panel-heading"><h2>สถานะสินทรัพย์</h2></div>
+        <div id="overview-status-distribution" class="dashboard-chart"></div>
+      </article>
+      <article class="panel">
+        <div class="panel-heading"><h2>ความพร้อมใช้งาน</h2></div>
+        <div id="overview-availability-distribution" class="dashboard-chart"></div>
+      </article>
+      <article class="panel">
+        <div class="panel-heading"><h2>การกระจายตามอายุ</h2></div>
+        <div id="overview-age-distribution" class="dashboard-chart"></div>
+      </article>
+    </section>
+
+    <article class="panel overview-issues-panel" aria-labelledby="overview-issues-title">
+      <div class="panel-heading">
+        <div>
+          <h2 id="overview-issues-title">หน่วยงาน × ประเด็น</h2>
+          <p class="panel-description">เปรียบเทียบอัตราแยกตามประเด็น ไม่มีคะแนนรวม และแสดงจำนวนเทียบกับฐานในแต่ละช่อง</p>
+        </div>
+        <a href="#/inventory/departments">ดู scorecard หน่วยงาน</a>
+      </div>
+      <div id="overview-issue-heatmap" class="dashboard-chart"></div>
+      <p class="panel-description heatmap-note" id="overview-issue-note"></p>
+    </article>
+
+    <section class="panel snapshot-history-panel" id="overview-history-panel" aria-labelledby="overview-history-title">
+      <div class="panel-heading"><h2 id="overview-history-title">การเปรียบเทียบชุดข้อมูล</h2></div>
+      <div id="overview-history-content" class="empty-state" role="status" aria-live="polite"></div>
+    </section>
+  </section>
+</section>

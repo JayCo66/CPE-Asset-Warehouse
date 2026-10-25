@@ -25,7 +25,7 @@ import {
   initExecutiveDashboard,
   refreshExecutiveDashboard,
   setInventoryDashboardPage,
-} from "./executive-dashboard.mjs";
+} from "./executive-dashboard.mjs?v=20261025.1";
 
 const dashboardData = {
   moduleNav: [
@@ -54,8 +54,8 @@ const ASSET_INVENTORY_API_ENDPOINT = new URL(
 ).href;
 const DASHBOARD_SECTION_FILES = [
   "sections/executive-filters.html",
+  "sections/executive-overview.html",
   "sections/executive-navigation.html",
-  "sections/overview.html",
   "sections/portfolio.html",
   "sections/departments.html",
   "sections/locations.html",
@@ -202,7 +202,10 @@ async function loadDashboardSections() {
   if (!container) throw new Error("ไม่พบพื้นที่สำหรับโหลดส่วนแดชบอร์ด");
 
   const responses = await Promise.all(
-    DASHBOARD_SECTION_FILES.map((file) => fetch(file, { headers: { Accept: "text/html" } })),
+    DASHBOARD_SECTION_FILES.map((file) => fetch(file, {
+      cache: "no-cache",
+      headers: { Accept: "text/html" },
+    })),
   );
   const failedResponse = responses.find((response) => !response.ok);
   if (failedResponse) throw new Error(`โหลดส่วนแดชบอร์ดไม่สำเร็จ (HTTP ${failedResponse.status})`);
