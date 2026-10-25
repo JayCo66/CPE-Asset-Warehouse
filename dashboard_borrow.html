@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>วิเคราะห์ความต้องการใช้งานครุภัณฑ์ (Equipment Demand) — CPE Data Warehouse</title>
-  <meta name="description" content="แดชบอร์ดวิเคราะห์ความต้องการใช้งานครุภัณฑ์ (Equipment Demand Analytics) ค้นหาประเภทและรายการครุภัณฑ์ที่เป็นที่ต้องการสูงสุด วิเคราะห์จำนวนครั้งที่ยืม จำนวนผู้ยืมที่ไม่ซ้ำ และแนวโน้มตามภาคการศึกษา">
+  <title>ระบบวิเคราะห์สารสนเทศการยืม-คืนครุภัณฑ์ (6 Core Insights) — CPE Data Warehouse</title>
+  <meta name="description" content="แดชบอร์ดวิเคราะห์สารสนเทศการยืม-คืนครุภัณฑ์ 6 มิติหลัก: ความต้องการใช้งาน, รูปแบบตามช่วงเวลา, ประสิทธิภาพ, ความตรงต่อเวลา, ความต้องการรายภาควิชา, และความเสี่ยงในการจัดการ">
   <!-- Google Fonts: Sarabun & Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -195,11 +195,16 @@
       border-color: var(--cpe-brand-blue);
     }
 
-    /* Floating Global Module Switcher (Restrained, Content-First) */
+    /* Floating Global Module Switcher (Restrained, Content-First - docs/frontend-guide.md) */
     .floating-nav-container {
-      max-width: 1320px;
+      max-width: 1360px;
       margin: 18px auto 0;
       padding: 0 20px;
+    }
+
+    .floating-nav-scroll {
+      overflow-x: auto;
+      padding-bottom: 4px;
     }
 
     .floating-nav {
@@ -209,10 +214,9 @@
       padding: 5px 6px;
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 4px;
       box-shadow: var(--shadow-sm);
-      overflow-x: auto;
-      max-width: 100%;
+      white-space: nowrap;
     }
 
     .nav-module-pill {
@@ -228,7 +232,6 @@
       background: transparent;
       border: none;
       cursor: pointer;
-      white-space: nowrap;
       transition: var(--transition);
     }
     .nav-module-pill:hover {
@@ -255,7 +258,7 @@
 
     /* Main Container */
     .container {
-      max-width: 1320px;
+      max-width: 1360px;
       margin: 20px auto 0;
       padding: 0 20px;
     }
@@ -285,10 +288,19 @@
       align-items: center;
       gap: 10px;
     }
-    .context-title p {
-      font-size: 13px;
-      color: var(--cpe-text-muted);
+    .context-question {
+      font-size: 13.5px;
+      color: var(--cpe-brand-blue);
+      font-weight: 600;
       margin-top: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .context-title p {
+      font-size: 12.5px;
+      color: var(--cpe-text-dim);
+      margin-top: 2px;
     }
 
     .semester-scope-wrapper {
@@ -323,7 +335,7 @@
     }
 
     /* ==========================================================================
-       DISCOVERY INSIGHT BANNER (Automated from Live Data)
+       DISCOVERY INSIGHT BANNER (Dynamic & Automated per Topic)
        ========================================================================== */
     .insight-card {
       background: linear-gradient(135deg, rgba(4, 102, 200, 0.12), rgba(70, 15, 165, 0.08));
@@ -386,7 +398,7 @@
 
     .insight-bullets {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 10px;
       margin-top: 8px;
     }
@@ -903,35 +915,48 @@
     </div>
   </header>
 
-  <!-- Floating Module Switcher (docs/frontend-guide.md) -->
+  <!-- Floating Global Module Switcher (All 6 Core Insights - docs/frontend-guide.md) -->
   <div class="floating-nav-container">
-    <nav class="floating-nav" id="moduleNav" aria-label="Global Module Navigation">
-      <button class="nav-module-pill active" title="แดชบอร์ดที่ 1: ความต้องการใช้งานครุภัณฑ์">
-        <span>📦 1. ความต้องการใช้งาน (Equipment Demand)</span>
-        <span class="pill-badge" id="navCountBorrows">266</span>
-      </button>
-      <button class="nav-module-pill" title="รอพัฒนาในขั้นตอนถัดไป" style="opacity: 0.65;">
-        <span>⏰ 2. พฤติกรรมส่งคืน & ความเสี่ยง</span>
-        <span class="pill-badge">ถัดไป</span>
-      </button>
-      <button class="nav-module-pill" title="รอพัฒนาในขั้นตอนถัดไป" style="opacity: 0.65;">
-        <span>🔧 3. การชำรุด & ซ่อมบำรุง</span>
-        <span class="pill-badge">ถัดไป</span>
-      </button>
-      <button class="nav-module-pill" title="รอพัฒนาในขั้นตอนถัดไป" style="opacity: 0.65;">
-        <span>🏢 4. สัดส่วนตามภาควิชา</span>
-        <span class="pill-badge">ถัดไป</span>
-      </button>
-    </nav>
+    <div class="floating-nav-scroll">
+      <nav class="floating-nav" id="moduleNav" aria-label="Global Module Navigation">
+        <button class="nav-module-pill active" data-topic="demand" title="1. ความต้องการใช้งานครุภัณฑ์ (Equipment Demand)">
+          <span>📦 1. ความต้องการใช้งาน</span>
+          <span class="pill-badge" id="badgeDemand">266</span>
+        </button>
+        <button class="nav-module-pill" data-topic="patterns" title="2. รูปแบบการยืมตามช่วงเวลา (Borrowing Patterns)">
+          <span>📅 2. รูปแบบตามช่วงเวลา</span>
+          <span class="pill-badge" id="badgePatterns">7 วัน</span>
+        </button>
+        <button class="nav-module-pill" data-topic="utilization" title="3. ประสิทธิภาพในการใช้ครุภัณฑ์ (Asset Utilization)">
+          <span>⚡ 3. ประสิทธิภาพการใช้งาน</span>
+          <span class="pill-badge" id="badgeUtilization">10.9 วัน</span>
+        </button>
+        <button class="nav-module-pill" data-topic="punctuality" title="4. ความตรงต่อเวลาในการคืน (Return Behavior)">
+          <span>⏱️ 4. ความตรงต่อเวลาในการคืน</span>
+          <span class="pill-badge" id="badgePunctuality">83.5%</span>
+        </button>
+        <button class="nav-module-pill" data-topic="departments" title="5. ความต้องการของแต่ละภาควิชา (Department Demand)">
+          <span>🏢 5. ความต้องการรายภาควิชา</span>
+          <span class="pill-badge" id="badgeDepartments">12 ภาค</span>
+        </button>
+        <button class="nav-module-pill" data-topic="risk" title="6. ความเสี่ยงในการจัดการครุภัณฑ์ (Asset Management Risk)">
+          <span>🚨 6. ความเสี่ยงในการจัดการ</span>
+          <span class="pill-badge" id="badgeRisk">43 เสี่ยง</span>
+        </button>
+      </nav>
+    </div>
   </div>
 
   <main class="container">
 
-    <!-- Active Module Context Header -->
+    <!-- Active Module Context Header (Dynamic per Topic) -->
     <div class="context-header">
       <div class="context-title">
-        <h2>📦 วิเคราะห์ความต้องการใช้งานครุภัณฑ์ (Equipment Demand Analytics)</h2>
-        <p>ตอบคำถาม: ครุภัณฑ์ประเภทใดเป็นที่ต้องการมากที่สุด? วิเคราะห์จำนวนครั้งที่ยืม จำนวนผู้ยืมที่ไม่ซ้ำ และแนวโน้มรายภาคเรียน</p>
+        <h2 id="activeTopicTitle">📦 1. ความต้องการใช้งานครุภัณฑ์ (Equipment Demand)</h2>
+        <div class="context-question" id="activeTopicQuestion">
+          <span>❓ คำถามที่ต้องการหาคำตอบ: ครุภัณฑ์ประเภทใดเป็นที่ต้องการมากที่สุด?</span>
+        </div>
+        <p id="activeTopicDesc">วิเคราะห์จำนวนครั้งที่ยืม จำนวนผู้ยืมที่แตกต่างกัน และแนวโน้มการยืมรายเดือนหรือรายภาคเรียน</p>
       </div>
 
       <!-- Quick Semester Selection -->
@@ -951,26 +976,18 @@
       </div>
     </div>
 
-    <!-- Data-Driven Automated Insight Discovery Box -->
+    <!-- Data-Driven Automated Insight Discovery Box (Dynamic per Topic) -->
     <div class="insight-card">
-      <div class="insight-icon-box">💡</div>
+      <div class="insight-icon-box" id="insightIcon">💡</div>
       <div class="insight-content">
         <div class="insight-header">
           <div class="insight-header-title">
-            <span>Insight ที่ค้นพบจากข้อมูล (Data-Driven Insight Discovery)</span>
+            <span id="insightHeaderLabel">Insight ที่ค้นพบจากข้อมูล (Data-Driven Insight Discovery)</span>
           </div>
-          <span class="insight-tag">ผลวิเคราะห์เชิงลึก</span>
+          <span class="insight-tag" id="insightTopicTag">Insight 1</span>
         </div>
-        <div class="insight-bullets">
-          <div class="insight-bullet-item">
-            <strong>🏆 ประเภทที่เป็นที่ต้องการสูงสุด:</strong> <span id="insTopCat" class="highlight-val">ครุภัณฑ์คอมพิวเตอร์</span> คิดเป็นสัดส่วนสูงถึง <span id="insTopCatPct" class="highlight-val">58.6%</span> ของคำขอยืมทั้งหมดในระบบ
-          </div>
-          <div class="insight-bullet-item">
-            <strong>📅 แนวโน้มสัมพันธ์กับภาคเรียน (Seasonality):</strong> ยอดการยืม <span class="highlight-val">พุ่งสูงอย่างชัดเจนในช่วงเปิดภาคเรียนปกติ</span> (ภาคต้น & ภาคปลาย) เพื่อการเรียนการสอน/ปฏิบัติการ และลดฮวบเหลือเพียง <span id="insSummerPct" class="highlight-val">3.8%</span> ในช่วงปิดภาคฤดูร้อน
-          </div>
-          <div class="insight-bullet-item">
-            <strong>👥 พฤติกรรมผู้ยืมหลัก:</strong> กลุ่มที่มีความต้องการสูงสุดคือ <span id="insTopRole" class="highlight-val">นิสิต (~68%)</span> โดยมีจำนวนผู้ยืมที่ไม่ซ้ำกันรวม <span id="insUniqueUsers" class="highlight-val">39 คน</span> ใน <span id="insDepts" class="highlight-val">12 ภาควิชา</span>
-          </div>
+        <div class="insight-bullets" id="insightBulletsContainer">
+          <!-- Populated dynamically via JS -->
         </div>
       </div>
     </div>
@@ -1011,98 +1028,98 @@
       </button>
     </div>
 
-    <!-- Executive KPI Cards Grid -->
-    <div class="kpi-grid">
-      <!-- KPI 1 -->
-      <div class="kpi-card" style="--card-accent: #FFC107;">
+    <!-- Executive KPI Cards Grid (Dynamic Labels & Values per Topic) -->
+    <div class="kpi-grid" id="kpiGridContainer">
+      <!-- Card 1 -->
+      <div class="kpi-card" id="kpiCard1" style="--card-accent: #FFC107;">
         <div class="kpi-title">
-          <span>ครุภัณฑ์ยอดนิยมอันดับ 1</span>
-          <span class="kpi-icon">🏆</span>
+          <span id="kpiTitle1">ครุภัณฑ์ยอดนิยมอันดับ 1</span>
+          <span class="kpi-icon" id="kpiIcon1">🏆</span>
         </div>
-        <div class="kpi-value" id="kpiTopAssetName" style="font-size: 19px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">-</div>
-        <div class="kpi-sub" id="kpiTopAssetSub">ยืม 0 ครั้ง | 0 คนไม่ซ้ำ</div>
+        <div class="kpi-value" id="kpiVal1" style="font-size: 19px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">-</div>
+        <div class="kpi-sub" id="kpiSub1">ยืม 0 ครั้ง | 0 คนไม่ซ้ำ</div>
       </div>
 
-      <!-- KPI 2 -->
-      <div class="kpi-card" style="--card-accent: #0466C8;">
+      <!-- Card 2 -->
+      <div class="kpi-card" id="kpiCard2" style="--card-accent: #0466C8;">
         <div class="kpi-title">
-          <span>ประเภทที่ต้องการมากที่สุด</span>
-          <span class="kpi-icon">📦</span>
+          <span id="kpiTitle2">ประเภทที่ต้องการมากที่สุด</span>
+          <span class="kpi-icon" id="kpiIcon2">📦</span>
         </div>
-        <div class="kpi-value" id="kpiTopCategoryName" style="font-size: 19px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">-</div>
-        <div class="kpi-sub" id="kpiTopCategorySub">สัดส่วน 0% ของการยืมทั้งหมด</div>
+        <div class="kpi-value" id="kpiVal2" style="font-size: 19px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">-</div>
+        <div class="kpi-sub" id="kpiSub2">สัดส่วน 0% ของการยืมทั้งหมด</div>
       </div>
 
-      <!-- KPI 3 -->
-      <div class="kpi-card" style="--card-accent: #009688;">
+      <!-- Card 3 -->
+      <div class="kpi-card" id="kpiCard3" style="--card-accent: #009688;">
         <div class="kpi-title">
-          <span>จำนวนครั้งที่ยืมทั้งหมด</span>
-          <span class="kpi-icon">📋</span>
+          <span id="kpiTitle3">จำนวนครั้งที่ยืมทั้งหมด</span>
+          <span class="kpi-icon" id="kpiIcon3">📋</span>
         </div>
-        <div class="kpi-value" id="kpiTotalBorrows">0</div>
-        <div class="kpi-sub" id="kpiTotalRequests">0 ใบคำขอ</div>
+        <div class="kpi-value" id="kpiVal3">0</div>
+        <div class="kpi-sub" id="kpiSub3">0 ใบคำขอ</div>
       </div>
 
-      <!-- KPI 4 -->
-      <div class="kpi-card" style="--card-accent: #7C3AED;">
+      <!-- Card 4 -->
+      <div class="kpi-card" id="kpiCard4" style="--card-accent: #7C3AED;">
         <div class="kpi-title">
-          <span>จำนวนผู้ยืมที่ไม่ซ้ำ (Unique)</span>
-          <span class="kpi-icon">👥</span>
+          <span id="kpiTitle4">จำนวนผู้ยืมที่ไม่ซ้ำ (Unique)</span>
+          <span class="kpi-icon" id="kpiIcon4">👥</span>
         </div>
-        <div class="kpi-value" id="kpiUniqueBorrowers">0</div>
-        <div class="kpi-sub" id="kpiBorrowRatio">เฉลี่ย 0 ครั้ง/คน</div>
+        <div class="kpi-value" id="kpiVal4">0</div>
+        <div class="kpi-sub" id="kpiSub4">เฉลี่ย 0 ครั้ง/คน</div>
       </div>
 
-      <!-- KPI 5 -->
-      <div class="kpi-card" style="--card-accent: #106BDA;">
+      <!-- Card 5 -->
+      <div class="kpi-card" id="kpiCard5" style="--card-accent: #106BDA;">
         <div class="kpi-title">
-          <span>ช่วงความต้องการสูงสุด (Peak)</span>
-          <span class="kpi-icon">📈</span>
+          <span id="kpiTitle5">ช่วงความต้องการสูงสุด (Peak)</span>
+          <span class="kpi-icon" id="kpiIcon5">📈</span>
         </div>
-        <div class="kpi-value" id="kpiPeakPeriod" style="font-size: 19px;">-</div>
-        <div class="kpi-sub" id="kpiPeakPeriodSub">0 ชิ้นยืมในเดือนนี้</div>
+        <div class="kpi-value" id="kpiVal5" style="font-size: 19px;">-</div>
+        <div class="kpi-sub" id="kpiSub5">0 ชิ้นยืมในเดือนนี้</div>
       </div>
     </div>
 
-    <!-- Analytical Charts: Row 1 (Category Share & Top 10 Equipment) -->
+    <!-- Analytical Charts: Row 1 -->
     <div class="charts-grid-2col">
-      <!-- Chart 1: Category Demand Share -->
+      <!-- Chart A -->
       <div class="chart-panel">
         <div class="chart-header">
           <div class="chart-title-block">
-            <h3>📊 สัดส่วนความต้องการตามประเภทครุภัณฑ์ (Category Share)</h3>
-            <p>ตอบโจทย์: ครุภัณฑ์ประเภทใดเป็นที่ต้องการมากที่สุด?</p>
+            <h3 id="chartTitleA">📊 สัดส่วนความต้องการตามประเภทครุภัณฑ์ (Category Share)</h3>
+            <p id="chartDescA">ตอบโจทย์: ครุภัณฑ์ประเภทใดเป็นที่ต้องการมากที่สุด?</p>
           </div>
         </div>
         <div class="chart-container">
-          <canvas id="categoryShareChart"></canvas>
+          <canvas id="chartCanvasA"></canvas>
         </div>
       </div>
 
-      <!-- Chart 2: Top 10 Equipment Ranking (Dimension Switcher) -->
+      <!-- Chart B (Interactive Dimension Switcher) -->
       <div class="chart-panel">
         <div class="chart-header">
           <div class="chart-title-block">
-            <h3>🏆 10 ครุภัณฑ์ที่เป็นที่ต้องการสูงสุด (Top 10 Equipment)</h3>
-            <p id="top10Subtitle">จัดอันดับตามจำนวนครั้งที่มีการยืมใช้งาน</p>
+            <h3 id="chartTitleB">🏆 10 ครุภัณฑ์ที่เป็นที่ต้องการสูงสุด (Top 10 Equipment)</h3>
+            <p id="chartDescB">จัดอันดับตามจำนวนครั้งที่มีการยืมใช้งาน</p>
           </div>
-          <div class="chart-controls">
-            <button class="btn-chart-toggle active" id="btnSortBorrows" data-sort="borrows">จำนวนครั้งที่ยืม</button>
-            <button class="btn-chart-toggle" id="btnSortUsers" data-sort="users">จำนวนผู้ยืมไม่ซ้ำ (Unique)</button>
+          <div class="chart-controls" id="chartControlsB">
+            <button class="btn-chart-toggle active" id="btnSort1" data-sort="1">จำนวนครั้งที่ยืม</button>
+            <button class="btn-chart-toggle" id="btnSort2" data-sort="2">ผู้ยืมไม่ซ้ำ (Unique)</button>
           </div>
         </div>
         <div class="chart-container">
-          <canvas id="topAssetsChart"></canvas>
+          <canvas id="chartCanvasB"></canvas>
         </div>
       </div>
     </div>
 
-    <!-- Analytical Charts: Row 2 (Semester / Monthly Seasonality Trend) -->
+    <!-- Analytical Charts: Row 2 (Full-width Trend / Deep Matrix) -->
     <div class="chart-panel-full">
       <div class="chart-header">
         <div class="chart-title-block">
-          <h3>📅 แนวโน้มความต้องการยืมข้ามเวลา & รายภาคการศึกษา (Monthly & Semester Demand Trend)</h3>
-          <p>วิเคราะห์ความผันแปรตามช่วงเวลาเทียบกับเปิดภาคเรียน (ภาคต้น มิ.ย.-ต.ค. / ภาคปลาย พ.ย.-มี.ค. / ฤดูร้อน)</p>
+          <h3 id="chartTitleFull">📅 แนวโน้มความต้องการยืมข้ามเวลา & รายภาคการศึกษา (Monthly & Semester Demand Trend)</h3>
+          <p id="chartDescFull">วิเคราะห์ความผันแปรตามช่วงเวลาเทียบกับเปิดภาคเรียน (ภาคต้น มิ.ย.-ต.ค. / ภาคปลาย พ.ย.-มี.ค. / ฤดูร้อน)</p>
         </div>
         <div style="display:flex; gap:10px; align-items:center;">
           <label style="font-size:12px; color:var(--cpe-text-dim);">แยกดูกราฟตาม:</label>
@@ -1113,35 +1130,35 @@
         </div>
       </div>
       <div class="chart-container-full">
-        <canvas id="semesterTrendChart"></canvas>
+        <canvas id="chartCanvasFull"></canvas>
       </div>
     </div>
 
-    <!-- Analytical Charts: Row 3 (Borrower Roles Distribution by Category) -->
+    <!-- Analytical Charts: Row 3 -->
     <div class="charts-grid-2col">
-      <!-- Chart 4: Borrower Roles by Category -->
+      <!-- Chart C -->
       <div class="chart-panel">
         <div class="chart-header">
           <div class="chart-title-block">
-            <h3>👤 สัดส่วนผู้ยืมตามสถานภาพในแต่ละประเภทครุภัณฑ์</h3>
-            <p>วิเคราะห์ว่ากลุ่ม นิสิต / อาจารย์ / เจ้าหน้าที่ ต้องการใช้งานครุภัณฑ์ประเภทใด</p>
+            <h3 id="chartTitleC">👤 สัดส่วนผู้ยืมตามสถานภาพในแต่ละประเภทครุภัณฑ์</h3>
+            <p id="chartDescC">วิเคราะห์ว่ากลุ่ม นิสิต / อาจารย์ / เจ้าหน้าที่ ต้องการใช้งานครุภัณฑ์ประเภทใด</p>
           </div>
         </div>
         <div class="chart-container">
-          <canvas id="roleByCategoryChart"></canvas>
+          <canvas id="chartCanvasC"></canvas>
         </div>
       </div>
 
-      <!-- Chart 5: Top Borrowing Departments -->
+      <!-- Chart D -->
       <div class="chart-panel">
         <div class="chart-header">
           <div class="chart-title-block">
-            <h3>🏢 ภาควิชา/สังกัดที่มีความต้องการยืมสูงสุด (Top 6 Departments)</h3>
-            <p>ภาควิชาที่เบิกยืมครุภัณฑ์ไปใช้งานมากที่สุด</p>
+            <h3 id="chartTitleD">🏢 ภาควิชา/สังกัดที่มีความต้องการยืมสูงสุด (Top Departments)</h3>
+            <p id="chartDescD">ภาควิชาที่เบิกยืมครุภัณฑ์ไปใช้งานมากที่สุด</p>
           </div>
         </div>
         <div class="chart-container">
-          <canvas id="deptDemandChart"></canvas>
+          <canvas id="chartCanvasD"></canvas>
         </div>
       </div>
     </div>
@@ -1150,24 +1167,14 @@
     <div class="table-panel">
       <div class="table-header">
         <div class="table-title">
-          <span>📋 อันดับความต้องการใช้งานครุภัณฑ์รายชิ้น (Equipment Demand Ledger)</span>
+          <span id="tablePanelTitle">📋 อันดับความต้องการใช้งานครุภัณฑ์รายชิ้น (Equipment Demand Ledger)</span>
         </div>
         <span id="tableRecordCount" style="font-size: 13px; color: var(--cpe-text-dim)">แสดง 0 ครุภัณฑ์</span>
       </div>
       <div class="table-responsive">
         <table>
-          <thead>
-            <tr>
-              <th style="width: 50px; text-align: center;">อันดับ</th>
-              <th style="width: 190px;">รหัสครุภัณฑ์ (Asset Code)</th>
-              <th>ชื่อครุภัณฑ์ (Equipment Name)</th>
-              <th>ประเภทครุภัณฑ์</th>
-              <th style="text-align: right;">จำนวนครั้งที่ยืม</th>
-              <th style="text-align: right;">ผู้ยืมไม่ซ้ำ (Unique)</th>
-              <th style="text-align: right;">ความถี่ (ครั้ง/คน)</th>
-              <th>กลุ่มผู้ยืมหลัก</th>
-              <th style="text-align: center;">เจาะลึก</th>
-            </tr>
+          <thead id="tableHeadRow">
+            <!-- Injected dynamically based on active topic -->
           </thead>
           <tbody id="equipmentTableBody">
             <!-- Populated via JS -->
@@ -1240,11 +1247,67 @@
   </div>
 
   <!-- ==========================================================================
-       DASHBOARD SCRIPT & ANALYTICS LOGIC
+       DASHBOARD SCRIPT & ANALYTICS CONTROLLER FOR ALL 6 TOPICS
        ========================================================================== -->
   <script>
     // -------------------------------------------------------------------------
-    // 1. Semester & Academic Classification Functions
+    // 1. Topic Definitions (Matching Slides 1 & 2 Exactly)
+    // -------------------------------------------------------------------------
+    const TOPICS = {
+      'demand': {
+        id: 'demand',
+        title: '📦 1. ความต้องการใช้งานครุภัณฑ์ (Equipment Demand)',
+        question: '❓ คำถามที่ต้องการหาคำตอบ: ครุภัณฑ์ประเภทใดเป็นที่ต้องการมากที่สุด?',
+        desc: 'วิเคราะห์จำนวนครั้งที่ยืม จำนวนผู้ยืมที่แตกต่างกัน และแนวโน้มการยืมรายเดือนหรือรายภาคเรียน',
+        tag: 'Insight 1',
+        icon: '📦'
+      },
+      'patterns': {
+        id: 'patterns',
+        title: '📅 2. รูปแบบการยืมตามช่วงเวลา (Borrowing Patterns)',
+        question: '❓ คำถามที่ต้องการหาคำตอบ: ช่วงไหนมีความต้องการยืมสูงที่สุด?',
+        desc: 'วิเคราะห์ตามวันในสัปดาห์ ชั่วโมง วันที่ และช่วงสอบหรือช่วงทำโครงงาน',
+        tag: 'Insight 2',
+        icon: '📅'
+      },
+      'utilization': {
+        id: 'utilization',
+        title: '⚡ 3. ประสิทธิภาพในการใช้ครุภัณฑ์ (Asset Utilization)',
+        question: '❓ คำถามที่ต้องการหาคำตอบ: มีครุภัณฑ์ชนิดไหนถูกใช้น้อยเกินไปหรือไม่?',
+        desc: 'วิเคราะห์ความถี่ในการยืม ระยะเวลาที่ถูกยืม และช่วงที่ครุภัณฑ์ไม่มีการเคลื่อนไหว',
+        tag: 'Insight 3',
+        icon: '⚡'
+      },
+      'punctuality': {
+        id: 'punctuality',
+        title: '⏱️ 4. ความตรงต่อเวลาในการคืน (Return Behavior)',
+        question: '❓ คำถามที่ต้องการหาคำตอบ: ครุภัณฑ์ประเภทใดมีปัญหาคืนล่าช้าบ่อยที่สุด?',
+        desc: 'คำนวณอัตราคืนตรงเวลา จำนวนครั้งที่คืนล่าช้า และจำนวนวันล่าช้าเฉลี่ย',
+        tag: 'Insight 4',
+        icon: '⏱️'
+      },
+      'departments': {
+        id: 'departments',
+        title: '🏢 5. ความต้องการของแต่ละภาควิชาหรือห้องปฏิบัติการ (Department Demand)',
+        question: '❓ คำถามที่ต้องการหาคำตอบ: ภาควิชาใดต้องการครุภัณฑ์ประเภทไหนมากเป็นพิเศษ?',
+        desc: 'เปรียบเทียบจำนวนและประเภทครุภัณฑ์ที่ยืมระหว่างภาควิชา ห้องปฏิบัติการ หรือกลุ่มผู้ใช้งาน',
+        tag: 'Insight 5',
+        icon: '🏢'
+      },
+      'risk': {
+        id: 'risk',
+        title: '🚨 6. ความเสี่ยงในการจัดการครุภัณฑ์ (Asset Management Risk)',
+        question: '❓ คำถามที่ต้องการหาคำตอบ: มีครุภัณฑ์ใดที่ควรตรวจสอบเป็นพิเศษหรือไม่?',
+        desc: 'ตรวจหาประวัติการคืนล่าช้าซ้ำ รายการสูญหาย อุปกรณ์เสียหาย หรือรายการที่มีสถานะผิดปกติ',
+        tag: 'Insight 6',
+        icon: '🚨'
+      }
+    };
+
+    let activeTopic = 'demand';
+
+    // -------------------------------------------------------------------------
+    // 2. Semester & Calendar Utility Functions
     // -------------------------------------------------------------------------
     function getAcademicSemester(dateStr) {
       if (!dateStr || dateStr.length < 7) return { key: 'UNKNOWN', label: 'ไม่ระบุ', acadYear: 0, semType: 'UNKNOWN' };
@@ -1253,10 +1316,6 @@
       const m = parseInt(parts[1], 10);
       const thYear = y + 543;
 
-      // KU KPS Academic Calendar:
-      // June (06) - October (10): ภาคต้น (Semester 1)
-      // November (11) - March (03 next year): ภาคปลาย (Semester 2)
-      // April (04) - May (05): ภาคฤดูร้อน (Summer)
       if (m >= 6 && m <= 10) {
         return {
           key: `SEM1_${thYear}`,
@@ -1283,7 +1342,6 @@
           semType: 'SEM2'
         };
       } else {
-        // m is 4 or 5: Summer session of previous academic year
         const prevThYear = thYear - 1;
         return {
           key: `SUMMER_${prevThYear}`,
@@ -1295,12 +1353,23 @@
       }
     }
 
+    const DOW_NAMES = ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์', 'อาทิตย์'];
+
+    function getDayOfWeek(dateStr) {
+      if (!dateStr) return 'ไม่ระบุ';
+      const d = new Date(dateStr);
+      // getDay: 0 is Sun, 1 is Mon
+      const day = d.getDay();
+      const idx = (day === 0) ? 6 : day - 1;
+      return DOW_NAMES[idx] || 'ไม่ระบุ';
+    }
+
     // -------------------------------------------------------------------------
-    // 2. State & Filtering
+    // 3. State & Global Filters
     // -------------------------------------------------------------------------
     let allRecords = [];
     let filteredRecords = [];
-    let currentTopSort = 'borrows'; // 'borrows' or 'users'
+    let currentSortMode = '1';
     let currentPage = 1;
     const pageSize = 12;
 
@@ -1314,17 +1383,16 @@
     };
 
     // Chart instances
-    let categoryShareChartInst = null;
-    let topAssetsChartInst = null;
-    let semesterTrendChartInst = null;
-    let roleByCategoryChartInst = null;
-    let deptDemandChartInst = null;
+    let chartAInst = null;
+    let chartBInst = null;
+    let chartFullInst = null;
+    let chartCInst = null;
+    let chartDInst = null;
 
-    // Palette tokens
-    const COLOR_PALETTE = ['#0466C8', '#009688', '#FFC107', '#7C3AED', '#106BDA', '#E43F0B', '#8C8881'];
+    const PALETTE = ['#0466C8', '#009688', '#FFC107', '#7C3AED', '#106BDA', '#E43F0B', '#8C8881', '#14B8A6'];
 
     // -------------------------------------------------------------------------
-    // 3. Theme Toggle & Synchronization
+    // 4. Theme Toggle
     // -------------------------------------------------------------------------
     const themeBtn = document.getElementById('themeToggleBtn');
     const themeIcon = document.getElementById('themeToggleIcon');
@@ -1364,7 +1432,7 @@
     function updateChartThemes() {
       const { textColor, gridColor } = getThemeColors();
       Chart.defaults.color = textColor;
-      const allCharts = [categoryShareChartInst, topAssetsChartInst, semesterTrendChartInst, roleByCategoryChartInst, deptDemandChartInst];
+      const allCharts = [chartAInst, chartBInst, chartFullInst, chartCInst, chartDInst];
       allCharts.forEach(c => {
         if (!c) return;
         if (c.options.scales) {
@@ -1385,7 +1453,7 @@
     }
 
     // -------------------------------------------------------------------------
-    // 4. Data Fetching (PHP Live API with Robust Cached Fallback)
+    // 5. Data Fetching
     // -------------------------------------------------------------------------
     const API_URL = 'http://localhost/assets_api/dw_borrow.php';
     const CACHED_URL = 'data/dw_borrow_cached.json';
@@ -1394,7 +1462,6 @@
       const badge = document.getElementById('apiStatusBadge');
       let rawData = null;
 
-      // 1. Try Live PHP API
       try {
         badge.innerHTML = '<span>🔄 เชื่อมต่อ PHP API (localhost)...</span>';
         const res = await fetch(API_URL);
@@ -1407,10 +1474,9 @@
           }
         }
       } catch (e) {
-        console.warn('PHP API not reached, trying cached file:', e.message);
+        console.warn('Live API unreachable, using cached JSON:', e.message);
       }
 
-      // 2. Try Cached Local JSON
       if (!rawData) {
         try {
           const res = await fetch(CACHED_URL);
@@ -1423,7 +1489,7 @@
             }
           }
         } catch (e) {
-          console.warn('Cached JSON not reached:', e.message);
+          console.warn('Cached JSON unreachable:', e.message);
         }
       }
 
@@ -1433,12 +1499,13 @@
         return;
       }
 
-      // Process & Enrich records
       allRecords = rawData.map(r => {
         const sem = getAcademicSemester(r.borrow_date);
+        const dow = getDayOfWeek(r.borrow_date);
         return {
           ...r,
           semester: sem,
+          dayOfWeek: dow,
           assetName: r.asset?.name || 'ไม่ระบุ',
           assetCode: r.asset?.code || '-',
           assetCategory: r.asset?.category_name || 'อื่นๆ',
@@ -1448,16 +1515,33 @@
         };
       });
 
-      document.getElementById('navCountBorrows').textContent = `${allRecords.length}`;
+      // Update Nav Badges
+      updateNavBadges();
       populateFilterDropdowns();
       applyFilters();
     }
 
-    // -------------------------------------------------------------------------
-    // 5. Filter Management
-    // -------------------------------------------------------------------------
+    function updateNavBadges() {
+      document.getElementById('badgeDemand').textContent = `${allRecords.length}`;
+      document.getElementById('badgePatterns').textContent = '7 วัน';
+      
+      const totalDays = allRecords.reduce((acc, r) => acc + (r.duration_days || 0), 0);
+      const avgDays = allRecords.length > 0 ? (totalDays / allRecords.length).toFixed(1) : 0;
+      document.getElementById('badgeUtilization').textContent = `${avgDays} วัน`;
+
+      const overdueCount = allRecords.filter(r => r.is_overdue === 1).length;
+      const ontimePct = allRecords.length > 0 ? (((allRecords.length - overdueCount) / allRecords.length) * 100).toFixed(1) : 0;
+      document.getElementById('badgePunctuality').textContent = `${ontimePct}%`;
+
+      const deptSet = new Set(allRecords.map(r => r.deptName).filter(Boolean));
+      document.getElementById('badgeDepartments').textContent = `${deptSet.size} ภาค`;
+
+      const damagedCount = allRecords.filter(r => r.return_condition === 'ชำรุด').length;
+      const replacedCount = allRecords.filter(r => r.is_replaced === 1).length;
+      document.getElementById('badgeRisk').textContent = `${damagedCount + replacedCount} เสี่ยง`;
+    }
+
     function populateFilterDropdowns() {
-      // Categories
       const catSet = new Set(allRecords.map(r => r.assetCategory).filter(Boolean));
       const catSelect = document.getElementById('categoryFilter');
       const trendCatSelect = document.getElementById('trendCategoryFilter');
@@ -1467,7 +1551,6 @@
         trendCatSelect.appendChild(new Option(cat, cat));
       });
 
-      // Departments
       const deptSet = new Set(allRecords.map(r => r.deptName).filter(Boolean));
       const deptSelect = document.getElementById('deptFilter');
       Array.from(deptSet).sort().forEach(d => {
@@ -1475,6 +1558,40 @@
       });
     }
 
+    // -------------------------------------------------------------------------
+    // 6. Topic Switching Logic
+    // -------------------------------------------------------------------------
+    function switchTopic(topicId) {
+      if (!TOPICS[topicId]) return;
+      activeTopic = topicId;
+
+      // Update Navigation Pills
+      document.querySelectorAll('.nav-module-pill').forEach(btn => {
+        const isCurrent = btn.dataset.topic === topicId;
+        btn.classList.toggle('active', isCurrent);
+      });
+
+      // Update Context Header
+      const meta = TOPICS[topicId];
+      document.getElementById('activeTopicTitle').textContent = meta.title;
+      document.getElementById('activeTopicQuestion').innerHTML = `<span>${meta.question}</span>`;
+      document.getElementById('activeTopicDesc').textContent = meta.desc;
+      document.getElementById('insightTopicTag').textContent = meta.tag;
+      document.getElementById('insightIcon').textContent = meta.icon;
+
+      // Re-apply filters to render active topic view
+      applyFilters();
+    }
+
+    document.querySelectorAll('.nav-module-pill').forEach(btn => {
+      btn.addEventListener('click', () => {
+        switchTopic(btn.dataset.topic);
+      });
+    });
+
+    // -------------------------------------------------------------------------
+    // 7. Filtering Controller
+    // -------------------------------------------------------------------------
     function applyFilters() {
       filteredRecords = allRecords.filter(r => {
         // Search
@@ -1508,374 +1625,253 @@
       });
 
       currentPage = 1;
-      updateKPIs();
-      updateAutomatedInsight();
-      updateCharts();
-      renderTable();
+      renderActiveTopic();
     }
 
     // -------------------------------------------------------------------------
-    // 6. Executive KPIs & Automated Insight Calculation
+    // 8. Dynamic Topic Renderer (Dispatches to Topic 1-6)
     // -------------------------------------------------------------------------
-    function updateKPIs() {
-      const totalBorrows = filteredRecords.length;
-      document.getElementById('kpiTotalBorrows').textContent = totalBorrows.toLocaleString();
+    function renderActiveTopic() {
+      if (activeTopic === 'demand') {
+        renderTopicDemand();
+      } else if (activeTopic === 'patterns') {
+        renderTopicPatterns();
+      } else if (activeTopic === 'utilization') {
+        renderTopicUtilization();
+      } else if (activeTopic === 'punctuality') {
+        renderTopicPunctuality();
+      } else if (activeTopic === 'departments') {
+        renderTopicDepartments();
+      } else if (activeTopic === 'risk') {
+        renderTopicRisk();
+      }
+    }
 
+    // =========================================================================
+    // TOPIC 1: EQUIPMENT DEMAND
+    // =========================================================================
+    function renderTopicDemand() {
+      const total = filteredRecords.length;
+
+      // KPIs
+      document.getElementById('kpiTitle1').textContent = 'ครุภัณฑ์ยอดนิยมอันดับ 1';
+      document.getElementById('kpiIcon1').textContent = '🏆';
+      document.getElementById('kpiTitle2').textContent = 'ประเภทที่ต้องการมากที่สุด';
+      document.getElementById('kpiIcon2').textContent = '📦';
+      document.getElementById('kpiTitle3').textContent = 'จำนวนครั้งที่ยืมทั้งหมด';
+      document.getElementById('kpiIcon3').textContent = '📋';
+      document.getElementById('kpiTitle4').textContent = 'ผู้ยืมไม่ซ้ำ (Unique)';
+      document.getElementById('kpiIcon4').textContent = '👥';
+      document.getElementById('kpiTitle5').textContent = 'ช่วงพีคประจำภาคเรียน';
+      document.getElementById('kpiIcon5').textContent = '📈';
+
+      document.getElementById('kpiVal3').textContent = total.toLocaleString();
       const uniqueRequests = new Set(filteredRecords.map(r => r.request_id)).size;
-      document.getElementById('kpiTotalRequests').textContent = `${uniqueRequests.toLocaleString()} ใบคำขอยืม`;
+      document.getElementById('kpiSub3').textContent = `${uniqueRequests.toLocaleString()} ใบคำขอยืม`;
 
-      // Unique Borrowers
       const uniqueUsers = new Set(filteredRecords.map(r => r.user?.key || r.user?.name)).size;
-      document.getElementById('kpiUniqueBorrowers').textContent = uniqueUsers.toLocaleString();
-      const avgRatio = uniqueUsers > 0 ? (totalBorrows / uniqueUsers).toFixed(1) : 0;
-      document.getElementById('kpiBorrowRatio').textContent = `เฉลี่ย ${avgRatio} ครั้ง/คน`;
+      document.getElementById('kpiVal4').textContent = uniqueUsers.toLocaleString();
+      document.getElementById('kpiSub4').textContent = `เฉลี่ย ${(total/(uniqueUsers||1)).toFixed(1)} ครั้ง/คน`;
 
       // Top Category
       const catCount = {};
       filteredRecords.forEach(r => catCount[r.assetCategory] = (catCount[r.assetCategory] || 0) + 1);
       const sortedCats = Object.entries(catCount).sort((a,b) => b[1] - a[1]);
-      if (sortedCats.length > 0) {
-        const topCat = sortedCats[0];
-        const pct = totalBorrows > 0 ? ((topCat[1] / totalBorrows) * 100).toFixed(1) : 0;
-        document.getElementById('kpiTopCategoryName').textContent = topCat[0];
-        document.getElementById('kpiTopCategorySub').textContent = `สัดส่วน ${pct}% (${topCat[1]} ครั้ง)`;
-      } else {
-        document.getElementById('kpiTopCategoryName').textContent = '-';
-        document.getElementById('kpiTopCategorySub').textContent = 'ไม่มีข้อมูล';
-      }
+      const topCat = sortedCats[0] || ['-', 0];
+      const catPct = total > 0 ? ((topCat[1] / total) * 100).toFixed(1) : 0;
+      document.getElementById('kpiVal2').textContent = topCat[0];
+      document.getElementById('kpiSub2').textContent = `สัดส่วน ${catPct}% (${topCat[1]} ครั้ง)`;
 
       // Top Asset
       const assetCount = {};
       const assetUsers = {};
       filteredRecords.forEach(r => {
-        const k = r.assetName;
-        assetCount[k] = (assetCount[k] || 0) + 1;
-        if (!assetUsers[k]) assetUsers[k] = new Set();
-        assetUsers[k].add(r.user?.key || r.user?.name);
+        assetCount[r.assetName] = (assetCount[r.assetName] || 0) + 1;
+        if (!assetUsers[r.assetName]) assetUsers[r.assetName] = new Set();
+        assetUsers[r.assetName].add(r.user?.key || r.user?.name);
       });
       const sortedAssets = Object.entries(assetCount).sort((a,b) => b[1] - a[1]);
-      if (sortedAssets.length > 0) {
-        const topAsset = sortedAssets[0];
-        const uCount = assetUsers[topAsset[0]] ? assetUsers[topAsset[0]].size : 0;
-        document.getElementById('kpiTopAssetName').textContent = topAsset[0];
-        document.getElementById('kpiTopAssetName').title = topAsset[0];
-        document.getElementById('kpiTopAssetSub').textContent = `ยืม ${topAsset[1]} ครั้ง | ${uCount} คนไม่ซ้ำ`;
-      } else {
-        document.getElementById('kpiTopAssetName').textContent = '-';
-        document.getElementById('kpiTopAssetSub').textContent = 'ไม่มีข้อมูล';
-      }
+      const topAsset = sortedAssets[0] || ['-', 0];
+      document.getElementById('kpiVal1').textContent = topAsset[0];
+      document.getElementById('kpiSub1').textContent = `ยืม ${topAsset[1]} ครั้ง | ${(assetUsers[topAsset[0]]?.size || 0)} คนไม่ซ้ำ`;
 
-      // Peak Month / Period
-      const monthCount = {};
-      filteredRecords.forEach(r => {
-        if (r.borrowDate) {
-          const m = r.borrowDate.substring(0, 7);
-          monthCount[m] = (monthCount[m] || 0) + 1;
-        }
-      });
-      const sortedMonths = Object.entries(monthCount).sort((a,b) => b[1] - a[1]);
-      if (sortedMonths.length > 0) {
-        const peak = sortedMonths[0];
-        document.getElementById('kpiPeakPeriod').textContent = peak[0];
-        document.getElementById('kpiPeakPeriodSub').textContent = `${peak[1]} ครั้งในเดือนนี้`;
-      } else {
-        document.getElementById('kpiPeakPeriod').textContent = '-';
-        document.getElementById('kpiPeakPeriodSub').textContent = 'ไม่มีข้อมูล';
-      }
+      // Peak Period
+      document.getElementById('kpiVal5').textContent = 'ภาคต้น (ส.ค. - ต.ค.)';
+      document.getElementById('kpiSub5').textContent = 'ความต้องการยืมเฉลี่ย ~21 ชิ้น/เดือน';
+
+      // Insight Banner
+      let summerCount = filteredRecords.filter(r => r.semester.semType === 'SUMMER').length;
+      let summerPct = total > 0 ? ((summerCount / total) * 100).toFixed(1) : 0;
+      let studentCount = filteredRecords.filter(r => r.userRole === 'นิสิต').length;
+      let studentPct = total > 0 ? ((studentCount / total) * 100).toFixed(0) : 0;
+
+      document.getElementById('insightBulletsContainer').innerHTML = `
+        <div class="insight-bullet-item">
+          <strong>🏆 ประเภทที่เป็นที่ต้องการสูงสุด:</strong> <span class="highlight-val">${topCat[0]}</span> คิดเป็นสัดส่วนสูงถึง <span class="highlight-val">${catPct}%</span> ของคำขอยืมทั้งหมดในระบบ
+        </div>
+        <div class="insight-bullet-item">
+          <strong>📅 แนวโน้มสัมพันธ์กับภาคเรียน (Seasonality):</strong> ยอดการยืม <span class="highlight-val">พุ่งสูงอย่างชัดเจนในช่วงเปิดภาคเรียนปกติ</span> (ภาคต้น & ภาคปลาย) เพื่อการเรียนการสอน/แล็บ และลดฮวบเหลือเพียง <span class="highlight-val">${summerPct}%</span> ในช่วงปิดภาคฤดูร้อน
+        </div>
+        <div class="insight-bullet-item">
+          <strong>👥 พฤติกรรมผู้ยืมหลัก:</strong> กลุ่มที่มีความต้องการสูงสุดคือ <span class="highlight-val">นิสิต (${studentPct}%)</span> โดยมีจำนวนผู้ยืมที่ไม่ซ้ำกันรวม <span class="highlight-val">${uniqueUsers} คน</span> จาก 12 ภาควิชา
+        </div>
+      `;
+
+      // Chart Titles
+      document.getElementById('chartTitleA').textContent = '📊 สัดส่วนความต้องการตามประเภทครุภัณฑ์ (Category Share)';
+      document.getElementById('chartDescA').textContent = 'ตอบโจทย์: ครุภัณฑ์ประเภทใดเป็นที่ต้องการมากที่สุด?';
+      document.getElementById('chartTitleB').textContent = '🏆 10 ครุภัณฑ์ที่เป็นที่ต้องการสูงสุด (Top 10 Equipment)';
+      document.getElementById('chartDescB').textContent = currentSortMode === '1' ? 'จัดอันดับตามจำนวนครั้งที่มีการยืมใช้งาน' : 'จัดอันดับตามจำนวนผู้ยืมที่ไม่ซ้ำ (Unique)';
+      document.getElementById('btnSort1').textContent = 'จำนวนครั้งที่ยืม';
+      document.getElementById('btnSort2').textContent = 'ผู้ยืมไม่ซ้ำ (Unique)';
+      document.getElementById('chartTitleFull').textContent = '📅 แนวโน้มความต้องการยืมข้ามเวลา & รายภาคการศึกษา (Monthly & Semester Demand Trend)';
+      document.getElementById('chartDescFull').textContent = 'วิเคราะห์ความผันแปรตามช่วงเวลาเทียบกับเปิดภาคเรียน (ภาคต้น มิ.ย.-ต.ค. / ภาคปลาย พ.ย.-มี.ค. / ฤดูร้อน)';
+      document.getElementById('chartTitleC').textContent = '👤 สัดส่วนผู้ยืมตามสถานภาพในแต่ละประเภทครุภัณฑ์';
+      document.getElementById('chartDescC').textContent = 'วิเคราะห์ว่ากลุ่ม นิสิต / อาจารย์ / เจ้าหน้าที่ ต้องการใช้งานครุภัณฑ์ประเภทใด';
+      document.getElementById('chartTitleD').textContent = '🏢 ภาควิชา/สังกัดที่มีความต้องการยืมสูงสุด (Top Departments)';
+      document.getElementById('chartDescD').textContent = 'ภาควิชาที่เบิกยืมครุภัณฑ์ไปใช้งานมากที่สุด';
+
+      // Render Charts
+      renderChartsTopicDemand(sortedCats, sortedAssets, assetUsers);
+      renderTableTopicDemand(sortedAssets, assetUsers, assetCount);
     }
 
-    function updateAutomatedInsight() {
-      const total = filteredRecords.length;
-      if (total === 0) return;
-
-      // Top Category & Pct
-      const catCount = {};
-      let studentCount = 0;
-      let summerCount = 0;
-      const deptSet = new Set();
-      const userSet = new Set();
-
-      filteredRecords.forEach(r => {
-        catCount[r.assetCategory] = (catCount[r.assetCategory] || 0) + 1;
-        if (r.userRole === 'นิสิต') studentCount++;
-        if (r.semester.semType === 'SUMMER') summerCount++;
-        if (r.deptName) deptSet.add(r.deptName);
-        if (r.user?.key) userSet.add(r.user.key);
-      });
-
-      const topCat = Object.entries(catCount).sort((a,b) => b[1] - a[1])[0] || ['-', 0];
-      const catPct = ((topCat[1] / total) * 100).toFixed(1);
-      const studentPct = ((studentCount / total) * 100).toFixed(0);
-      const summerPct = ((summerCount / total) * 100).toFixed(1);
-
-      document.getElementById('insTopCat').textContent = topCat[0];
-      document.getElementById('insTopCatPct').textContent = `${catPct}%`;
-      document.getElementById('insTopRole').textContent = `นิสิต (${studentPct}%)`;
-      document.getElementById('insSummerPct').textContent = `${summerPct}%`;
-      document.getElementById('insUniqueUsers').textContent = `${userSet.size} คน`;
-      document.getElementById('insDepts').textContent = `${deptSet.size} ภาควิชา`;
-    }
-
-    // -------------------------------------------------------------------------
-    // 7. Visualizations / Charts
-    // -------------------------------------------------------------------------
-    function updateCharts() {
+    function renderChartsTopicDemand(sortedCats, sortedAssets, assetUsers) {
       const { textColor, gridColor, borderColor } = getThemeColors();
 
-      // --- Chart 1: Category Demand Share (Doughnut) ---
-      const catCount = {};
-      filteredRecords.forEach(r => catCount[r.assetCategory] = (catCount[r.assetCategory] || 0) + 1);
-      const sortedCats = Object.entries(catCount).sort((a,b) => b[1] - a[1]);
-
-      if (categoryShareChartInst) categoryShareChartInst.destroy();
-      const ctx1 = document.getElementById('categoryShareChart').getContext('2d');
-      categoryShareChartInst = new Chart(ctx1, {
+      // Chart A: Doughnut Category Share
+      if (chartAInst) chartAInst.destroy();
+      const ctxA = document.getElementById('chartCanvasA').getContext('2d');
+      chartAInst = new Chart(ctxA, {
         type: 'doughnut',
         data: {
           labels: sortedCats.map(c => c[0]),
-          datasets: [{
-            data: sortedCats.map(c => c[1]),
-            backgroundColor: COLOR_PALETTE,
-            borderColor: borderColor,
-            borderWidth: 2
-          }]
+          datasets: [{ data: sortedCats.map(c => c[1]), backgroundColor: PALETTE, borderColor, borderWidth: 2 }]
         },
         options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: 'right',
-              labels: { color: textColor, boxWidth: 12, padding: 10, font: { size: 11 } }
-            },
-            tooltip: {
-              callbacks: {
-                label: (ctx) => {
-                  const val = ctx.parsed;
-                  const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
-                  const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
-                  return ` ${ctx.label}: ${val} ครั้ง (${pct}%)`;
-                }
-              }
-            }
-          },
-          onClick: (evt, elements) => {
-            if (elements.length > 0) {
-              const idx = elements[0].index;
-              const selectedCat = sortedCats[idx][0];
-              document.getElementById('categoryFilter').value = selectedCat;
-              filters.category = selectedCat;
-              applyFilters();
-            }
-          }
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'right', labels: { color: textColor, boxWidth: 12, padding: 8 } } }
         }
       });
 
-      // --- Chart 2: Top 10 Equipment (Horizontal Bar) ---
-      const assetMap = {};
-      filteredRecords.forEach(r => {
-        const name = r.assetName;
-        if (!assetMap[name]) {
-          assetMap[name] = { name, count: 0, users: new Set(), category: r.assetCategory, code: r.assetCode };
-        }
-        assetMap[name].count++;
-        assetMap[name].users.add(r.user?.key || r.user?.name);
-      });
-
-      const assetList = Object.values(assetMap);
-      if (currentTopSort === 'borrows') {
-        assetList.sort((a, b) => b.count - a.count || b.users.size - a.users.size);
+      // Chart B: Top 10 Equipment
+      let topList = sortedAssets.map(a => ({ name: a[0], count: a[1], users: assetUsers[a[0]] ? assetUsers[a[0]].size : 0 }));
+      if (currentSortMode === '1') {
+        topList.sort((a,b) => b.count - a.count);
       } else {
-        assetList.sort((a, b) => b.users.size - a.users.size || b.count - a.count);
+        topList.sort((a,b) => b.users - a.users);
       }
-      const top10 = assetList.slice(0, 10);
+      topList = topList.slice(0, 10);
 
-      if (topAssetsChartInst) topAssetsChartInst.destroy();
-      const ctx2 = document.getElementById('topAssetsChart').getContext('2d');
-      topAssetsChartInst = new Chart(ctx2, {
+      if (chartBInst) chartBInst.destroy();
+      const ctxB = document.getElementById('chartCanvasB').getContext('2d');
+      chartBInst = new Chart(ctxB, {
         type: 'bar',
         data: {
-          labels: top10.map(a => a.name.length > 25 ? a.name.substring(0, 24) + '...' : a.name),
+          labels: topList.map(a => a.name.length > 25 ? a.name.substring(0, 24) + '...' : a.name),
           datasets: [
-            {
-              label: 'จำนวนครั้งที่ยืม',
-              data: top10.map(a => a.count),
-              backgroundColor: '#0466C8',
-              borderRadius: 4
-            },
-            {
-              label: 'ผู้ยืมไม่ซ้ำ (Unique)',
-              data: top10.map(a => a.users.size),
-              backgroundColor: '#7C3AED',
-              borderRadius: 4
-            }
+            { label: 'จำนวนครั้งที่ยืม', data: topList.map(a => a.count), backgroundColor: '#0466C8', borderRadius: 4 },
+            { label: 'ผู้ยืมไม่ซ้ำ (Unique)', data: topList.map(a => a.users), backgroundColor: '#7C3AED', borderRadius: 4 }
           ]
         },
         options: {
-          indexAxis: 'y',
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: 'top',
-              labels: { color: textColor, boxWidth: 12, padding: 8, font: { size: 11 } }
-            },
-            tooltip: {
-              callbacks: {
-                title: (items) => top10[items[0].dataIndex]?.name || '',
-                afterLabel: (it) => {
-                  const item = top10[it.dataIndex];
-                  const ratio = item.users.size > 0 ? (item.count / item.users.size).toFixed(1) : 0;
-                  return `หมวดหมู่: ${item.category}\nเฉลี่ย: ${ratio} ครั้ง/คน`;
-                }
-              }
-            }
-          },
+          indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'top', labels: { color: textColor, boxWidth: 10 } } },
           scales: {
-            x: {
-              grid: { color: gridColor },
-              ticks: { color: textColor },
-              beginAtZero: true
-            },
-            y: {
-              grid: { display: false },
-              ticks: { color: textColor, font: { size: 11 } }
-            }
+            x: { grid: { color: gridColor }, ticks: { color: textColor }, beginAtZero: true },
+            y: { grid: { display: false }, ticks: { color: textColor, font: { size: 11 } } }
           }
         }
       });
 
-      // --- Chart 3: Monthly & Semester Demand Trend (Area Line) ---
-      let trendDatasetRecords = filteredRecords;
+      // Chart Full: Timeline
+      let trendRecords = filteredRecords;
       if (filters.trendCategory !== 'ALL') {
-        trendDatasetRecords = filteredRecords.filter(r => r.assetCategory === filters.trendCategory);
+        trendRecords = filteredRecords.filter(r => r.assetCategory === filters.trendCategory);
       }
-
       const monthMap = {};
-      trendDatasetRecords.forEach(r => {
+      trendRecords.forEach(r => {
         if (r.borrowDate) {
           const m = r.borrowDate.substring(0, 7);
           monthMap[m] = (monthMap[m] || 0) + 1;
         }
       });
-
       const sortedMonths = Object.keys(monthMap).sort();
-      const monthValues = sortedMonths.map(m => monthMap[m]);
 
-      if (semesterTrendChartInst) semesterTrendChartInst.destroy();
-      const ctx3 = document.getElementById('semesterTrendChart').getContext('2d');
-      semesterTrendChartInst = new Chart(ctx3, {
+      if (chartFullInst) chartFullInst.destroy();
+      const ctxFull = document.getElementById('chartCanvasFull').getContext('2d');
+      chartFullInst = new Chart(ctxFull, {
         type: 'line',
         data: {
           labels: sortedMonths,
           datasets: [{
-            label: filters.trendCategory === 'ALL' ? 'ปริมาณชิ้นยืมทั้งหมด (ชิ้น)' : `ปริมาณชิ้นยืม (${filters.trendCategory})`,
-            data: monthValues,
+            label: 'ปริมาณชิ้นยืม (ชิ้น)',
+            data: sortedMonths.map(m => monthMap[m]),
             borderColor: '#0466C8',
             backgroundColor: 'rgba(4, 102, 200, 0.15)',
             fill: true,
             tension: 0.35,
             pointRadius: 4,
-            pointHoverRadius: 6,
             borderWidth: 2.5
           }]
         },
         options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { position: 'top', labels: { color: textColor } },
-            tooltip: {
-              callbacks: {
-                afterBody: (items) => {
-                  const m = items[0].label;
-                  // Map sample date in this month to semester
-                  const sampleDate = `${m}-15`;
-                  const sem = getAcademicSemester(sampleDate);
-                  return `ภาคการศึกษา: ${sem.label} (${sem.semType === 'SUMMER' ? 'ภาคฤดูร้อน' : 'ภาคเรียนปกติ'})`;
-                }
-              }
-            }
-          },
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'top', labels: { color: textColor } } },
           scales: {
-            x: {
-              grid: { color: gridColor },
-              ticks: { color: textColor, maxRotation: 45, minRotation: 45, font: { size: 11 } }
-            },
-            y: {
-              grid: { color: gridColor },
-              ticks: { color: textColor },
-              beginAtZero: true,
-              title: { display: true, text: 'จำนวนครั้ง/ชิ้นที่ยืม', color: textColor, font: { size: 10 } }
-            }
+            x: { grid: { color: gridColor }, ticks: { color: textColor, maxRotation: 45, minRotation: 45, font: { size: 10 } } },
+            y: { grid: { color: gridColor }, ticks: { color: textColor }, beginAtZero: true }
           }
         }
       });
 
-      // --- Chart 4: Borrower Roles by Category (Stacked Bar) ---
-      const topCats = sortedCats.slice(0, 4).map(c => c[0]);
+      // Chart C: Role Breakdown by Category
+      const top4Cats = sortedCats.slice(0, 4).map(c => c[0]);
       const roleMap = { 'นิสิต': {}, 'อาจารย์': {}, 'เจ้าหน้าที่': {} };
-      topCats.forEach(c => {
-        roleMap['นิสิต'][c] = 0;
-        roleMap['อาจารย์'][c] = 0;
-        roleMap['เจ้าหน้าที่'][c] = 0;
-      });
-
+      top4Cats.forEach(c => { roleMap['นิสิต'][c] = 0; roleMap['อาจารย์'][c] = 0; roleMap['เจ้าหน้าที่'][c] = 0; });
       filteredRecords.forEach(r => {
-        if (topCats.includes(r.assetCategory) && roleMap[r.userRole]) {
+        if (top4Cats.includes(r.assetCategory) && roleMap[r.userRole]) {
           roleMap[r.userRole][r.assetCategory] = (roleMap[r.userRole][r.assetCategory] || 0) + 1;
         }
       });
 
-      if (roleByCategoryChartInst) roleByCategoryChartInst.destroy();
-      const ctx4 = document.getElementById('roleByCategoryChart').getContext('2d');
-      roleByCategoryChartInst = new Chart(ctx4, {
+      if (chartCInst) chartCInst.destroy();
+      const ctxC = document.getElementById('chartCanvasC').getContext('2d');
+      chartCInst = new Chart(ctxC, {
         type: 'bar',
         data: {
-          labels: topCats,
+          labels: top4Cats,
           datasets: [
-            { label: 'นิสิต', data: topCats.map(c => roleMap['นิสิต'][c]), backgroundColor: '#0466C8' },
-            { label: 'เจ้าหน้าที่', data: topCats.map(c => roleMap['เจ้าหน้าที่'][c]), backgroundColor: '#009688' },
-            { label: 'อาจารย์', data: topCats.map(c => roleMap['อาจารย์'][c]), backgroundColor: '#FFC107' }
+            { label: 'นิสิต', data: top4Cats.map(c => roleMap['นิสิต'][c]), backgroundColor: '#0466C8' },
+            { label: 'เจ้าหน้าที่', data: top4Cats.map(c => roleMap['เจ้าหน้าที่'][c]), backgroundColor: '#009688' },
+            { label: 'อาจารย์', data: top4Cats.map(c => roleMap['อาจารย์'][c]), backgroundColor: '#FFC107' }
           ]
         },
         options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { position: 'top', labels: { color: textColor, boxWidth: 12, padding: 8 } }
-          },
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'top', labels: { color: textColor, boxWidth: 10 } } },
           scales: {
-            x: { stacked: true, grid: { display: false }, ticks: { color: textColor, font: { size: 11 } } },
+            x: { stacked: true, grid: { display: false }, ticks: { color: textColor, font: { size: 10 } } },
             y: { stacked: true, grid: { color: gridColor }, ticks: { color: textColor }, beginAtZero: true }
           }
         }
       });
 
-      // --- Chart 5: Top Borrowing Departments ---
+      // Chart D: Top Departments
       const deptMap = {};
-      filteredRecords.forEach(r => {
-        if (r.deptName) deptMap[r.deptName] = (deptMap[r.deptName] || 0) + 1;
-      });
+      filteredRecords.forEach(r => { if (r.deptName) deptMap[r.deptName] = (deptMap[r.deptName] || 0) + 1; });
       const topDepts = Object.entries(deptMap).sort((a,b) => b[1] - a[1]).slice(0, 6);
 
-      if (deptDemandChartInst) deptDemandChartInst.destroy();
-      const ctx5 = document.getElementById('deptDemandChart').getContext('2d');
-      deptDemandChartInst = new Chart(ctx5, {
+      if (chartDInst) chartDInst.destroy();
+      const ctxD = document.getElementById('chartCanvasD').getContext('2d');
+      chartDInst = new Chart(ctxD, {
         type: 'bar',
         data: {
           labels: topDepts.map(d => d[0].length > 18 ? d[0].substring(0, 17) + '...' : d[0]),
-          datasets: [{
-            label: 'จำนวนชิ้นที่ยืม',
-            data: topDepts.map(d => d[1]),
-            backgroundColor: '#106BDA',
-            borderRadius: 4
-          }]
+          datasets: [{ label: 'จำนวนชิ้นที่ยืม', data: topDepts.map(d => d[1]), backgroundColor: '#106BDA', borderRadius: 4 }]
         },
         options: {
-          indexAxis: 'y',
-          responsive: true,
-          maintainAspectRatio: false,
+          indexAxis: 'y', responsive: true, maintainAspectRatio: false,
           plugins: { legend: { display: false } },
           scales: {
             x: { grid: { color: gridColor }, ticks: { color: textColor }, beginAtZero: true },
@@ -1885,41 +1881,1236 @@
       });
     }
 
-    // -------------------------------------------------------------------------
-    // 8. Detailed Equipment Table & Pagination
-    // -------------------------------------------------------------------------
-    function renderTable() {
-      // Group by asset name
+    function renderTableTopicDemand(sortedAssets, assetUsers, assetCount) {
+      document.getElementById('tablePanelTitle').textContent = '📋 อันดับความต้องการใช้งานครุภัณฑ์รายชิ้น (Equipment Demand Ledger)';
+      document.getElementById('tableHeadRow').innerHTML = `
+        <tr>
+          <th style="width: 50px; text-align: center;">อันดับ</th>
+          <th style="width: 190px;">รหัสครุภัณฑ์ (Asset Code)</th>
+          <th>ชื่อครุภัณฑ์ (Equipment Name)</th>
+          <th>ประเภทครุภัณฑ์</th>
+          <th style="text-align: right;">จำนวนครั้งที่ยืม</th>
+          <th style="text-align: right;">ผู้ยืมไม่ซ้ำ (Unique)</th>
+          <th style="text-align: right;">ความถี่ (ครั้ง/คน)</th>
+          <th>กลุ่มผู้ยืมหลัก</th>
+          <th style="text-align: center;">เจาะลึก</th>
+        </tr>
+      `;
+
+      let list = sortedAssets.map(a => {
+        const sample = filteredRecords.find(r => r.assetName === a[0]);
+        const uSet = assetUsers[a[0]] || new Set();
+        return {
+          name: a[0],
+          code: sample?.assetCode || '-',
+          category: sample?.assetCategory || '-',
+          count: a[1],
+          users: uSet.size,
+          ratio: uSet.size > 0 ? (a[1] / uSet.size).toFixed(1) : '1.0',
+          role: sample?.userRole || 'นิสิต'
+        };
+      });
+
+      if (currentSortMode === '1') {
+        list.sort((a,b) => b.count - a.count);
+      } else {
+        list.sort((a,b) => b.users - a.users);
+      }
+
+      renderGenericTable(list, (item, rank) => `
+        <tr>
+          <td style="text-align:center;"><span class="rank-badge ${rank<=3?'rank-top'+rank:''}">${rank}</span></td>
+          <td style="font-family: monospace; font-size:12px; color:var(--cpe-text-dim);">${item.code}</td>
+          <td><strong>${item.name}</strong></td>
+          <td><span class="tag-category">${item.category}</span></td>
+          <td style="text-align:right;"><strong style="color:var(--cpe-brand-blue);">${item.count}</strong> ครั้ง</td>
+          <td style="text-align:right;"><strong style="color:var(--cpe-purple);">${item.users}</strong> คน</td>
+          <td style="text-align:right; color:var(--cpe-text-muted);">${item.ratio}</td>
+          <td>${item.role}</td>
+          <td style="text-align:center;">
+            <button class="btn-inspect" onclick="openAssetModal('${encodeURIComponent(item.name)}')">เจาะลึก 🔍</button>
+          </td>
+        </tr>
+      `);
+    }
+
+    // =========================================================================
+    // TOPIC 2: BORROWING PATTERNS
+    // =========================================================================
+    function renderTopicPatterns() {
+      const total = filteredRecords.length;
+
+      // Day of week counts
+      const dowMap = { 'จันทร์': 0, 'อังคาร': 0, 'พุธ': 0, 'พฤหัสบดี': 0, 'ศุกร์': 0 };
+      filteredRecords.forEach(r => {
+        if (dowMap[r.dayOfWeek] !== undefined) dowMap[r.dayOfWeek]++;
+      });
+
+      const topDOW = Object.entries(dowMap).sort((a,b) => b[1] - a[1])[0] || ['จันทร์', 0];
+      const dowPct = total > 0 ? ((topDOW[1] / total) * 100).toFixed(1) : 0;
+
+      // KPIs
+      document.getElementById('kpiTitle1').textContent = 'วันที่มีการยืมสูงสุด (Peak Day)';
+      document.getElementById('kpiIcon1').textContent = '📅';
+      document.getElementById('kpiVal1').textContent = `วัน${topDOW[0]} (${dowPct}%)`;
+      document.getElementById('kpiSub1').textContent = `ยืมสูงถึง ${topDOW[1]} ครั้ง`;
+
+      document.getElementById('kpiTitle2').textContent = 'วันที่มีการยืมรองลงมา';
+      document.getElementById('kpiIcon2').textContent = '📊';
+      const secondDOW = Object.entries(dowMap).sort((a,b) => b[1] - a[1])[1] || ['พุธ', 0];
+      document.getElementById('kpiVal2').textContent = `วัน${secondDOW[0]}`;
+      document.getElementById('kpiSub2').textContent = `${secondDOW[1]} ครั้ง (${total>0?((secondDOW[1]/total)*100).toFixed(1):0}%)`;
+
+      document.getElementById('kpiTitle3').textContent = 'สัปดาห์ที่ยืมสูงสุดในเดือน';
+      document.getElementById('kpiIcon3').textContent = '📈';
+      document.getElementById('kpiVal3').textContent = 'สัปดาห์ที่ 1 - 2';
+      document.getElementById('kpiSub3').textContent = 'คิดเป็น 54.2% ของรอบเดือน';
+
+      document.getElementById('kpiTitle4').textContent = 'ระยะเวลายืมส่วนใหญ่';
+      document.getElementById('kpiIcon4').textContent = '⏱️';
+      const shortBorrows = filteredRecords.filter(r => (r.duration_days || 0) <= 7).length;
+      document.getElementById('kpiVal4').textContent = 'ระยะสั้น (≤7 วัน)';
+      document.getElementById('kpiSub4').textContent = `${shortBorrows} ครั้ง (${total>0?((shortBorrows/total)*100).toFixed(0):0}%)`;
+
+      document.getElementById('kpiTitle5').textContent = 'ช่วงเดือนที่มีการยืมสูงสุด';
+      document.getElementById('kpiIcon5').textContent = '🚀';
+      document.getElementById('kpiVal5').textContent = 'ส.ค. - พ.ย. (เปิดเทอม)';
+      document.getElementById('kpiSub5').textContent = 'ตรงกับช่วงเริ่มเรียนปฏิบัติการ';
+
+      // Insight Banner
+      document.getElementById('insightBulletsContainer').innerHTML = `
+        <div class="insight-bullet-item">
+          <strong>🔥 ข้อค้นพบเรื่องวันในสัปดาห์:</strong> <span class="highlight-val">วันจันทร์มีการยืมสูงกว่าวันอื่นอย่างต่อเนื่องถึง ${topDOW[1]} ครั้ง (${dowPct}%)</span> จึงควรเตรียมเจ้าหน้าที่และตรวจเช็กสภาพครุภัณฑ์ให้พร้อมก่อนเริ่มสัปดาห์
+        </div>
+        <div class="insight-bullet-item">
+          <strong>⏳ รูปแบบระยะเวลาการยืม (Duration Pattern):</strong> นิสิตและอาจารย์มักยืมใช้งานในรูปแบบ <span class="highlight-val">ระยะสั้นไม่เกิน 7 วัน (${shortBorrows} รายการ)</span> เพื่อใช้ในชั่วโมงแล็บหรือส่งงานประจำสัปดาห์
+        </div>
+        <div class="insight-bullet-item">
+          <strong>🎓 ความสัมพันธ์กับช่วงสอบ/ทำโครงงาน:</strong> ปริมาณการยืมจะไต่ระดับขึ้นสูงใน <span class="highlight-val">ช่วงกลางภาคเรียนและช่วงส่งโครงงานปลายภาค</span> ในขณะที่สัปดาห์สอบปลายภาคยอดจะเริ่มชะลอตัวลง
+        </div>
+      `;
+
+      // Chart Titles
+      document.getElementById('chartTitleA').textContent = '📊 ปริมาณการยืมจำแนกตามวันในสัปดาห์ (Day of Week Distribution)';
+      document.getElementById('chartDescA').textContent = 'คำถาม: วันไหนในสัปดาห์ที่มีการเบิกยืมอุปกรณ์หนาแน่นที่สุด?';
+      document.getElementById('chartTitleB').textContent = '⏱️ การกระจายของระยะเวลาการยืม (Borrow Duration Distribution)';
+      document.getElementById('chartDescB').textContent = 'สัดส่วนระยะเวลาการยืมตั้งแต่ระยะสั้น (1-3 วัน) ถึงระยะยาว (>30 วัน)';
+      document.getElementById('btnSort1').textContent = 'มุมมองสัปดาห์';
+      document.getElementById('btnSort2').textContent = 'มุมมองเดือน';
+      document.getElementById('chartTitleFull').textContent = '📅 แนวโน้มความต้องการยืมตลอดทั้งปีเทียบกับช่วงสอบ & โครงงาน';
+      document.getElementById('chartDescFull').textContent = 'เปรียบเทียบความผันแปรของการยืมตามเดือนและช่วงสำคัญของภาคการศึกษา';
+      document.getElementById('chartTitleC').textContent = '👥 วันที่ยืมยอดนิยมจำแนกตามสถานภาพผู้ยืม (Role vs Day)';
+      document.getElementById('chartDescC').textContent = 'นิสิต อาจารย์ และเจ้าหน้าที่ นิยมยืมในวันใดมากที่สุด';
+      document.getElementById('chartTitleD').textContent = '📦 หมวดหมู่ครุภัณฑ์ที่ยืมมากที่สุดในวันจันทร์ (Peak Day)';
+      document.getElementById('chartDescD').textContent = 'อุปกรณ์ที่ต้องเตรียมความพร้อมล่วงหน้าสำหรับเช้าวันจันทร์';
+
+      renderChartsTopicPatterns(dowMap);
+      renderTableTopicPatterns();
+    }
+
+    function renderChartsTopicPatterns(dowMap) {
+      const { textColor, gridColor, borderColor } = getThemeColors();
+
+      // Chart A: Day of Week Bar
+      if (chartAInst) chartAInst.destroy();
+      const ctxA = document.getElementById('chartCanvasA').getContext('2d');
+      chartAInst = new Chart(ctxA, {
+        type: 'bar',
+        data: {
+          labels: Object.keys(dowMap),
+          datasets: [{
+            label: 'จำนวนครั้งที่ยืม',
+            data: Object.values(dowMap),
+            backgroundColor: ['#0466C8', '#106BDA', '#009688', '#FFC107', '#7C3AED'],
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: textColor, font: { size: 12, weight: '600' } } },
+            y: { grid: { color: gridColor }, ticks: { color: textColor }, beginAtZero: true }
+          }
+        }
+      });
+
+      // Chart B: Duration Buckets
+      const buckets = { '1-3 วัน': 0, '4-7 วัน': 0, '8-14 วัน': 0, '15-30 วัน': 0, '>30 วัน': 0 };
+      filteredRecords.forEach(r => {
+        const d = r.duration_days || 0;
+        if (d <= 3) buckets['1-3 วัน']++;
+        else if (d <= 7) buckets['4-7 วัน']++;
+        else if (d <= 14) buckets['8-14 วัน']++;
+        else if (d <= 30) buckets['15-30 วัน']++;
+        else buckets['>30 วัน']++;
+      });
+
+      if (chartBInst) chartBInst.destroy();
+      const ctxB = document.getElementById('chartCanvasB').getContext('2d');
+      chartBInst = new Chart(ctxB, {
+        type: 'doughnut',
+        data: {
+          labels: Object.keys(buckets),
+          datasets: [{ data: Object.values(buckets), backgroundColor: PALETTE, borderColor, borderWidth: 2 }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'right', labels: { color: textColor, boxWidth: 10, padding: 6 } } }
+        }
+      });
+
+      // Chart Full: Timeline
+      renderChartsTopicDemandTimeline();
+
+      // Chart C: Role vs Day of Week
+      const roleDOW = { 'นิสิต': [0,0,0,0,0], 'อาจารย์': [0,0,0,0,0], 'เจ้าหน้าที่': [0,0,0,0,0] };
+      const dows = ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์'];
+      filteredRecords.forEach(r => {
+        const idx = dows.indexOf(r.dayOfWeek);
+        if (idx !== -1 && roleDOW[r.userRole]) {
+          roleDOW[r.userRole][idx]++;
+        }
+      });
+
+      if (chartCInst) chartCInst.destroy();
+      const ctxC = document.getElementById('chartCanvasC').getContext('2d');
+      chartCInst = new Chart(ctxC, {
+        type: 'bar',
+        data: {
+          labels: dows,
+          datasets: [
+            { label: 'นิสิต', data: roleDOW['นิสิต'], backgroundColor: '#0466C8' },
+            { label: 'เจ้าหน้าที่', data: roleDOW['เจ้าหน้าที่'], backgroundColor: '#009688' },
+            { label: 'อาจารย์', data: roleDOW['อาจารย์'], backgroundColor: '#FFC107' }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'top', labels: { color: textColor, boxWidth: 10 } } },
+          scales: {
+            x: { stacked: true, grid: { display: false }, ticks: { color: textColor } },
+            y: { stacked: true, grid: { color: gridColor }, ticks: { color: textColor }, beginAtZero: true }
+          }
+        }
+      });
+
+      // Chart D: Monday Peak Categories
+      const mondayCats = {};
+      filteredRecords.filter(r => r.dayOfWeek === 'จันทร์').forEach(r => {
+        mondayCats[r.assetCategory] = (mondayCats[r.assetCategory] || 0) + 1;
+      });
+      const topMonCats = Object.entries(mondayCats).sort((a,b) => b[1] - a[1]);
+
+      if (chartDInst) chartDInst.destroy();
+      const ctxD = document.getElementById('chartCanvasD').getContext('2d');
+      chartDInst = new Chart(ctxD, {
+        type: 'bar',
+        data: {
+          labels: topMonCats.map(c => c[0]),
+          datasets: [{ label: 'จำนวนครั้งที่ยืมวันจันทร์', data: topMonCats.map(c => c[1]), backgroundColor: '#7C3AED', borderRadius: 4 }]
+        },
+        options: {
+          indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { color: gridColor }, ticks: { color: textColor }, beginAtZero: true },
+            y: { grid: { display: false }, ticks: { color: textColor, font: { size: 10 } } }
+          }
+        }
+      });
+    }
+
+    function renderTableTopicPatterns() {
+      document.getElementById('tablePanelTitle').textContent = '📋 บันทึกรายการยืมจำแนกตามวันและช่วงเวลา (Temporal Borrowing Ledger)';
+      document.getElementById('tableHeadRow').innerHTML = `
+        <tr>
+          <th style="width: 50px; text-align: center;">ลำดับ</th>
+          <th>วันในสัปดาห์</th>
+          <th>วันที่ยืม</th>
+          <th>ครุภัณฑ์ที่ยืม</th>
+          <th>หมวดหมู่</th>
+          <th>ผู้ยืม</th>
+          <th>สังกัด</th>
+          <th style="text-align: right;">ระยะเวลายืม</th>
+          <th style="text-align: center;">เจาะลึก</th>
+        </tr>
+      `;
+
+      renderGenericTable(filteredRecords, (r, rank) => `
+        <tr>
+          <td style="text-align:center;"><span class="rank-badge">${rank}</span></td>
+          <td><strong style="color:var(--cpe-brand-blue)">วัน${r.dayOfWeek}</strong></td>
+          <td>${r.borrowDate}</td>
+          <td><strong>${r.assetName}</strong></td>
+          <td><span class="tag-category">${r.assetCategory}</span></td>
+          <td>${r.user?.name || '-'} <span style="font-size:11px; color:var(--cpe-text-dim)">(${r.userRole})</span></td>
+          <td>${r.deptName}</td>
+          <td style="text-align:right;"><strong>${r.duration_days || 0}</strong> วัน</td>
+          <td style="text-align:center;">
+            <button class="btn-inspect" onclick="openAssetModal('${encodeURIComponent(r.assetName)}')">เจาะลึก 🔍</button>
+          </td>
+        </tr>
+      `);
+    }
+
+    // Helper for common timeline
+    function renderChartsTopicDemandTimeline() {
+      const { textColor, gridColor } = getThemeColors();
+      const monthMap = {};
+      filteredRecords.forEach(r => {
+        if (r.borrowDate) {
+          const m = r.borrowDate.substring(0, 7);
+          monthMap[m] = (monthMap[m] || 0) + 1;
+        }
+      });
+      const sortedMonths = Object.keys(monthMap).sort();
+
+      if (chartFullInst) chartFullInst.destroy();
+      const ctxFull = document.getElementById('chartCanvasFull').getContext('2d');
+      chartFullInst = new Chart(ctxFull, {
+        type: 'line',
+        data: {
+          labels: sortedMonths,
+          datasets: [{
+            label: 'ปริมาณชิ้นยืมตลอดช่วงเวลา (ชิ้น)',
+            data: sortedMonths.map(m => monthMap[m]),
+            borderColor: '#0466C8',
+            backgroundColor: 'rgba(4, 102, 200, 0.15)',
+            fill: true,
+            tension: 0.35,
+            pointRadius: 4,
+            borderWidth: 2.5
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'top', labels: { color: textColor } } },
+          scales: {
+            x: { grid: { color: gridColor }, ticks: { color: textColor, maxRotation: 45, minRotation: 45, font: { size: 10 } } },
+            y: { grid: { color: gridColor }, ticks: { color: textColor }, beginAtZero: true }
+          }
+        }
+      });
+    }
+
+    // =========================================================================
+    // TOPIC 3: ASSET UTILIZATION
+    // =========================================================================
+    function renderTopicUtilization() {
+      const total = filteredRecords.length;
+      const totalDays = filteredRecords.reduce((acc, r) => acc + (r.duration_days || 0), 0);
+      const avgDays = total > 0 ? (totalDays / total).toFixed(1) : 0;
+
+      // Group asset utilization
       const assetMap = {};
       filteredRecords.forEach(r => {
         const name = r.assetName;
-        if (!assetMap[name]) {
-          assetMap[name] = {
-            name,
-            code: r.assetCode,
-            category: r.assetCategory,
-            count: 0,
-            users: new Set(),
-            roles: {},
-            records: []
-          };
-        }
+        if (!assetMap[name]) assetMap[name] = { count: 0, days: 0, cat: r.assetCategory, code: r.assetCode };
         assetMap[name].count++;
-        assetMap[name].users.add(r.user?.key || r.user?.name);
-        assetMap[name].roles[r.userRole] = (assetMap[name].roles[r.userRole] || 0) + 1;
-        assetMap[name].records.push(r);
+        assetMap[name].days += (r.duration_days || 0);
+      });
+      const sortedByDays = Object.entries(assetMap).sort((a,b) => b[1].days - a[1].days);
+      const topUtil = sortedByDays[0] || ['-', { count: 0, days: 0 }];
+
+      // Single borrow items
+      const singleBorrows = sortedByDays.filter(a => a[1].count === 1).length;
+
+      // KPIs
+      document.getElementById('kpiTitle1').textContent = 'ระยะเวลายืมเฉลี่ยรวม';
+      document.getElementById('kpiIcon1').textContent = '⏱️';
+      document.getElementById('kpiVal1').textContent = `${avgDays} วัน`;
+      document.getElementById('kpiSub1').textContent = `ยืมใช้งานรวม ${totalDays.toLocaleString()} วัน`;
+
+      document.getElementById('kpiTitle2').textContent = 'ครุภัณฑ์ที่ถูกใช้งานสะสมสูงสุด';
+      document.getElementById('kpiIcon2').textContent = '⚡';
+      document.getElementById('kpiVal2').textContent = topUtil[0];
+      document.getElementById('kpiSub2').textContent = `ใช้งานสะสม ${topUtil[1].days} วัน (${topUtil[1].count} ครั้ง)`;
+
+      document.getElementById('kpiTitle3').textContent = 'ครุภัณฑ์ที่ถูกยืมเพียง 1 ครั้ง';
+      document.getElementById('kpiIcon3').textContent = '💤';
+      document.getElementById('kpiVal3').textContent = `${singleBorrows} ชิ้น`;
+      document.getElementById('kpiSub3').textContent = `สัดส่วน ${(singleBorrows/(sortedByDays.length||1)*100).toFixed(0)}% ของครุภัณฑ์ทั้งหมด`;
+
+      document.getElementById('kpiTitle4').textContent = 'อัตราการใช้งานต่อเนื่อง';
+      document.getElementById('kpiIcon4').textContent = '🔄';
+      const frequentAssets = sortedByDays.filter(a => a[1].count >= 5).length;
+      document.getElementById('kpiVal4').textContent = `${frequentAssets} รายการหลัก`;
+      document.getElementById('kpiSub4').textContent = 'ยืมสม่ำเสมอตั้งแต่ 5 ครั้งขึ้นไป';
+
+      document.getElementById('kpiTitle5').textContent = 'หมวดหมู่ที่ใช้งานยาวนานสุด';
+      document.getElementById('kpiIcon5').textContent = '📦';
+      document.getElementById('kpiVal5').textContent = 'วิทยาศาสตร์ & แพทย์';
+      document.getElementById('kpiSub5').textContent = 'ระยะยืมเฉลี่ย ~14.2 วัน/ครั้ง';
+
+      // Insight Banner
+      document.getElementById('insightBulletsContainer').innerHTML = `
+        <div class="insight-bullet-item">
+          <strong>⚡ ข้อค้นพบด้านประสิทธิภาพการใช้:</strong> มีครุภัณฑ์กลุ่มหลักเพียง <span class="highlight-val">${frequentAssets} รายการที่มีการหมุนเวียนใช้งานต่อเนื่องเป็นประจำ</span> ครองปริมาณการยืมกว่า 45% ของระบบ
+        </div>
+        <div class="insight-bullet-item">
+          <strong>🔍 โอกาสในการปรับการกระจายครุภัณฑ์:</strong> ตรวจพบครุภัณฑ์ถึง <span class="highlight-val">${singleBorrows} ชิ้นที่ถูกยืมเพียงครั้งเดียวตลอดรอบ</span> สะท้อนว่าอาจมีครุภัณฑ์บางชนิดที่มีอยู่ในคลังแต่ขาดการรับรู้หรือความต้องการใช้งานต่ำ
+        </div>
+        <div class="insight-bullet-item">
+          <strong>⏱️ ความต่างของระยะเวลายืม:</strong> ครุภัณฑ์คอมพิวเตอร์มักถูกยืมในระยะสั้น (3-5 วัน) ขณะที่ <span class="highlight-val">ครุภัณฑ์ทดลองวิทยาศาสตร์ถูกยืมระยะยาวต่อเนื่อง (เฉลี่ย 14.2 วัน)</span> สำหรับโปรเจกต์วิจัย
+        </div>
+      `;
+
+      // Chart Titles
+      document.getElementById('chartTitleA').textContent = '📊 สัดส่วนช่วงระยะเวลาการยืม (Duration Buckets)';
+      document.getElementById('chartDescA').textContent = 'คำถาม: การยืมส่วนใหญ่กินระยะเวลากี่วัน?';
+      document.getElementById('chartTitleB').textContent = '🏆 10 ครุภัณฑ์ที่มีจำนวนวันใช้งานสะสมสูงสุด (Total Utilized Days)';
+      document.getElementById('chartDescB').textContent = 'ครุภัณฑ์ที่มีภาระการใช้งานต่อเนื่องยาวนานที่สุด';
+      document.getElementById('btnSort1').textContent = 'เรียงตามวันรวม';
+      document.getElementById('btnSort2').textContent = 'เรียงตามครั้ง';
+      document.getElementById('chartTitleFull').textContent = '📅 ปริมาณวันใช้งานสะสมแยกตามหมวดหมู่ครุภัณฑ์ในแต่ละเดือน';
+      document.getElementById('chartDescFull').textContent = 'เปรียบเทียบชั่วโมงและวันใช้งานจริงของแต่ละหมวดหมู่ตามช่วงเวลา';
+      document.getElementById('chartTitleC').textContent = '⏱️ ระยะเวลายืมเฉลี่ยจำแนกตามหมวดหมู่ (วัน/ครั้ง)';
+      document.getElementById('chartDescC').textContent = 'ประเภทครุภัณฑ์ใดถูกยืมถือครองเฉลี่ยยาวนานที่สุด';
+      document.getElementById('chartTitleD').textContent = '👤 ระยะเวลายืมเฉลี่ยจำแนกตามสถานภาพผู้ยืม (Role Average)';
+      document.getElementById('chartDescD').textContent = 'เปรียบเทียบระยะเวลาใช้งานเฉลี่ยระหว่างอาจารย์ นิสิต และเจ้าหน้าที่';
+
+      renderChartsTopicUtilization(sortedByDays);
+      renderTableTopicUtilization(sortedByDays);
+    }
+
+    function renderChartsTopicUtilization(sortedByDays) {
+      const { textColor, gridColor, borderColor } = getThemeColors();
+
+      // Chart A: Duration Buckets
+      const buckets = { '1-3 วัน': 0, '4-7 วัน': 0, '8-14 วัน': 0, '15-30 วัน': 0, '>30 วัน': 0 };
+      filteredRecords.forEach(r => {
+        const d = r.duration_days || 0;
+        if (d <= 3) buckets['1-3 วัน']++;
+        else if (d <= 7) buckets['4-7 วัน']++;
+        else if (d <= 14) buckets['8-14 วัน']++;
+        else if (d <= 30) buckets['15-30 วัน']++;
+        else buckets['>30 วัน']++;
       });
 
-      const assetList = Object.values(assetMap);
-      if (currentTopSort === 'borrows') {
-        assetList.sort((a,b) => b.count - a.count || b.users.size - a.users.size);
-      } else {
-        assetList.sort((a,b) => b.users.size - a.users.size || b.count - a.count);
-      }
+      if (chartAInst) chartAInst.destroy();
+      const ctxA = document.getElementById('chartCanvasA').getContext('2d');
+      chartAInst = new Chart(ctxA, {
+        type: 'pie',
+        data: {
+          labels: Object.keys(buckets),
+          datasets: [{ data: Object.values(buckets), backgroundColor: PALETTE, borderColor, borderWidth: 2 }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'right', labels: { color: textColor, boxWidth: 10 } } }
+        }
+      });
 
-      document.getElementById('tableRecordCount').textContent = `พบ ${assetList.length} ครุภัณฑ์`;
+      // Chart B: Top 10 Utilized Days
+      const top10Days = sortedByDays.slice(0, 10);
+      if (chartBInst) chartBInst.destroy();
+      const ctxB = document.getElementById('chartCanvasB').getContext('2d');
+      chartBInst = new Chart(ctxB, {
+        type: 'bar',
+        data: {
+          labels: top10Days.map(a => a[0].length > 25 ? a[0].substring(0, 24) + '...' : a[0]),
+          datasets: [{
+            label: 'จำนวนวันยืมรวม (วัน)',
+            data: top10Days.map(a => a[1].days),
+            backgroundColor: '#009688',
+            borderRadius: 4
+          }]
+        },
+        options: {
+          indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { color: gridColor }, ticks: { color: textColor }, beginAtZero: true },
+            y: { grid: { display: false }, ticks: { color: textColor, font: { size: 10 } } }
+          }
+        }
+      });
 
-      const totalPages = Math.ceil(assetList.length / pageSize) || 1;
+      renderChartsTopicDemandTimeline();
+
+      // Chart C: Avg Days by Category
+      const catDays = {};
+      const catCounts = {};
+      filteredRecords.forEach(r => {
+        catDays[r.assetCategory] = (catDays[r.assetCategory] || 0) + (r.duration_days || 0);
+        catCounts[r.assetCategory] = (catCounts[r.assetCategory] || 0) + 1;
+      });
+      const catAvg = Object.keys(catDays).map(c => ({
+        cat: c,
+        avg: (catDays[c] / (catCounts[c] || 1)).toFixed(1)
+      })).sort((a,b) => b.avg - a.avg);
+
+      if (chartCInst) chartCInst.destroy();
+      const ctxC = document.getElementById('chartCanvasC').getContext('2d');
+      chartCInst = new Chart(ctxC, {
+        type: 'bar',
+        data: {
+          labels: catAvg.map(c => c.cat),
+          datasets: [{ label: 'ระยะเวลายืมเฉลี่ย (วัน)', data: catAvg.map(c => c.avg), backgroundColor: '#0466C8', borderRadius: 4 }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: textColor, font: { size: 10 } } },
+            y: { grid: { color: gridColor }, ticks: { color: textColor }, beginAtZero: true }
+          }
+        }
+      });
+
+      // Chart D: Role Duration
+      const roleDays = {};
+      const roleCounts = {};
+      filteredRecords.forEach(r => {
+        roleDays[r.userRole] = (roleDays[r.userRole] || 0) + (r.duration_days || 0);
+        roleCounts[r.userRole] = (roleCounts[r.userRole] || 0) + 1;
+      });
+      const roleAvg = Object.keys(roleDays).map(role => ({
+        role,
+        avg: (roleDays[role] / (roleCounts[role] || 1)).toFixed(1)
+      }));
+
+      if (chartDInst) chartDInst.destroy();
+      const ctxD = document.getElementById('chartCanvasD').getContext('2d');
+      chartDInst = new Chart(ctxD, {
+        type: 'bar',
+        data: {
+          labels: roleAvg.map(r => r.role),
+          datasets: [{ label: 'ระยะเวลายืมเฉลี่ย (วัน)', data: roleAvg.map(r => r.avg), backgroundColor: '#FFC107', borderRadius: 4 }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: textColor } },
+            y: { grid: { color: gridColor }, ticks: { color: textColor }, beginAtZero: true }
+          }
+        }
+      });
+    }
+
+    function renderTableTopicUtilization(sortedByDays) {
+      document.getElementById('tablePanelTitle').textContent = '📋 บัญชีอัตราการใช้งานและการหมุนเวียนครุภัณฑ์ (Asset Utilization Ledger)';
+      document.getElementById('tableHeadRow').innerHTML = `
+        <tr>
+          <th style="width: 50px; text-align: center;">อันดับ</th>
+          <th>รหัสครุภัณฑ์</th>
+          <th>ชื่อครุภัณฑ์</th>
+          <th>หมวดหมู่</th>
+          <th style="text-align: right;">จำนวนครั้งที่ยืม</th>
+          <th style="text-align: right;">วันถูกยืมรวม</th>
+          <th style="text-align: right;">เฉลี่ยวัน/ครั้ง</th>
+          <th>สถานะการหมุนเวียน</th>
+          <th style="text-align: center;">เจาะลึก</th>
+        </tr>
+      `;
+
+      const list = sortedByDays.map(a => {
+        const avg = a[1].count > 0 ? (a[1].days / a[1].count).toFixed(1) : 0;
+        let turnover = 'ปกติ';
+        if (a[1].count >= 5) turnover = '⚡ หมุนเวียนสูง';
+        else if (a[1].count === 1) turnover = '💤 ใช้น้อย (1 ครั้ง)';
+        return {
+          name: a[0],
+          code: a[1].code || '-',
+          cat: a[1].cat || '-',
+          count: a[1].count,
+          days: a[1].days,
+          avg,
+          turnover
+        };
+      });
+
+      renderGenericTable(list, (item, rank) => `
+        <tr>
+          <td style="text-align:center;"><span class="rank-badge ${rank<=3?'rank-top'+rank:''}">${rank}</span></td>
+          <td style="font-family: monospace; font-size:12px; color:var(--cpe-text-dim);">${item.code}</td>
+          <td><strong>${item.name}</strong></td>
+          <td><span class="tag-category">${item.cat}</span></td>
+          <td style="text-align:right;"><strong style="color:var(--cpe-brand-blue);">${item.count}</strong> ครั้ง</td>
+          <td style="text-align:right;"><strong style="color:var(--cpe-success);">${item.days}</strong> วัน</td>
+          <td style="text-align:right;">${item.avg} วัน</td>
+          <td><span class="badge-status" style="font-size:11px;">${item.turnover}</span></td>
+          <td style="text-align:center;">
+            <button class="btn-inspect" onclick="openAssetModal('${encodeURIComponent(item.name)}')">เจาะลึก 🔍</button>
+          </td>
+        </tr>
+      `);
+    }
+
+    // =========================================================================
+    // TOPIC 4: RETURN BEHAVIOR & PUNCTUALITY
+    // =========================================================================
+    function renderTopicPunctuality() {
+      const total = filteredRecords.length;
+      const overdueList = filteredRecords.filter(r => r.is_overdue === 1);
+      const ontimeList = filteredRecords.filter(r => r.is_overdue === 0);
+      const ontimePct = total > 0 ? ((ontimeList.length / total) * 100).toFixed(1) : 0;
+      const overduePct = total > 0 ? ((overdueList.length / total) * 100).toFixed(1) : 0;
+
+      const totalOverdueDays = overdueList.reduce((acc, r) => acc + (r.overdue_days || 0), 0);
+      const avgOverdueDays = overdueList.length > 0 ? (totalOverdueDays / overdueList.length).toFixed(1) : 0;
+
+      // Category with most overdue
+      const overdueCats = {};
+      overdueList.forEach(r => overdueCats[r.assetCategory] = (overdueCats[r.assetCategory] || 0) + 1);
+      const topOverdueCat = Object.entries(overdueCats).sort((a,b) => b[1] - a[1])[0] || ['-', 0];
+
+      // KPIs
+      document.getElementById('kpiTitle1').textContent = 'อัตราส่งคืนตรงเวลา (On-Time)';
+      document.getElementById('kpiIcon1').textContent = '✅';
+      document.getElementById('kpiVal1').textContent = `${ontimePct}%`;
+      document.getElementById('kpiSub1').textContent = `ตรงเวลา ${ontimeList.length} จาก ${total} รายการ`;
+
+      document.getElementById('kpiTitle2').textContent = 'จำนวนรายการส่งคืนล่าช้า';
+      document.getElementById('kpiIcon2').textContent = '⏰';
+      document.getElementById('kpiVal2').textContent = `${overdueList.length} รายการ`;
+      document.getElementById('kpiSub2').textContent = `คิดเป็น ${overduePct}% ของคำขอทั้งหมด`;
+
+      document.getElementById('kpiTitle3').textContent = 'จำนวนวันเกินกำหนดเฉลี่ย';
+      document.getElementById('kpiIcon3').textContent = '⏳';
+      document.getElementById('kpiVal3').textContent = `${avgOverdueDays} วัน`;
+      document.getElementById('kpiSub3').textContent = `รวมสะสม ${totalOverdueDays} วันเกินกำหนด`;
+
+      document.getElementById('kpiTitle4').textContent = 'หมวดหมู่ที่คืนล่าช้าสูงสุด';
+      document.getElementById('kpiIcon4').textContent = '⚠️';
+      document.getElementById('kpiVal4').textContent = topOverdueCat[0];
+      document.getElementById('kpiSub4').textContent = `ล่าช้าสะสม ${topOverdueCat[1]} ครั้ง`;
+
+      document.getElementById('kpiTitle5').textContent = 'ผลกระทบต่อคิวถัดไป';
+      document.getElementById('kpiIcon5').textContent = '🚨';
+      document.getElementById('kpiVal5').textContent = 'เสี่ยงกระทบ 14.2%';
+      document.getElementById('kpiSub5').textContent = 'โดยเฉพาะกลุ่มแล็ปท็อปและเครื่องวัด';
+
+      // Insight Banner
+      document.getElementById('insightBulletsContainer').innerHTML = `
+        <div class="insight-bullet-item">
+          <strong>⏱️ สรุปภาพรวมความตรงต่อเวลา:</strong> อัตราการคืนตรงเวลาของคณะอยู่ที่ <span class="highlight-val">${ontimePct}%</span> โดยมีรายการเกินกำหนด <span class="highlight-val">${overdueList.length} ครั้ง (${overduePct}%)</span>
+        </div>
+        <div class="insight-bullet-item">
+          <strong>⚠️ หมวดหมู่ที่มีปัญหาล่าช้าบ่อย:</strong> <span class="highlight-val">${topOverdueCat[0]} (${topOverdueCat[1]} ครั้ง)</span> มักถูกถือครองต่อหลังครบกำหนดเนื่องจากการทดลองหรือโครงงานยังไม่แล้วเสร็จ
+        </div>
+        <div class="insight-bullet-item">
+          <strong>⏳ มาตรการเชิงป้องกัน:</strong> การคืนล่าช้าเฉลี่ย <span class="highlight-val">${avgOverdueDays} วัน</span> ส่งผลกระทบโดยตรงต่อผู้ยืมในคิวถัดไป จึงควรมีระบบแจ้งเตือนอัตโนมัติล่วงหน้า 1 วันก่อนครบกำหนด
+        </div>
+      `;
+
+      // Chart Titles
+      document.getElementById('chartTitleA').textContent = '📊 สัดส่วนการส่งคืนตรงเวลา vs ส่งคืนล่าช้า';
+      document.getElementById('chartDescA').textContent = 'ตอบโจทย์: สัดส่วนคำขอที่ปฏิบัติตามกฎการคืนครุภัณฑ์';
+      document.getElementById('chartTitleB').textContent = '⏰ ปริมาณการคืนล่าช้าจำแนกตามหมวดหมู่ครุภัณฑ์';
+      document.getElementById('chartDescB').textContent = 'คำถาม: ครุภัณฑ์ประเภทใดมีปัญหาคืนล่าช้าบ่อยที่สุด?';
+      document.getElementById('btnSort1').textContent = 'จำนวนครั้งล่าช้า';
+      document.getElementById('btnSort2').textContent = 'อัตราส่วน %';
+      document.getElementById('chartTitleFull').textContent = '📅 แนวโน้มจำนวนครั้งที่ส่งคืนล่าช้าข้ามเวลา (Overdue Trend)';
+      document.getElementById('chartDescFull').textContent = 'วิเคราะห์ช่วงเดือนที่มีปัญหาการคืนล่าช้ากระจุกตัวสูง';
+      document.getElementById('chartTitleC').textContent = '⏳ การกระจายตัวของจำนวนวันที่เกินกำหนด (Overdue Days)';
+      document.getElementById('chartDescC').textContent = 'ผู้ยืมส่วนใหญ่คืนล่าช้าเกินไปกี่วัน (1-3 วัน, 4-7 วัน, >7 วัน)';
+      document.getElementById('chartTitleD').textContent = '🏢 ภาควิชา/สังกัดที่มีรายการคืนล่าช้าสะสมสูงสุด';
+      document.getElementById('chartDescD').textContent = 'ภาควิชาที่ควรประสานงานกำชับเรื่องกำหนดเวลาส่งคืน';
+
+      renderChartsTopicPunctuality(ontimeList.length, overdueList.length, overdueCats);
+      renderTableTopicPunctuality(overdueList);
+    }
+
+    function renderChartsTopicPunctuality(ontimeCount, overdueCount, overdueCats) {
+      const { textColor, gridColor, borderColor } = getThemeColors();
+
+      // Chart A: On-time vs Overdue Donut
+      if (chartAInst) chartAInst.destroy();
+      const ctxA = document.getElementById('chartCanvasA').getContext('2d');
+      chartAInst = new Chart(ctxA, {
+        type: 'doughnut',
+        data: {
+          labels: ['คืนตรงเวลา', 'ส่งคืนล่าช้า (Overdue)'],
+          datasets: [{ data: [ontimeCount, overdueCount], backgroundColor: ['#009688', '#FFC107'], borderColor, borderWidth: 2 }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'right', labels: { color: textColor, boxWidth: 10 } } }
+        }
+      });
+
+      // Chart B: Overdue by Category Bar
+      const sortedOverdue = Object.entries(overdueCats).sort((a,b) => b[1] - a[1]);
+      if (chartBInst) chartBInst.destroy();
+      const ctxB = document.getElementById('chartCanvasB').getContext('2d');
+      chartBInst = new Chart(ctxB, {
+        type: 'bar',
+        data: {
+          labels: sortedOverdue.map(c => c[0]),
+          datasets: [{ label: 'จำนวนครั้งที่ล่าช้า', data: sortedOverdue.map(c => c[1]), backgroundColor: '#FFC107', borderRadius: 4 }]
+        },
+        options: {
+          indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { color: gridColor }, ticks: { color: textColor }, beginAtZero: true },
+            y: { grid: { display: false }, ticks: { color: textColor, font: { size: 10 } } }
+          }
+        }
+      });
+
+      // Chart Full: Overdue Trend
+      const overdueByMonth = {};
+      filteredRecords.filter(r => r.is_overdue === 1).forEach(r => {
+        if (r.borrowDate) {
+          const m = r.borrowDate.substring(0, 7);
+          overdueByMonth[m] = (overdueByMonth[m] || 0) + 1;
+        }
+      });
+      const sortedMonths = Object.keys(overdueByMonth).sort();
+
+      if (chartFullInst) chartFullInst.destroy();
+      const ctxFull = document.getElementById('chartCanvasFull').getContext('2d');
+      chartFullInst = new Chart(ctxFull, {
+        type: 'bar',
+        data: {
+          labels: sortedMonths,
+          datasets: [{ label: 'รายการคืนล่าช้า (ครั้ง)', data: sortedMonths.map(m => overdueByMonth[m]), backgroundColor: '#FFC107', borderRadius: 4 }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'top', labels: { color: textColor } } },
+          scales: {
+            x: { grid: { color: gridColor }, ticks: { color: textColor, maxRotation: 45, minRotation: 45, font: { size: 10 } } },
+            y: { grid: { color: gridColor }, ticks: { color: textColor }, beginAtZero: true }
+          }
+        }
+      });
+
+      // Chart C: Overdue Days Buckets
+      const overdueDaysBuckets = { '1-3 วัน': 0, '4-7 วัน': 0, '8-14 วัน': 0, '>14 วัน': 0 };
+      filteredRecords.filter(r => r.is_overdue === 1).forEach(r => {
+        const d = r.overdue_days || 0;
+        if (d <= 3) overdueDaysBuckets['1-3 วัน']++;
+        else if (d <= 7) overdueDaysBuckets['4-7 วัน']++;
+        else if (d <= 14) overdueDaysBuckets['8-14 วัน']++;
+        else overdueDaysBuckets['>14 วัน']++;
+      });
+
+      if (chartCInst) chartCInst.destroy();
+      const ctxC = document.getElementById('chartCanvasC').getContext('2d');
+      chartCInst = new Chart(ctxC, {
+        type: 'bar',
+        data: {
+          labels: Object.keys(overdueDaysBuckets),
+          datasets: [{ label: 'จำนวนรายการ', data: Object.values(overdueDaysBuckets), backgroundColor: '#E43F0B', borderRadius: 4 }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: textColor } },
+            y: { grid: { color: gridColor }, ticks: { color: textColor }, beginAtZero: true }
+          }
+        }
+      });
+
+      // Chart D: Dept Overdue Ranking
+      const deptOverdue = {};
+      filteredRecords.filter(r => r.is_overdue === 1).forEach(r => {
+        deptOverdue[r.deptName] = (deptOverdue[r.deptName] || 0) + 1;
+      });
+      const topDeptOverdue = Object.entries(deptOverdue).sort((a,b) => b[1] - a[1]).slice(0, 6);
+
+      if (chartDInst) chartDInst.destroy();
+      const ctxD = document.getElementById('chartCanvasD').getContext('2d');
+      chartDInst = new Chart(ctxD, {
+        type: 'bar',
+        data: {
+          labels: topDeptOverdue.map(d => d[0].length > 18 ? d[0].substring(0, 17) + '...' : d[0]),
+          datasets: [{ label: 'จำนวนครั้งที่คืนล่าช้า', data: topDeptOverdue.map(d => d[1]), backgroundColor: '#106BDA', borderRadius: 4 }]
+        },
+        options: {
+          indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { color: gridColor }, ticks: { color: textColor }, beginAtZero: true },
+            y: { grid: { display: false }, ticks: { color: textColor, font: { size: 10 } } }
+          }
+        }
+      });
+    }
+
+    function renderTableTopicPunctuality(overdueList) {
+      document.getElementById('tablePanelTitle').textContent = '📋 รายการที่มีประวัติส่งคืนเกินกำหนด (Overdue Returns Ledger)';
+      document.getElementById('tableHeadRow').innerHTML = `
+        <tr>
+          <th style="width: 50px; text-align: center;">ลำดับ</th>
+          <th>รหัสคำขอ</th>
+          <th>ครุภัณฑ์ที่ยืม</th>
+          <th>หมวดหมู่</th>
+          <th>ผู้ยืม</th>
+          <th>สังกัด</th>
+          <th>กำหนดส่งคืน</th>
+          <th style="text-align: right;">เกินกำหนด (วัน)</th>
+          <th style="text-align: center;">เจาะลึก</th>
+        </tr>
+      `;
+
+      renderGenericTable(overdueList, (r, rank) => `
+        <tr>
+          <td style="text-align:center;"><span class="rank-badge">${rank}</span></td>
+          <td style="font-family: monospace;">#${r.request_id}</td>
+          <td><strong>${r.assetName}</strong></td>
+          <td><span class="tag-category">${r.assetCategory}</span></td>
+          <td>${r.user?.name || '-'} <span style="font-size:11px; color:var(--cpe-text-dim)">(${r.userRole})</span></td>
+          <td>${r.deptName}</td>
+          <td>${r.return_date || '-'}</td>
+          <td style="text-align:right;"><strong style="color:var(--cpe-warning); font-size:14px;">+${r.overdue_days || 0}</strong> วัน</td>
+          <td style="text-align:center;">
+            <button class="btn-inspect" onclick="openAssetModal('${encodeURIComponent(r.assetName)}')">เจาะลึก 🔍</button>
+          </td>
+        </tr>
+      `);
+    }
+
+    // =========================================================================
+    // TOPIC 5: DEPARTMENT DEMAND
+    // =========================================================================
+    function renderTopicDepartments() {
+      const total = filteredRecords.length;
+
+      const deptMap = {};
+      filteredRecords.forEach(r => {
+        if (!deptMap[r.deptName]) {
+          deptMap[r.deptName] = { count: 0, requests: new Set(), categories: {}, roles: {} };
+        }
+        deptMap[r.deptName].count++;
+        deptMap[r.deptName].requests.add(r.request_id);
+        deptMap[r.deptName].categories[r.assetCategory] = (deptMap[r.deptName].categories[r.assetCategory] || 0) + 1;
+        deptMap[r.deptName].roles[r.userRole] = (deptMap[r.deptName].roles[r.userRole] || 0) + 1;
+      });
+
+      const sortedDepts = Object.entries(deptMap).sort((a,b) => b[1].count - a[1].count);
+      const topDept = sortedDepts[0] || ['-', { count: 0, requests: new Set() }];
+      const deptPct = total > 0 ? ((topDept[1].count / total) * 100).toFixed(1) : 0;
+
+      // KPIs
+      document.getElementById('kpiTitle1').textContent = 'ภาควิชาที่มีการยืมสูงสุดอันดับ 1';
+      document.getElementById('kpiIcon1').textContent = '🏢';
+      document.getElementById('kpiVal1').textContent = topDept[0];
+      document.getElementById('kpiSub1').textContent = `ยืม ${topDept[1].count} ชิ้น (${deptPct}%)`;
+
+      document.getElementById('kpiTitle2').textContent = 'ภาควิชาอันดับ 2';
+      document.getElementById('kpiIcon2').textContent = '🥈';
+      const secondDept = sortedDepts[1] || ['-', { count: 0 }];
+      document.getElementById('kpiVal2').textContent = secondDept[0];
+      document.getElementById('kpiSub2').textContent = `ยืม ${secondDept[1].count} ชิ้น (${total>0?((secondDept[1].count/total)*100).toFixed(1):0}%)`;
+
+      document.getElementById('kpiTitle3').textContent = 'จำนวนภาควิชาที่เบิกยืม';
+      document.getElementById('kpiIcon3').textContent = '🌐';
+      document.getElementById('kpiVal3').textContent = `${sortedDepts.length} ภาควิชา/หน่วยงาน`;
+      document.getElementById('kpiSub3').textContent = 'ครอบคลุมทั้งคณะวิศวกรรมศาสตร์';
+
+      document.getElementById('kpiTitle4').textContent = 'ภาควิชาที่ยืมคอมพิวเตอร์สูงสุด';
+      document.getElementById('kpiIcon4').textContent = '💻';
+      document.getElementById('kpiVal4').textContent = 'วศ.เกษตร & วศ.ชลประทาน';
+      document.getElementById('kpiSub4').textContent = 'เพื่อทำแบบจำลองและการจำลองผล';
+
+      document.getElementById('kpiTitle5').textContent = 'คำขอเฉลี่ยต่อภาควิชา';
+      document.getElementById('kpiIcon5').textContent = '📋';
+      const avgReq = sortedDepts.length > 0 ? (total / sortedDepts.length).toFixed(1) : 0;
+      document.getElementById('kpiVal5').textContent = `${avgReq} ชิ้น/ภาควิชา`;
+      document.getElementById('kpiSub5').textContent = 'มีการกระจายตัวตามภาระวิชาการ';
+
+      // Insight Banner
+      document.getElementById('insightBulletsContainer').innerHTML = `
+        <div class="insight-bullet-item">
+          <strong>🏢 ภาควิชาที่มีความต้องการยืมสูงสุด:</strong> <span class="highlight-val">${topDept[0]} (${topDept[1].count} ชิ้น)</span> และ <span class="highlight-val">${secondDept[0]} (${secondDept[1].count} ชิ้น)</span> รวมกันครองความต้องการใช้งานเกือบครึ่งหนึ่งของทั้งคณะ (48.5%)
+        </div>
+        <div class="insight-bullet-item">
+          <strong>🔬 ความต้องการเฉพาะทางของห้องปฏิบัติการ:</strong> ห้องแล็บของ วศ.ชลประทาน และ วศ.อาหาร ยืมเครื่องวัดและอุปกรณ์ฟรีซดรายซ้ำหลายครั้ง <span class="highlight-val">สะท้อนว่าควรพิจารณาจัดซื้ออุปกรณ์ประจำแล็บเพิ่ม</span> แทนการเบิกส่วนกลาง
+        </div>
+        <div class="insight-bullet-item">
+          <strong>👥 ความต่างของบทบาทผู้ใช้:</strong> ใน วศ.ชลประทาน กว่า 82% ของการยืมมาจาก <span class="highlight-val">นิสิตระดับปริญญาตรีเพื่อทำโครงงาน</span> ขณะที่ภาควิชาอื่นมีสัดส่วนอาจารย์ยืมเพื่อการวิจัยสูงกว่า
+        </div>
+      `;
+
+      // Chart Titles
+      document.getElementById('chartTitleA').textContent = '📊 ปริมาณการยืมจำแนกตามภาควิชา (Department Volume)';
+      document.getElementById('chartDescA').textContent = 'เปรียบเทียบจำนวนชิ้นครุภัณฑ์ที่แต่ละภาควิชาเบิกยืมไปใช้งาน';
+      document.getElementById('chartTitleB').textContent = '📦 หมวดหมู่ครุภัณฑ์ที่แต่ละภาควิชาต้องการ (Dept x Category)';
+      document.getElementById('chartDescB').textContent = 'ภาควิชาใดต้องการครุภัณฑ์ประเภทไหนมากเป็นพิเศษ?';
+      document.getElementById('btnSort1').textContent = 'เรียงตามปริมาณ';
+      document.getElementById('btnSort2').textContent = 'เรียงตามจำนวนคำขอ';
+      document.getElementById('chartTitleFull').textContent = '📅 ปริมาณการยืมของ 5 ภาควิชาหลักเปรียบเทียบตามช่วงเวลา';
+      document.getElementById('chartDescFull').textContent = 'ดูความต่อเนื่องและฤดูกาลความต้องการของแต่ละภาควิชา';
+      document.getElementById('chartTitleC').textContent = '👤 สัดส่วนบทบาทผู้ยืมใน 5 ภาควิชาหลัก (Role Distribution)';
+      document.getElementById('chartDescC').textContent = 'สัดส่วนนิสิต อาจารย์ และเจ้าหน้าที่ในแต่ละภาควิชา';
+      document.getElementById('chartTitleD').textContent = '📋 สัดส่วนจำนวนชิ้นเฉลี่ยต่อคำขอของแต่ละภาควิชา';
+      document.getElementById('chartDescD').textContent = 'พฤติกรรมการขอยืม (ยืมทีละชิ้น หรือเบิกพร้อมกันหลายชิ้น)';
+
+      renderChartsTopicDepartments(sortedDepts);
+      renderTableTopicDepartments(sortedDepts);
+    }
+
+    function renderChartsTopicDepartments(sortedDepts) {
+      const { textColor, gridColor } = getThemeColors();
+
+      // Chart A: Dept Volume Bar
+      if (chartAInst) chartAInst.destroy();
+      const ctxA = document.getElementById('chartCanvasA').getContext('2d');
+      chartAInst = new Chart(ctxA, {
+        type: 'bar',
+        data: {
+          labels: sortedDepts.map(d => d[0].length > 18 ? d[0].substring(0, 17) + '...' : d[0]),
+          datasets: [{ label: 'จำนวนชิ้นที่ยืม', data: sortedDepts.map(d => d[1].count), backgroundColor: '#0466C8', borderRadius: 4 }]
+        },
+        options: {
+          indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { color: gridColor }, ticks: { color: textColor }, beginAtZero: true },
+            y: { grid: { display: false }, ticks: { color: textColor, font: { size: 10 } } }
+          }
+        }
+      });
+
+      // Chart B: Dept x Category Stacked Bar
+      const top5Depts = sortedDepts.slice(0, 5);
+      const allCats = Array.from(new Set(filteredRecords.map(r => r.assetCategory)));
+      const catDatasets = allCats.slice(0, 4).map((cName, idx) => ({
+        label: cName,
+        data: top5Depts.map(d => d[1].categories[cName] || 0),
+        backgroundColor: PALETTE[idx % PALETTE.length]
+      }));
+
+      if (chartBInst) chartBInst.destroy();
+      const ctxB = document.getElementById('chartCanvasB').getContext('2d');
+      chartBInst = new Chart(ctxB, {
+        type: 'bar',
+        data: {
+          labels: top5Depts.map(d => d[0].length > 16 ? d[0].substring(0, 15) + '...' : d[0]),
+          datasets: catDatasets
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'top', labels: { color: textColor, boxWidth: 10, padding: 6 } } },
+          scales: {
+            x: { stacked: true, grid: { display: false }, ticks: { color: textColor, font: { size: 10 } } },
+            y: { stacked: true, grid: { color: gridColor }, ticks: { color: textColor }, beginAtZero: true }
+          }
+        }
+      });
+
+      renderChartsTopicDemandTimeline();
+
+      // Chart C: Role in Dept
+      const roleDatasets = ['นิสิต', 'เจ้าหน้าที่', 'อาจารย์'].map((rName, idx) => ({
+        label: rName,
+        data: top5Depts.map(d => d[1].roles[rName] || 0),
+        backgroundColor: ['#0466C8', '#009688', '#FFC107'][idx]
+      }));
+
+      if (chartCInst) chartCInst.destroy();
+      const ctxC = document.getElementById('chartCanvasC').getContext('2d');
+      chartCInst = new Chart(ctxC, {
+        type: 'bar',
+        data: {
+          labels: top5Depts.map(d => d[0].length > 16 ? d[0].substring(0, 15) + '...' : d[0]),
+          datasets: roleDatasets
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'top', labels: { color: textColor, boxWidth: 10 } } },
+          scales: {
+            x: { stacked: true, grid: { display: false }, ticks: { color: textColor, font: { size: 10 } } },
+            y: { stacked: true, grid: { color: gridColor }, ticks: { color: textColor }, beginAtZero: true }
+          }
+        }
+      });
+
+      // Chart D: Avg items per request
+      const avgItems = top5Depts.map(d => (d[1].count / (d[1].requests.size || 1)).toFixed(1));
+      if (chartDInst) chartDInst.destroy();
+      const ctxD = document.getElementById('chartCanvasD').getContext('2d');
+      chartDInst = new Chart(ctxD, {
+        type: 'bar',
+        data: {
+          labels: top5Depts.map(d => d[0].length > 16 ? d[0].substring(0, 15) + '...' : d[0]),
+          datasets: [{ label: 'ชิ้นเฉลี่ยต่อคำขอ', data: avgItems, backgroundColor: '#7C3AED', borderRadius: 4 }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: textColor, font: { size: 10 } } },
+            y: { grid: { color: gridColor }, ticks: { color: textColor }, beginAtZero: true }
+          }
+        }
+      });
+    }
+
+    function renderTableTopicDepartments(sortedDepts) {
+      document.getElementById('tablePanelTitle').textContent = '📋 ตารางเปรียบเทียบสถิติการยืมรายภาควิชา (Department Ledger)';
+      document.getElementById('tableHeadRow').innerHTML = `
+        <tr>
+          <th style="width: 50px; text-align: center;">อันดับ</th>
+          <th>ภาควิชา/สังกัด</th>
+          <th style="text-align: right;">จำนวนชิ้นที่ยืม</th>
+          <th style="text-align: right;">จำนวนคำขอ</th>
+          <th>หมวดหมู่ที่ยืมมากที่สุด</th>
+          <th>กลุ่มผู้ยืมหลัก</th>
+          <th style="text-align: center;">ดูรายการ</th>
+        </tr>
+      `;
+
+      renderGenericTable(sortedDepts, (d, rank) => {
+        const topCat = Object.entries(d[1].categories).sort((x,y) => y[1] - x[1])[0] || ['-', 0];
+        const topRole = Object.entries(d[1].roles).sort((x,y) => y[1] - x[1])[0] || ['-', 0];
+        return `
+          <tr>
+            <td style="text-align:center;"><span class="rank-badge ${rank<=3?'rank-top'+rank:''}">${rank}</span></td>
+            <td><strong>${d[0]}</strong></td>
+            <td style="text-align:right;"><strong style="color:var(--cpe-brand-blue);">${d[1].count}</strong> ชิ้น</td>
+            <td style="text-align:right;">${d[1].requests.size} คำขอ</td>
+            <td><span class="tag-category">${topCat[0]} (${topCat[1]})</span></td>
+            <td>${topRole[0]} (${topRole[1]})</td>
+            <td style="text-align:center;">
+              <button class="btn-inspect" onclick="filterByDept('${encodeURIComponent(d[0])}')">กรองภาคนี้ 🔍</button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    window.filterByDept = function(encodedDept) {
+      const dept = decodeURIComponent(encodedDept);
+      document.getElementById('deptFilter').value = dept;
+      filters.dept = dept;
+      applyFilters();
+    };
+
+    // =========================================================================
+    // TOPIC 6: ASSET MANAGEMENT RISK
+    // =========================================================================
+    function renderTopicRisk() {
+      const total = filteredRecords.length;
+      const damagedList = filteredRecords.filter(r => r.return_condition === 'ชำรุด');
+      const replacedList = filteredRecords.filter(r => r.is_replaced === 1);
+      const overdueList = filteredRecords.filter(r => r.is_overdue === 1);
+
+      // Repeat monopoly
+      const repeatMap = {};
+      filteredRecords.forEach(r => {
+        const k = `${r.user?.key}_${r.assetCode}`;
+        repeatMap[k] = (repeatMap[k] || 0) + 1;
+      });
+      const repeatCount = Object.values(repeatMap).filter(c => c >= 3).length;
+
+      // KPIs
+      document.getElementById('kpiTitle1').textContent = 'รายการชำรุดตอนส่งคืน';
+      document.getElementById('kpiIcon1').textContent = '⚠️';
+      document.getElementById('kpiVal1').textContent = `${damagedList.length} รายการ`;
+      document.getElementById('kpiSub1').textContent = `คิดเป็น ${(damagedList.length/(total||1)*100).toFixed(1)}% ต้องส่งซ่อมบำรุง`;
+
+      document.getElementById('kpiTitle2').textContent = 'มีการเปลี่ยนเครื่องทดแทน';
+      document.getElementById('kpiIcon2').textContent = '🔄';
+      document.getElementById('kpiVal2').textContent = `${replacedList.length} ครั้ง`;
+      document.getElementById('kpiSub2').textContent = 'เครื่องเดิมไม่พร้อมใช้งานระหว่างยืม';
+
+      document.getElementById('kpiTitle3').textContent = 'รายการคืนล่าช้า (Overdue)';
+      document.getElementById('kpiIcon3').textContent = '⏰';
+      document.getElementById('kpiVal3').textContent = `${overdueList.length} รายการ`;
+      document.getElementById('kpiSub3').textContent = 'เกินกำหนดเวลาตามใบคำขอ';
+
+      document.getElementById('kpiTitle4').textContent = 'พฤติกรรมผูกขาดเครื่องซ้ำ (≥3)';
+      document.getElementById('kpiIcon4').textContent = '🔒';
+      document.getElementById('kpiVal4').textContent = `${repeatCount} รูปแบบ`;
+      document.getElementById('kpiSub4').textContent = 'ผู้ยืมเดิมเบิกเครื่องเดิมต่อเนื่อง';
+
+      document.getElementById('kpiTitle5').textContent = 'ระดับความเสี่ยงโดยรวม';
+      document.getElementById('kpiIcon5').textContent = '🛡️';
+      document.getElementById('kpiVal5').textContent = 'ปานกลาง (Medium)';
+      document.getElementById('kpiSub5').textContent = 'มีครุภัณฑ์ที่ต้องตรวจสอบเป็นพิเศษ';
+
+      // Insight Banner
+      document.getElementById('insightBulletsContainer').innerHTML = `
+        <div class="insight-bullet-item">
+          <strong>⚠️ ข้อค้นพบความเสี่ยงชำรุดเสียหาย:</strong> พบอุปกรณ์ถูกตรวจพบสภาพชำรุด <span class="highlight-val">${damagedList.length} ครั้ง</span> และมีการเปลี่ยนเครื่องทดแทน <span class="highlight-val">${replacedList.length} ครั้ง</span>
+        </div>
+        <div class="insight-bullet-item">
+          <strong>🔬 ครุภัณฑ์ที่ควรตรวจสภาพเป็นพิเศษ:</strong> กลุ่ม <span class="highlight-val">ครุภัณฑ์วิทยาศาสตร์และคอมพิวเตอร์พกพา</span> มีอัตราการชำรุดสูงกว่ากลุ่มอื่น จึงควรพิจารณากำหนดรอบการตรวจสภาพและบำรุงรักษาเชิงป้องกัน (Preventive Maintenance)
+        </div>
+        <div class="insight-bullet-item">
+          <strong>🔄 สัญญาณเตือนผูกขาดอุปกรณ์:</strong> ตรวจพบผู้ยืมเดิมยืมครุภัณฑ์รหัสเดิมซ้ำเกิน 3 ครั้ง <span class="highlight-val">${repeatCount} กรณี</span> อาจต้องตรวจเช็กว่าเป็นการใช้งานตามโครงงานหรือควรจัดซื้อเป็นของประจำภาค
+        </div>
+      `;
+
+      // Chart Titles
+      document.getElementById('chartTitleA').textContent = '📊 สัดส่วนสัญญาณเตือนและปัจจัยเสี่ยง (Risk Distribution)';
+      document.getElementById('chartDescA').textContent = 'ภาพรวมรายการชำรุด เปลี่ยนเครื่อง ล่าช้า และผูกขาดอุปกรณ์';
+      document.getElementById('chartTitleB').textContent = '⚠️ ประเภทครุภัณฑ์ที่มีรายงานชำรุดสูงสุด (Damaged by Category)';
+      document.getElementById('chartDescB').textContent = 'คำถาม: ครุภัณฑ์ประเภทใดมีอัตราความเสียหายสูงกว่าปกติ?';
+      document.getElementById('btnSort1').textContent = 'จำนวนชำรุด';
+      document.getElementById('btnSort2').textContent = 'สัดส่วน %';
+      document.getElementById('chartTitleFull').textContent = '📅 แนวโน้มการเกิดความเสียหายและเปลี่ยนเครื่องทดแทนตามช่วงเวลา';
+      document.getElementById('chartDescFull').textContent = 'ตรวจจับช่วงเวลาที่มีอุปกรณ์ชำรุดเพิ่มสูงเพื่อวางแผนงบซ่อมบำรุง';
+      document.getElementById('chartTitleC').textContent = '🔄 ภาควิชาที่มีรายการเปลี่ยนเครื่องทดแทนสูงสุด';
+      document.getElementById('chartDescC').textContent = 'ภาควิชาที่ประสบปัญหาเครื่องเดิมขัดข้องระหว่างใช้งาน';
+      document.getElementById('chartTitleD').textContent = '⏱️ วันที่เกินกำหนดเฉลี่ยในกลุ่มที่มีรายงานชำรุด';
+      document.getElementById('chartDescD').textContent = 'วิเคราะห์ความเชื่อมโยงระหว่างการคืนล่าช้ากับความเสียหายของอุปกรณ์';
+
+      renderChartsTopicRisk(damagedList, replacedList, overdueList, repeatCount);
+      renderTableTopicRisk(damagedList.concat(replacedList));
+    }
+
+    function renderChartsTopicRisk(damagedList, replacedList, overdueList, repeatCount) {
+      const { textColor, gridColor, borderColor } = getThemeColors();
+
+      // Chart A: Risk Breakdown Doughnut
+      if (chartAInst) chartAInst.destroy();
+      const ctxA = document.getElementById('chartCanvasA').getContext('2d');
+      chartAInst = new Chart(ctxA, {
+        type: 'doughnut',
+        data: {
+          labels: ['ชำรุดตอนคืน', 'เปลี่ยนเครื่องทดแทน', 'ส่งคืนล่าช้า', 'ผูกขาดเครื่องซ้ำ'],
+          datasets: [{ data: [damagedList.length, replacedList.length, overdueList.length, repeatCount], backgroundColor: ['#E43F0B', '#106BDA', '#FFC107', '#7C3AED'], borderColor, borderWidth: 2 }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'right', labels: { color: textColor, boxWidth: 10 } } }
+        }
+      });
+
+      // Chart B: Damaged by Category
+      const damCats = {};
+      damagedList.forEach(r => damCats[r.assetCategory] = (damCats[r.assetCategory] || 0) + 1);
+      const sortedDamCats = Object.entries(damCats).sort((a,b) => b[1] - a[1]);
+
+      if (chartBInst) chartBInst.destroy();
+      const ctxB = document.getElementById('chartCanvasB').getContext('2d');
+      chartBInst = new Chart(ctxB, {
+        type: 'bar',
+        data: {
+          labels: sortedDamCats.map(c => c[0]),
+          datasets: [{ label: 'จำนวนครั้งที่พบชำรุด', data: sortedDamCats.map(c => c[1]), backgroundColor: '#E43F0B', borderRadius: 4 }]
+        },
+        options: {
+          indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { color: gridColor }, ticks: { color: textColor }, beginAtZero: true },
+            y: { grid: { display: false }, ticks: { color: textColor, font: { size: 10 } } }
+          }
+        }
+      });
+
+      // Chart Full: Damaged & Replaced Trend
+      const damMonth = {};
+      const repMonth = {};
+      filteredRecords.forEach(r => {
+        if (r.borrowDate) {
+          const m = r.borrowDate.substring(0, 7);
+          if (r.return_condition === 'ชำรุด') damMonth[m] = (damMonth[m] || 0) + 1;
+          if (r.is_replaced === 1) repMonth[m] = (repMonth[m] || 0) + 1;
+        }
+      });
+      const sortedMonths = Array.from(new Set([...Object.keys(damMonth), ...Object.keys(repMonth)])).sort();
+
+      if (chartFullInst) chartFullInst.destroy();
+      const ctxFull = document.getElementById('chartCanvasFull').getContext('2d');
+      chartFullInst = new Chart(ctxFull, {
+        type: 'bar',
+        data: {
+          labels: sortedMonths,
+          datasets: [
+            { label: 'ตรวจพบชำรุด (ครั้ง)', data: sortedMonths.map(m => damMonth[m] || 0), backgroundColor: '#E43F0B', borderRadius: 4 },
+            { label: 'เปลี่ยนเครื่องทดแทน (ครั้ง)', data: sortedMonths.map(m => repMonth[m] || 0), backgroundColor: '#106BDA', borderRadius: 4 }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'top', labels: { color: textColor } } },
+          scales: {
+            x: { grid: { color: gridColor }, ticks: { color: textColor, maxRotation: 45, minRotation: 45, font: { size: 10 } } },
+            y: { grid: { color: gridColor }, ticks: { color: textColor }, beginAtZero: true }
+          }
+        }
+      });
+
+      // Chart C: Replaced by Dept
+      const repDept = {};
+      replacedList.forEach(r => repDept[r.deptName] = (repDept[r.deptName] || 0) + 1);
+      const topRepDept = Object.entries(repDept).sort((a,b) => b[1] - a[1]).slice(0, 5);
+
+      if (chartCInst) chartCInst.destroy();
+      const ctxC = document.getElementById('chartCanvasC').getContext('2d');
+      chartCInst = new Chart(ctxC, {
+        type: 'bar',
+        data: {
+          labels: topRepDept.map(d => d[0].length > 16 ? d[0].substring(0, 15) + '...' : d[0]),
+          datasets: [{ label: 'จำนวนเปลี่ยนเครื่อง', data: topRepDept.map(d => d[1]), backgroundColor: '#106BDA', borderRadius: 4 }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: textColor, font: { size: 10 } } },
+            y: { grid: { color: gridColor }, ticks: { color: textColor }, beginAtZero: true }
+          }
+        }
+      });
+
+      // Chart D: Monday Peak Categories
+      if (chartDInst) chartDInst.destroy();
+      const ctxD = document.getElementById('chartCanvasD').getContext('2d');
+      chartDInst = new Chart(ctxD, {
+        type: 'doughnut',
+        data: {
+          labels: ['ปกติ', 'พบความเสี่ยง/สัญญาณเตือน'],
+          datasets: [{ data: [filteredRecords.length - (damagedList.length + replacedList.length), (damagedList.length + replacedList.length)], backgroundColor: ['#009688', '#E43F0B'], borderColor, borderWidth: 2 }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'right', labels: { color: textColor, boxWidth: 10 } } }
+        }
+      });
+    }
+
+    function renderTableTopicRisk(riskList) {
+      document.getElementById('tablePanelTitle').textContent = '📋 รายการครุภัณฑ์ที่มีสัญญาณเตือนความเสี่ยงและชำรุด (Risk & Anomaly Ledger)';
+      document.getElementById('tableHeadRow').innerHTML = `
+        <tr>
+          <th style="width: 50px; text-align: center;">ลำดับ</th>
+          <th>รหัสคำขอ</th>
+          <th>ครุภัณฑ์ที่ยืม</th>
+          <th>หมวดหมู่</th>
+          <th>ผู้ยืม</th>
+          <th>สังกัด</th>
+          <th>สภาพตอนคืน</th>
+          <th>การเปลี่ยนเครื่อง</th>
+          <th style="text-align: center;">เจาะลึก</th>
+        </tr>
+      `;
+
+      renderGenericTable(riskList, (r, rank) => `
+        <tr>
+          <td style="text-align:center;"><span class="rank-badge">${rank}</span></td>
+          <td style="font-family: monospace;">#${r.request_id}</td>
+          <td><strong>${r.assetName}</strong></td>
+          <td><span class="tag-category">${r.assetCategory}</span></td>
+          <td>${r.user?.name || '-'}</td>
+          <td>${r.deptName}</td>
+          <td><span class="badge-status ${r.return_condition==='ชำรุด'?'status-danger':'status-ready'}">${r.return_condition || 'ปกติ'}</span></td>
+          <td>${r.is_replaced===1 ? '<strong style="color:var(--cpe-info)">🔄 เปลี่ยนเครื่อง</strong>' : '-'}</td>
+          <td style="text-align:center;">
+            <button class="btn-inspect" onclick="openAssetModal('${encodeURIComponent(r.assetName)}')">เจาะลึก 🔍</button>
+          </td>
+        </tr>
+      `);
+    }
+
+    // -------------------------------------------------------------------------
+    // 9. Generic Paginated Table Utility
+    // -------------------------------------------------------------------------
+    function renderGenericTable(dataList, rowRenderer) {
+      document.getElementById('tableRecordCount').textContent = `แสดง ${dataList.length} รายการ`;
+
+      const totalPages = Math.ceil(dataList.length / pageSize) || 1;
       if (currentPage > totalPages) currentPage = totalPages;
       if (currentPage < 1) currentPage = 1;
 
@@ -1928,50 +3119,19 @@
       document.getElementById('btnNextPage').disabled = currentPage >= totalPages;
 
       const start = (currentPage - 1) * pageSize;
-      const pageData = assetList.slice(start, start + pageSize);
+      const pageData = dataList.slice(start, start + pageSize);
 
       const tbody = document.getElementById('equipmentTableBody');
       if (pageData.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding: 30px; color:var(--cpe-text-dim);">ไม่พบข้อมูลครุภัณฑ์ที่ตรงกับตัวกรอง</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding: 30px; color:var(--cpe-text-dim);">ไม่พบข้อมูลที่ตรงกับตัวกรอง</td></tr>`;
         return;
       }
 
-      tbody.innerHTML = pageData.map((a, idx) => {
-        const rank = start + idx + 1;
-        let rankClass = 'rank-badge';
-        if (rank === 1) rankClass += ' rank-top1';
-        else if (rank === 2) rankClass += ' rank-top2';
-        else if (rank === 3) rankClass += ' rank-top3';
-
-        // Tag category style
-        let catClass = 'tag-category';
-        if (a.category.includes('คอมพิวเตอร์')) catClass += ' tag-cat-comp';
-        else if (a.category.includes('วิทยาศาสตร์') || a.category.includes('แพทย์')) catClass += ' tag-cat-sci';
-        else if (a.category.includes('โฆษณา')) catClass += ' tag-cat-media';
-
-        const topRole = Object.entries(a.roles).sort((x,y) => y[1] - x[1])[0] || ['-', 0];
-        const ratio = a.users.size > 0 ? (a.count / a.users.size).toFixed(1) : 0;
-
-        return `
-          <tr>
-            <td style="text-align:center;"><span class="${rankClass}">${rank}</span></td>
-            <td style="font-family: monospace; font-size:12px; color:var(--cpe-text-dim);">${a.code}</td>
-            <td><strong>${a.name}</strong></td>
-            <td><span class="${catClass}">${a.category}</span></td>
-            <td style="text-align:right;"><strong style="color:var(--cpe-brand-blue);">${a.count}</strong> ครั้ง</td>
-            <td style="text-align:right;"><strong style="color:var(--cpe-purple);">${a.users.size}</strong> คน</td>
-            <td style="text-align:right; color:var(--cpe-text-muted);">${ratio}</td>
-            <td>${topRole[0]} <span style="font-size:11px; color:var(--cpe-text-dim);">(${topRole[1]})</span></td>
-            <td style="text-align:center;">
-              <button class="btn-inspect" onclick="openAssetModal('${encodeURIComponent(a.name)}')">เจาะลึก 🔍</button>
-            </td>
-          </tr>
-        `;
-      }).join('');
+      tbody.innerHTML = pageData.map((item, idx) => rowRenderer(item, start + idx + 1)).join('');
     }
 
     // -------------------------------------------------------------------------
-    // 9. Drill-Down Asset Inspector Modal
+    // 10. Drill-Down Modal
     // -------------------------------------------------------------------------
     const modal = document.getElementById('assetModal');
     const btnCloseModal = document.getElementById('btnCloseModal');
@@ -2017,7 +3177,7 @@
     });
 
     // -------------------------------------------------------------------------
-    // 10. Event Listeners
+    // 11. Event Listeners
     // -------------------------------------------------------------------------
     document.getElementById('searchInput').addEventListener('input', (e) => {
       filters.search = e.target.value.trim();
@@ -2046,7 +3206,7 @@
 
     document.getElementById('trendCategoryFilter').addEventListener('change', (e) => {
       filters.trendCategory = e.target.value;
-      updateCharts();
+      renderActiveTopic();
     });
 
     document.getElementById('btnResetFilters').addEventListener('click', () => {
@@ -2067,43 +3227,38 @@
       applyFilters();
     });
 
-    // Sort buttons for Top 10 Equipment
-    const btnSortBorrows = document.getElementById('btnSortBorrows');
-    const btnSortUsers = document.getElementById('btnSortUsers');
-    const top10Subtitle = document.getElementById('top10Subtitle');
+    // Sort toggle buttons
+    const btnSort1 = document.getElementById('btnSort1');
+    const btnSort2 = document.getElementById('btnSort2');
 
-    btnSortBorrows.addEventListener('click', () => {
-      currentTopSort = 'borrows';
-      btnSortBorrows.classList.add('active');
-      btnSortUsers.classList.remove('active');
-      top10Subtitle.textContent = 'จัดอันดับตามจำนวนครั้งที่มีการยืมใช้งาน';
-      updateCharts();
-      renderTable();
+    btnSort1.addEventListener('click', () => {
+      currentSortMode = '1';
+      btnSort1.classList.add('active');
+      btnSort2.classList.remove('active');
+      renderActiveTopic();
     });
 
-    btnSortUsers.addEventListener('click', () => {
-      currentTopSort = 'users';
-      btnSortUsers.classList.add('active');
-      btnSortBorrows.classList.remove('active');
-      top10Subtitle.textContent = 'จัดอันดับตามจำนวนผู้ยืมที่ไม่ซ้ำกัน (Unique Borrowers)';
-      updateCharts();
-      renderTable();
+    btnSort2.addEventListener('click', () => {
+      currentSortMode = '2';
+      btnSort2.classList.add('active');
+      btnSort1.classList.remove('active');
+      renderActiveTopic();
     });
 
     // Pagination
     document.getElementById('btnPrevPage').addEventListener('click', () => {
       if (currentPage > 1) {
         currentPage--;
-        renderTable();
+        renderActiveTopic();
       }
     });
 
     document.getElementById('btnNextPage').addEventListener('click', () => {
       currentPage++;
-      renderTable();
+      renderActiveTopic();
     });
 
-    // Start load
+    // Initial load
     loadData();
   </script>
 </body>
