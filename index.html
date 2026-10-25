@@ -1,34 +1,59 @@
 <!doctype html>
-<!-- index.html : หน้ารวมงานทั้ง 3 คน มีหัวเว็บ + เมนูลอยเดียวสลับระหว่างหน้า แต่ละหน้าเปิดใน iframe ใช้ฟอนต์แบบมีหัวและหน้าตาแบบ dashboard_report.html (hub-theme.css)
-     วางไว้ที่ root ของ repo (เช่น XAMPP htdocs) แล้วเปิด http://localhost/index.html ; ทุกหน้าต้องอยู่ origin เดียวกันจึงซ่อนเมนูเดิมของแต่ละหน้าได้ -->
+<!-- index.html : หน้ารวมศูนย์กลาง CPE Asset Warehouse มีหน้าภาพรวมระบบ (Overview Hub) แสดงสรุป 4 หัวข้อหลัก พร้อมปุ่มกดเข้าสู่แดชบอร์ดแต่ละโมดูล
+     รองรับเมนูลอยแบบ Global Module Navigation ตาม Frontend Design Guide และเปลี่ยนธีมมืด/สว่างได้สมบูรณ์ -->
 <html lang="th">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CPE Asset Warehouse</title>
+  <title>CPE Asset Warehouse — ศูนย์ข้อมูลและวิเคราะห์สินทรัพย์</title>
   <script>document.documentElement.setAttribute("data-theme", (() => { try { return localStorage.getItem("cpe_theme") || "dark"; } catch { return "dark"; } })());</script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai+Looped:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai+Looped:wght@400;500;600;700&display=swap">
   <style>
-    /* หัวเว็บและเมนูลอยแบบเดียวกับ dashboard_report.html ; สีจาก docs/design-guide.md */
+    /* ค่าสีและโทเคนตาม docs/design-guide.md และ docs/frontend-guide.md */
     :root {
-      --cpe-page-start: #1B1D1E; --cpe-surface: #181A1B; --cpe-text: #E8E6E3; --cpe-text-muted: #CCC8C1;
-      --cpe-brand-blue: #0466C8; --cpe-tool-navy: #1A243B; --cpe-info: #106BDA;
+      --cpe-page-start: #1B1D1E;
+      --cpe-page-end: #1D1F20;
+      --cpe-surface: #181A1B;
+      --cpe-text: #E8E6E3;
+      --cpe-text-muted: #CCC8C1;
+      --cpe-brand-blue: #0466C8;
+      --cpe-brand-blue-deep: #0353A4;
+      --cpe-action-start: #1E169C;
+      --cpe-action-end: #460FA5;
+      --cpe-tool-navy: #1A243B;
+      --cpe-info: #106BDA;
+      --cpe-success: #009688;
+      --cpe-warning: #FFC107;
+      --cpe-danger: #E43F0B;
       --line: color-mix(in srgb, var(--cpe-text) 12%, transparent);
       --line-strong: color-mix(in srgb, var(--cpe-text) 22%, transparent);
       --fill-hover: color-mix(in srgb, var(--cpe-text) 6%, transparent);
       --text-faint: color-mix(in srgb, var(--cpe-text-muted) 70%, transparent);
-      --font: "Leelawadee UI", "IBM Plex Sans Thai Looped", Tahoma, sans-serif;   /* แบบมีหัว เหมือนหน้าทะเบียนสินทรัพย์ */
-      --fs-xs: 0.75rem; --fs-sm: 0.8125rem; --fs-lg: 1.125rem;
-      --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px;
-      --radius: 6px; --radius-pill: 999px; --content-max: 1280px;
+      --font: "Leelawadee UI", "IBM Plex Sans Thai Looped", Tahoma, sans-serif;
+      --fs-xs: 0.75rem;
+      --fs-sm: 0.8125rem;
+      --fs-base: 0.9375rem;
+      --fs-lg: 1.125rem;
+      --sp-1: 4px;
+      --sp-2: 8px;
+      --sp-3: 12px;
+      --sp-4: 16px;
+      --radius: 6px;
+      --radius-pill: 999px;
+      --content-max: 1280px;
       --focus: 0 0 0 2px var(--cpe-page-start), 0 0 0 4px var(--cpe-info);
       color-scheme: dark;
     }
     :root[data-theme="light"] {
-      --cpe-page-start: #F4F6F9; --cpe-surface: #FFFFFF; --cpe-text: #181A1B; --cpe-text-muted: #4B5563;
-      --cpe-tool-navy: #FFFFFF; --cpe-info: #0466C8;
+      --cpe-page-start: #F4F6F9;
+      --cpe-page-end: #E9ECEF;
+      --cpe-surface: #FFFFFF;
+      --cpe-text: #181A1B;
+      --cpe-text-muted: #4B5563;
+      --cpe-tool-navy: #FFFFFF;
+      --cpe-info: #0466C8;
       color-scheme: light;
     }
     * { box-sizing: border-box; }
@@ -39,18 +64,26 @@
     }
     :focus-visible { outline: none; box-shadow: var(--focus); }
 
+    /* Shell Header */
     .app-header {
       display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: var(--sp-3) var(--sp-4);
       padding: var(--sp-3) max(var(--sp-4), calc((100vw - var(--content-max)) / 2));
       background: var(--cpe-surface); border-bottom: 1px solid var(--line);
+      z-index: 10;
     }
-    .app-name { color: var(--cpe-text); font-weight: 600; font-size: var(--fs-lg); letter-spacing: 0.01em; text-decoration: none; white-space: nowrap; border-radius: 4px; }
+    .app-name {
+      color: var(--cpe-text); font-weight: 600; font-size: var(--fs-lg); letter-spacing: 0.01em;
+      text-decoration: none; white-space: nowrap; border-radius: 4px;
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .app-name:hover { color: var(--cpe-text); }
     .btn {
       justify-self: end; font: inherit; font-size: var(--fs-sm); color: var(--cpe-text); background: transparent; cursor: pointer;
       border: 1px solid var(--line-strong); border-radius: var(--radius); padding: var(--sp-2) var(--sp-3); min-height: 38px; white-space: nowrap;
     }
     .btn:hover { background: var(--fill-hover); }
 
+    /* Floating Module Navigation */
     .module-nav { min-width: 0; display: flex; justify-content: center; }
     .module-nav-list {
       display: flex; gap: var(--sp-1); list-style: none; margin: 0; padding: var(--sp-1); max-width: 100%;
@@ -59,7 +92,6 @@
       box-shadow: 0 6px 18px color-mix(in srgb, var(--cpe-page-start) 70%, transparent);
     }
     .module-nav-list::-webkit-scrollbar { display: none; }
-    /* เมนูล้นจอ: จางที่ขอบด้านที่ยังเลื่อนได้ ให้รู้ว่ามีหน้าเพิ่ม */
     .module-nav-list.fade-end { mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent); }
     .module-nav-list.fade-start { mask-image: linear-gradient(to left, #000 calc(100% - 32px), transparent); }
     .module-nav-list.fade-start.fade-end { mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 32px), transparent); }
@@ -75,43 +107,659 @@
     :root[data-theme="light"] .module-nav-list a[aria-current="page"] { color: #FFFFFF; box-shadow: none; }
     :root[data-theme="light"] .module-nav-list { box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08); }
 
+    /* Frame Viewport & Overview View */
     .hub-frames { position: relative; flex: 1; min-height: 0; }
     .hub-frames iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: var(--cpe-page-start); }
     .hub-frames iframe[hidden] { display: none; }
 
-    @media (max-width: 900px) {
+    /* =========================================================================
+       OVERVIEW PORTAL (หน้าภาพรวมระบบ 4 หัวข้อ)
+       ========================================================================= */
+    .overview-pane {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      overflow-y: auto; overflow-x: hidden;
+      background: linear-gradient(180deg, var(--cpe-page-start) 0%, var(--cpe-page-end) 100%);
+      padding: var(--sp-4) max(var(--sp-4), calc((100vw - var(--content-max)) / 2)) 56px;
+    }
+    .overview-pane[hidden] { display: none !important; }
+
+    .overview-container {
+      max-width: var(--content-max);
+      margin: 0 auto;
+      padding: var(--sp-2) 0 var(--sp-4);
+    }
+
+    /* Hero Section */
+    .overview-hero {
+      margin-bottom: 24px;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: var(--fs-xs);
+      font-weight: 600;
+      color: var(--cpe-info);
+      background: color-mix(in srgb, var(--cpe-info) 10%, transparent);
+      border: 1px solid color-mix(in srgb, var(--cpe-info) 25%, transparent);
+      padding: 3px 12px;
+      border-radius: var(--radius-pill);
+      margin-bottom: 12px;
+      letter-spacing: 0.02em;
+    }
+    :root[data-theme="light"] .hero-badge {
+      background: #EBF5FF;
+      border-color: #BEE3F8;
+      color: var(--cpe-brand-blue-deep);
+    }
+    .hero-title {
+      font-size: clamp(1.4rem, 2.5vw, 1.85rem);
+      font-weight: 600;
+      color: var(--cpe-text);
+      line-height: 1.3;
+      margin: 0 0 8px;
+    }
+    .hero-subtitle {
+      font-size: var(--fs-base);
+      color: var(--cpe-text-muted);
+      max-width: 920px;
+      margin: 0 0 24px;
+      line-height: 1.6;
+    }
+
+    /* Executive Aggregate Stats Strip */
+    .summary-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 32px;
+    }
+    .summary-card {
+      background: var(--cpe-surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: border-color .15s ease;
+    }
+    .summary-card:hover {
+      border-color: var(--line-strong);
+    }
+    .summary-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 6px;
+    }
+    .summary-card-label {
+      font-size: var(--fs-xs);
+      color: var(--cpe-text-muted);
+      font-weight: 500;
+    }
+    .summary-card-icon {
+      font-size: 15px;
+      opacity: 0.9;
+    }
+    .summary-card-val-row {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+    .summary-card-val {
+      font-size: 1.85rem;
+      font-weight: 600;
+      color: var(--cpe-text);
+      font-variant-numeric: tabular-nums;
+      line-height: 1.2;
+    }
+    .summary-card-unit {
+      font-size: var(--fs-xs);
+      color: var(--text-faint);
+    }
+    .summary-card-sub {
+      font-size: 0.8125rem;
+      color: var(--cpe-text-muted);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .status-pill-good {
+      color: var(--cpe-success);
+      font-weight: 500;
+    }
+
+    /* Topics Grid */
+    .topics-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 18px;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 12px;
+    }
+    .topics-header-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--cpe-text);
+      margin: 0 0 4px;
+    }
+    .topics-header-desc {
+      font-size: var(--fs-sm);
+      color: var(--cpe-text-muted);
+      margin: 0;
+    }
+
+    .topics-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+
+    .topic-card {
+      background: var(--cpe-surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: border-color .2s ease;
+    }
+    .topic-card:hover {
+      border-color: var(--line-strong);
+    }
+
+    .topic-badge-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .topic-tag {
+      font-size: var(--fs-xs);
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 4px;
+      background: var(--fill-hover);
+      color: var(--cpe-text-muted);
+      border: 1px solid var(--line);
+    }
+    .topic-tag.accent-blue {
+      color: var(--cpe-info);
+      background: color-mix(in srgb, var(--cpe-info) 10%, transparent);
+      border-color: color-mix(in srgb, var(--cpe-info) 25%, transparent);
+    }
+    .topic-tag.accent-purple {
+      color: #9061F9;
+      background: rgba(144, 97, 249, 0.1);
+      border-color: rgba(144, 97, 249, 0.25);
+    }
+    .topic-tag.accent-teal {
+      color: #009688;
+      background: rgba(0, 150, 136, 0.1);
+      border-color: rgba(0, 150, 136, 0.25);
+    }
+    .topic-tag.accent-amber {
+      color: #FFC107;
+      background: rgba(255, 193, 7, 0.1);
+      border-color: rgba(255, 193, 7, 0.25);
+    }
+
+    .topic-code {
+      font-family: monospace;
+      font-size: 11px;
+      color: var(--text-faint);
+    }
+
+    .topic-title-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+    .topic-icon {
+      font-size: 24px;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+    .topic-title {
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--cpe-text);
+      margin: 0;
+    }
+    .topic-subtitle {
+      font-size: 12px;
+      color: var(--text-faint);
+      margin: 0 0 12px;
+    }
+    .topic-desc {
+      font-size: 0.875rem;
+      color: var(--cpe-text-muted);
+      line-height: 1.55;
+      margin: 0 0 16px;
+    }
+
+    /* Baseline Data Box inside card */
+    .baseline-box {
+      background: color-mix(in srgb, var(--cpe-page-start) 65%, var(--cpe-surface));
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 18px;
+    }
+    .baseline-title {
+      font-size: 11.5px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-faint);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .baseline-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px 16px;
+    }
+    .baseline-item {
+      display: flex;
+      flex-direction: column;
+    }
+    .baseline-item-lbl {
+      font-size: 11.5px;
+      color: var(--cpe-text-muted);
+      margin-bottom: 2px;
+    }
+    .baseline-item-val {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--cpe-text);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Action button */
+    .topic-card-action {
+      margin-top: auto;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .topic-owner {
+      font-size: 12px;
+      color: var(--text-faint);
+    }
+    .btn-topic {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: inherit;
+      font-size: 0.875rem;
+      font-weight: 500;
+      padding: 8px 18px;
+      border-radius: var(--radius);
+      text-decoration: none;
+      cursor: pointer;
+      color: #FFFFFF;
+      background: linear-gradient(135deg, var(--cpe-brand-blue), var(--cpe-brand-blue-deep));
+      border: 1px solid color-mix(in srgb, var(--cpe-brand-blue) 40%, transparent);
+      box-shadow: 0 2px 6px rgba(4, 102, 200, 0.2);
+      transition: background .15s ease, box-shadow .15s ease, transform .15s ease;
+    }
+    .btn-topic:hover {
+      background: linear-gradient(135deg, var(--cpe-brand-blue-deep), #023E7D);
+      box-shadow: 0 4px 12px rgba(4, 102, 200, 0.35);
+      transform: translateY(-1px);
+      color: #FFFFFF;
+    }
+    .btn-topic .btn-arrow {
+      transition: transform .15s ease;
+      font-size: 14px;
+      display: inline-block;
+    }
+    .btn-topic:hover .btn-arrow {
+      transform: translateX(3px);
+    }
+
+    /* Responsive */
+    @media (max-width: 960px) {
       .app-header { grid-template-columns: 1fr auto; }
       .module-nav { grid-column: 1 / -1; grid-row: 2; justify-content: flex-start; }
+      .summary-strip { grid-template-columns: repeat(2, 1fr); }
+      .topics-grid { grid-template-columns: 1fr; }
     }
-    @media (prefers-reduced-motion: no-preference) { .module-nav-list a, .btn { transition: background-color .15s, color .15s; } }
+    @media (max-width: 600px) {
+      .summary-strip { grid-template-columns: 1fr; }
+      .baseline-grid { grid-template-columns: 1fr; }
+      .topic-card-action { flex-direction: column; align-items: stretch; gap: 10px; }
+      .btn-topic { justify-content: center; width: 100%; }
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .module-nav-list a, .btn, .btn-topic { transition: background-color .15s, color .15s, transform .15s; }
+    }
   </style>
 </head>
 <body>
+  <!-- Shell Header with Global Navigation -->
   <header class="app-header">
-    <a class="app-name" href="#/assets">CPE Asset Warehouse</a>
-    <nav class="module-nav" aria-label="งานของแต่ละคน"><ul class="module-nav-list" id="hub-list"></ul></nav>
-    <button type="button" class="btn" id="theme-btn"></button>
+    <a class="app-name" href="#/overview">
+      <span>🏛️</span>
+      <span>CPE Asset Warehouse</span>
+    </a>
+    <nav class="module-nav" aria-label="โมดูลหลักของระบบ">
+      <ul class="module-nav-list" id="hub-list">
+        <!-- Rendered via JS -->
+      </ul>
+    </nav>
+    <button type="button" class="btn" id="theme-btn" aria-label="สลับธีม">โหมดสว่าง</button>
   </header>
-  <main class="hub-frames" id="hub-frames"></main>
+
+  <main class="hub-frames" id="hub-frames">
+    <!-- หน้าภาพรวมระบบ (Overview Portal View) -->
+    <div id="overview-pane" class="overview-pane">
+      <div class="overview-container">
+
+        <!-- Hero Section -->
+        <section class="overview-hero">
+          <div class="hero-badge">📊 Data Warehouse &amp; Analytics Portal</div>
+          <h1 class="hero-title">ระบบคลังข้อมูลและแดชบอร์ดวิเคราะห์สินทรัพย์</h1>
+          <p class="hero-subtitle">
+            ศูนย์รวมข้อมูลสารสนเทศและสถิติภาพรวม ภาควิชาวิศวกรรมคอมพิวเตอร์ คณะวิศวกรรมศาสตร์ กำแพงแสน
+            บูรณาการข้อมูลทะเบียนสินทรัพย์ การหมุนเวียนใช้งาน การยืม-คืน ตลอดจนการแจ้งซ่อมอาคารและการซ่อมบำรุงครุภัณฑ์
+            เพื่อสนับสนุนการตัดสินใจเชิงบริหารและการตรวจนับพัสดุประจำปี
+          </p>
+
+          <!-- Executive Aggregate Stats Strip -->
+          <div class="summary-strip" role="region" aria-label="ตัวชี้วัดภาพรวมทั้งระบบ">
+            <div class="summary-card">
+              <div class="summary-card-header">
+                <span class="summary-card-label">สินทรัพย์ทั้งหมดในคลัง</span>
+                <span class="summary-card-icon">📦</span>
+              </div>
+              <div class="summary-card-val-row">
+                <span class="summary-card-val">4,324</span>
+                <span class="summary-card-unit">ชิ้น</span>
+              </div>
+              <span class="summary-card-sub status-pill-good">✓ สภาพพร้อมใช้งาน 99.8% (4,317 ชิ้น)</span>
+            </div>
+
+            <div class="summary-card">
+              <div class="summary-card-header">
+                <span class="summary-card-label">สถิติการยืม-คืนอุปกรณ์</span>
+                <span class="summary-card-icon">🔄</span>
+              </div>
+              <div class="summary-card-val-row">
+                <span class="summary-card-val">247</span>
+                <span class="summary-card-unit">ครั้ง</span>
+              </div>
+              <span class="summary-card-sub">ผู้ยืม 165 คนไม่ซ้ำ | คืนตรงเวลา 86.6%</span>
+            </div>
+
+            <div class="summary-card">
+              <div class="summary-card-header">
+                <span class="summary-card-label">งานแจ้งซ่อมอาคารสถานที่</span>
+                <span class="summary-card-icon">🏢</span>
+              </div>
+              <div class="summary-card-val-row">
+                <span class="summary-card-val">770+</span>
+                <span class="summary-card-unit">งาน</span>
+              </div>
+              <span class="summary-card-sub status-pill-good">✓ ปิดงานตามเกณฑ์ SLA 82.4% (3 วัน)</span>
+            </div>
+
+            <div class="summary-card">
+              <div class="summary-card-header">
+                <span class="summary-card-label">งานซ่อมบำรุงครุภัณฑ์</span>
+                <span class="summary-card-icon">🛠️</span>
+              </div>
+              <div class="summary-card-val-row">
+                <span class="summary-card-val">145+</span>
+                <span class="summary-card-unit">งาน</span>
+              </div>
+              <span class="summary-card-sub">ซ่อมเสร็จใน SLA 88.5% (15 วัน)</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 4 Core Topics Section -->
+        <section aria-labelledby="topics-title">
+          <div class="topics-header">
+            <div>
+              <h2 id="topics-title" class="topics-header-title">4 หัวข้อการบริหารจัดการและวิเคราะห์ข้อมูล</h2>
+              <p class="topics-header-desc">เลือกเข้าสู่แดชบอร์ดเฉพาะทางเพื่อเจาะลึกมิติและตัวชี้วัดของข้อมูลคลังสินทรัพย์</p>
+            </div>
+          </div>
+
+          <div class="topics-grid">
+            <!-- Topic 1: Asset Inventory -->
+            <article class="topic-card">
+              <div>
+                <div class="topic-badge-row">
+                  <span class="topic-tag accent-blue">หัวข้อที่ 1 · พัสดุและคลัง</span>
+                  <span class="topic-code">MODULE_01_ASSETS</span>
+                </div>
+                <div class="topic-title-row">
+                  <span class="topic-icon">📦</span>
+                  <h3 class="topic-title">ทะเบียนสินทรัพย์และพัสดุคงคลัง</h3>
+                </div>
+                <div class="topic-subtitle">Asset Inventory &amp; Lifecycle Tracking</div>
+                <p class="topic-desc">
+                  บริหารจัดการฐานข้อมูลครุภัณฑ์ ตรวจสอบสถานะความพร้อมใช้งาน การจำแนกตามหมวดหมู่และภาควิชา
+                  พร้อมทั้งติดตามอายุการใช้งานและค่าเสื่อมสภาพเพื่อเตรียมการตรวจนับพัสดุประจำปี
+                </p>
+
+                <div class="baseline-box">
+                  <div class="baseline-title">📌 ข้อมูลพื้นฐานและตัวชี้วัดสำคัญ (Key Baseline)</div>
+                  <div class="baseline-grid">
+                    <div class="baseline-item">
+                      <span class="baseline-item-lbl">จำนวนครุภัณฑ์ในคลัง</span>
+                      <span class="baseline-item-val">4,324 ชิ้น</span>
+                    </div>
+                    <div class="baseline-item">
+                      <span class="baseline-item-lbl">สถานะพร้อมใช้งาน (Ready)</span>
+                      <span class="baseline-item-val" style="color:var(--cpe-success);">4,317 ชิ้น (99.8%)</span>
+                    </div>
+                    <div class="baseline-item">
+                      <span class="baseline-item-lbl">อายุใช้งานเกิน 10 ปี</span>
+                      <span class="baseline-item-val" style="color:var(--cpe-warning);">2,750+ รายการ (~64%)</span>
+                    </div>
+                    <div class="baseline-item">
+                      <span class="baseline-item-lbl">การจัดกลุ่มพัสดุ</span>
+                      <span class="baseline-item-val">คอมพิวเตอร์, เครื่องมือวัด, โสตฯ</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="topic-card-action">
+                <span class="topic-owner">ผู้รับผิดชอบ: สุธรรม</span>
+                <a href="#/assets" class="btn-topic" aria-label="เข้าสู่แดชบอร์ดทะเบียนสินทรัพย์">
+                  <span>เข้าสู่แดชบอร์ดทะเบียนสินทรัพย์</span>
+                  <span class="btn-arrow">→</span>
+                </a>
+              </div>
+            </article>
+
+            <!-- Topic 2: Borrow & Return -->
+            <article class="topic-card">
+              <div>
+                <div class="topic-badge-row">
+                  <span class="topic-tag accent-purple">หัวข้อที่ 2 · การหมุนเวียน</span>
+                  <span class="topic-code">MODULE_02_BORROW</span>
+                </div>
+                <div class="topic-title-row">
+                  <span class="topic-icon">🔄</span>
+                  <h3 class="topic-title">การยืม-คืนและการหมุนเวียนครุภัณฑ์</h3>
+                </div>
+                <div class="topic-subtitle">Equipment Borrowing &amp; Circulation Analytics</div>
+                <p class="topic-desc">
+                  วิเคราะห์ความต้องการใช้งาน รูปแบบการยืมตามช่วงเวลาและภาคการศึกษา การคืนตรงเวลา
+                  ตลอดจนตรวจจับครุภัณฑ์นอนนิ่งไม่เคยถูกใช้งาน (Zero-Borrow) เพื่อพิจารณาจัดสรรทรัพยากรใหม่
+                </p>
+
+                <div class="baseline-box">
+                  <div class="baseline-title">📌 ข้อมูลพื้นฐานและตัวชี้วัดสำคัญ (Key Baseline)</div>
+                  <div class="baseline-grid">
+                    <div class="baseline-item">
+                      <span class="baseline-item-lbl">จำนวนครั้งที่ยืมทั้งหมด</span>
+                      <span class="baseline-item-val">247 ครั้ง (165 ผู้ยืม)</span>
+                    </div>
+                    <div class="baseline-item">
+                      <span class="baseline-item-lbl">อัตราคืนตรงเวลา</span>
+                      <span class="baseline-item-val" style="color:var(--cpe-success);">86.6% (คืนช้า 33 ครั้ง)</span>
+                    </div>
+                    <div class="baseline-item">
+                      <span class="baseline-item-lbl">ไม่เคยถูกยืม (Zero-Borrow)</span>
+                      <span class="baseline-item-val" style="color:var(--cpe-info);">4,214 ชิ้น (2,447 โมเดล)</span>
+                    </div>
+                    <div class="baseline-item">
+                      <span class="baseline-item-lbl">ครุภัณฑ์หมุนเวียนสูง</span>
+                      <span class="baseline-item-val">39 รายการ (ยืมบ่อย ≥3 ครั้ง)</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="topic-card-action">
+                <span class="topic-owner">ผู้รับผิดชอบ: บูม</span>
+                <a href="#/borrow" class="btn-topic" aria-label="เข้าสู่แดชบอร์ดการยืม-คืน">
+                  <span>เข้าสู่แดชบอร์ดการยืม-คืน</span>
+                  <span class="btn-arrow">→</span>
+                </a>
+              </div>
+            </article>
+
+            <!-- Topic 3: Facility Maintenance -->
+            <article class="topic-card">
+              <div>
+                <div class="topic-badge-row">
+                  <span class="topic-tag accent-teal">หัวข้อที่ 3 · กายภาพและอาคาร</span>
+                  <span class="topic-code">MODULE_03_FACILITY</span>
+                </div>
+                <div class="topic-title-row">
+                  <span class="topic-icon">🏢</span>
+                  <h3 class="topic-title">การแจ้งซ่อมอาคารและสถานที่</h3>
+                </div>
+                <div class="topic-subtitle">Facility Maintenance &amp; Building Services</div>
+                <p class="topic-desc">
+                  ติดตามงานแจ้งซ่อมโครงสร้างพื้นฐาน ห้องปฏิบัติการ และงานบริการอาคาร ตั้งแต่ฟอร์มเดิมจนถึงระบบใหม่
+                  จำแนกตามประเภทงาน อาคาร และวัดระดับการให้บริการ (SLA) ภายใน 3 วันทำการ
+                </p>
+
+                <div class="baseline-box">
+                  <div class="baseline-title">📌 ข้อมูลพื้นฐานและตัวชี้วัดสำคัญ (Key Baseline)</div>
+                  <div class="baseline-grid">
+                    <div class="baseline-item">
+                      <span class="baseline-item-lbl">รายการแจ้งซ่อมสะสม</span>
+                      <span class="baseline-item-val">770+ งาน</span>
+                    </div>
+                    <div class="baseline-item">
+                      <span class="baseline-item-lbl">ปิดงานตาม SLA (3 วัน)</span>
+                      <span class="baseline-item-val" style="color:var(--cpe-success);">82.4%</span>
+                    </div>
+                    <div class="baseline-item">
+                      <span class="baseline-item-lbl">ประเภทงานที่แจ้งสูงสุด</span>
+                      <span class="baseline-item-val">ระบบปรับอากาศ (แอร์) &amp; ไฟฟ้า</span>
+                    </div>
+                    <div class="baseline-item">
+                      <span class="baseline-item-lbl">สถิติช่วงเกิดเหตุบ่อย</span>
+                      <span class="baseline-item-val">ฤดูร้อน (มี.ค. - พ.ค.)</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="topic-card-action">
+                <span class="topic-owner">ผู้รับผิดชอบ: กิลเบิร์ต</span>
+                <a href="#/facility" class="btn-topic" aria-label="เข้าสู่แดชบอร์ดแจ้งซ่อมอาคาร">
+                  <span>เข้าสู่แดชบอร์ดแจ้งซ่อมอาคาร</span>
+                  <span class="btn-arrow">→</span>
+                </a>
+              </div>
+            </article>
+
+            <!-- Topic 4: Equipment Repair -->
+            <article class="topic-card">
+              <div>
+                <div class="topic-badge-row">
+                  <span class="topic-tag accent-amber">หัวข้อที่ 4 · ซ่อมบำรุงและค่าใช้จ่าย</span>
+                  <span class="topic-code">MODULE_04_REPAIR</span>
+                </div>
+                <div class="topic-title-row">
+                  <span class="topic-icon">🛠️</span>
+                  <h3 class="topic-title">การซ่อมบำรุงครุภัณฑ์</h3>
+                </div>
+                <div class="topic-subtitle">Equipment Repair &amp; Cost Feasibility</div>
+                <p class="topic-desc">
+                  วิเคราะห์ค่าใช้จ่ายในการซ่อมแซม ระยะเวลาซ่อม และประเมินความคุ้มค่า (Repair vs. Replace)
+                  เพื่อจำแนกครุภัณฑ์ที่ค่าซ่อมสะสมสูงเกิน 50% ของราคาซื้อสำหรับวางแผนจำหน่ายออก
+                </p>
+
+                <div class="baseline-box">
+                  <div class="baseline-title">📌 ข้อมูลพื้นฐานและตัวชี้วัดสำคัญ (Key Baseline)</div>
+                  <div class="baseline-grid">
+                    <div class="baseline-item">
+                      <span class="baseline-item-lbl">งานซ่อมครุภัณฑ์สะสม</span>
+                      <span class="baseline-item-val">145+ งาน</span>
+                    </div>
+                    <div class="baseline-item">
+                      <span class="baseline-item-lbl">เสร็จใน SLA (15 วันทำการ)</span>
+                      <span class="baseline-item-val" style="color:var(--cpe-success);">88.5%</span>
+                    </div>
+                    <div class="baseline-item">
+                      <span class="baseline-item-lbl">รายการไม่คุ้มซ่อมต่อ</span>
+                      <span class="baseline-item-val" style="color:var(--cpe-danger);">28 ชิ้น (ค่าซ่อม >50%)</span>
+                    </div>
+                    <div class="baseline-item">
+                      <span class="baseline-item-lbl">อัตราซ่อมสำเร็จส่งคืน</span>
+                      <span class="baseline-item-val">92.0%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="topic-card-action">
+                <span class="topic-owner">ผู้รับผิดชอบ: กิลเบิร์ต</span>
+                <a href="#/repair" class="btn-topic" aria-label="เข้าสู่แดชบอร์ดซ่อมครุภัณฑ์">
+                  <span>เข้าสู่แดชบอร์ดซ่อมครุภัณฑ์</span>
+                  <span class="btn-arrow">→</span>
+                </a>
+              </div>
+            </article>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </main>
 
   <script>
-    // รายการหน้า (เมนูสร้างจากข้อมูลนี้) ; hide = selector ที่ซ่อนเฉพาะตอนเปิดผ่านหน้ารวม (หน้ารวมมีหัวเว็บ เมนู และปุ่มธีมให้แล้ว)
-    // owner = เจ้าของงาน (ไม่แสดงบนเมนู) ; theme = ใส่ hub-theme.css ให้หน้านั้นเป็นหน้าตาแบบหน้าเรา ; ไม่ได้แก้ไฟล์ของเจ้าของ
+    // ข้อมูลโมดูลและแดชบอร์ดของระบบ (ขับเคลื่อนด้วย Module Metadata ตาม Frontend Guide)
     const PAGES = [
+      { id: "overview", label: "ภาพรวมระบบ", isOverview: true },
       { id: "assets", label: "ทะเบียนสินทรัพย์", owner: "Sutham", src: "src/asset-inv/", hide: [".app-header", ".module-nav"], theme: true },
-      { id: "borrow", label: "ยืม-คืน", owner: "Boom", src: "src/borrow/", hide: [".app-header"], theme: true },   // เมนู 6 หัวข้อวิเคราะห์ไม่ซ่อน กลายเป็นแท็บย่อย
+      { id: "borrow", label: "ยืม-คืน", owner: "Boom", src: "src/borrow/", hide: [".app-header"], theme: true },
       { id: "facility", label: "แจ้งซ่อมอาคาร", owner: "G1ilbert", src: "src/maintenance/#/facility", hide: [".app-header", ".module-nav"], theme: false },
-      { id: "repair", label: "ซ่อมครุภัณฑ์", owner: "G1ilbert", src: "src/maintenance/#/repair", hide: [".app-header", ".module-nav"], theme: false },
+      { id: "repair", label: "ซ่อมครุภัณฑ์", owner: "G1ilbert", src: "src/maintenance/#/repair", hide: [".app-header", ".module-nav"], theme: false }
     ];
-    // แต่ละคนเก็บธีมไว้คนละ key: ปุ่มบนหัวเขียนทุก key ให้ทุกหน้าเป็นธีมเดียวกัน
+
     const THEME_KEYS = ["cpe_theme", "cpe_dw_theme", "cpe-asset-inventory-theme"];
     const list = document.getElementById("hub-list");
     const frames = document.getElementById("hub-frames");
+    const overviewPane = document.getElementById("overview-pane");
     const themeBtn = document.getElementById("theme-btn");
-    const theme = () => document.documentElement.getAttribute("data-theme");
-    const loaded = new Map();   // id -> { frame, theme ตอนโหลด }
+    const theme = () => document.documentElement.getAttribute("data-theme") || "dark";
+    const loaded = new Map(); // id -> { frame, theme ตอนโหลด }
 
-    list.innerHTML = PAGES.map((p) => `<li><a href="#/${p.id}" data-id="${p.id}" >${p.label}</a></li>`).join("");
+    // เรนเดอร์เมนูลอยจาก PAGES
+    list.innerHTML = PAGES.map((p) => `<li><a href="#/${p.id}" data-id="${p.id}">${p.label}</a></li>`).join("");
 
     function updateOverflow() {
       const over = list.scrollWidth > list.clientWidth + 1;
@@ -123,7 +771,7 @@
 
     const THEME_CSS = new URL("hub-theme.css", location.href).href;
 
-    // ใส่ style ของหน้ารวมให้หน้าใน iframe ; คืน true เมื่อใส่แล้ว (หรือใส่ไม่ได้เพราะต่าง origin)
+    // ใส่ style ของหน้ารวมให้หน้าใน iframe (Theme Synchronization)
     function dressPage(frame, page) {
       try {
         const doc = frame.contentDocument;
@@ -138,12 +786,12 @@
         }
         const st = doc.createElement("style");
         st.id = "hub-hide";
-        st.textContent = page.hide.length ? `${page.hide.join(",")} { display: none !important; }` : "";
+        st.textContent = page.hide && page.hide.length ? `${page.hide.join(",")} { display: none !important; }` : "";
         doc.head.appendChild(st);
         return true;
-      } catch { return true; /* ต่าง origin: หน้านั้นจะแสดงแบบเดิม */ }
+      } catch { return true; /* ต่าง origin */ }
     }
-    // ใส่ตั้งแต่ <head> พร้อม ไม่รอโหลดสคริปต์/กราฟเสร็จ จะได้ไม่เห็นหน้าตาเดิมแวบขึ้นมาก่อน
+
     function watchPage(frame, page, oldDoc) {
       const started = Date.now();
       const tick = () => {
@@ -152,10 +800,10 @@
       };
       tick();
     }
-    // กราฟ Chart.js วาดบน canvas ซึ่ง CSS เปลี่ยนฟอนต์ไม่ได้ จึงตั้งฟอนต์ให้ตอนหน้าโหลดเสร็จ
+
     function setChartFont(frame, page) {
       try {
-        const Chart = page.theme && frame.contentWindow.Chart;
+        const Chart = page.theme && frame.contentWindow && frame.contentWindow.Chart;
         if (!Chart) return;
         Chart.defaults.font.family = getComputedStyle(document.documentElement).getPropertyValue("--font").trim();
         Object.values(Chart.instances).forEach((c) => c.update("none"));
@@ -163,48 +811,78 @@
     }
 
     function show(id) {
-      const page = PAGES.find((p) => p.id === id) || PAGES[0];
-      let entry = loaded.get(page.id);
-      if (!entry) {
-        const frame = document.createElement("iframe");
-        frame.title = page.label;
-        frame.addEventListener("load", () => { dressPage(frame, page); setChartFont(frame, page); });
-        frame.src = page.src;
-        frames.appendChild(frame);
-        watchPage(frame, page);
-        entry = { frame, theme: theme() };
-        loaded.set(page.id, entry);
-      } else if (entry.theme !== theme()) {
-        entry.theme = theme();              // สลับธีมไปแล้วตอนหน้านี้ซ่อนอยู่: โหลดใหม่ให้ธีมตรงกัน
-        reloadPage(entry, page);
+      const validPage = PAGES.find((p) => p.id === id);
+      const targetId = validPage ? validPage.id : "overview";
+      const page = PAGES.find((p) => p.id === targetId);
+
+      if (page.isOverview) {
+        overviewPane.hidden = false;
+        loaded.forEach((e) => { e.frame.hidden = true; });
+        document.title = "CPE Asset Warehouse — ศูนย์ข้อมูลและวิเคราะห์สินทรัพย์";
+      } else {
+        overviewPane.hidden = true;
+        let entry = loaded.get(page.id);
+        if (!entry) {
+          const frame = document.createElement("iframe");
+          frame.title = page.label;
+          frame.addEventListener("load", () => {
+            dressPage(frame, page);
+            setChartFont(frame, page);
+          });
+          frame.src = page.src;
+          frames.appendChild(frame);
+          watchPage(frame, page);
+          entry = { frame, theme: theme() };
+          loaded.set(page.id, entry);
+        } else if (entry.theme !== theme()) {
+          entry.theme = theme();
+          reloadPage(entry, page);
+        }
+        loaded.forEach((e, k) => { e.frame.hidden = k !== page.id; });
+        document.title = `${page.label} · CPE Asset Warehouse`;
       }
-      loaded.forEach((e, k) => { e.frame.hidden = k !== page.id; });
+
       list.querySelectorAll("a").forEach((a) => {
-        if (a.dataset.id === page.id) { a.setAttribute("aria-current", "page"); a.scrollIntoView({ block: "nearest", inline: "nearest" }); }
-        else a.removeAttribute("aria-current");
+        if (a.dataset.id === page.id) {
+          a.setAttribute("aria-current", "page");
+          a.scrollIntoView({ block: "nearest", inline: "nearest" });
+        } else {
+          a.removeAttribute("aria-current");
+        }
       });
       updateOverflow();
-      document.title = `${page.label} · CPE Asset Warehouse`;
     }
 
     function reloadPage(entry, page) {
-      const oldDoc = entry.frame.contentDocument;   // รอจนเป็นเอกสารใหม่ ไม่งั้นจะเจอหน้าเก่าที่ใส่ style ไว้แล้ว
-      entry.frame.contentWindow.location.reload();
-      watchPage(entry.frame, page, oldDoc);
+      try {
+        const oldDoc = entry.frame.contentDocument;
+        entry.frame.contentWindow.location.reload();
+        watchPage(entry.frame, page, oldDoc);
+      } catch { /* ต่าง origin */ }
     }
 
     function setTheme(next, fromKey) {
       document.documentElement.setAttribute("data-theme", next);
-      try { THEME_KEYS.forEach((k) => { if (k !== fromKey && localStorage.getItem(k) !== next) localStorage.setItem(k, next); }); } catch { /* ไม่มี storage ก็ใช้ได้ */ }
+      try {
+        THEME_KEYS.forEach((k) => {
+          if (k !== fromKey && localStorage.getItem(k) !== next) localStorage.setItem(k, next);
+        });
+      } catch { /* ไม่มี storage */ }
       const light = next === "light";
       themeBtn.textContent = light ? "โหมดมืด" : "โหมดสว่าง";
       themeBtn.setAttribute("aria-label", light ? "สลับเป็นโหมดมืด" : "สลับเป็นโหมดสว่าง");
     }
+
     themeBtn.addEventListener("click", () => {
       setTheme(theme() === "light" ? "dark" : "light");
-      loaded.forEach((e, id) => { if (!e.frame.hidden) { e.theme = theme(); reloadPage(e, PAGES.find((p) => p.id === id)); } });
+      loaded.forEach((e, id) => {
+        if (!e.frame.hidden) {
+          e.theme = theme();
+          reloadPage(e, PAGES.find((p) => p.id === id));
+        }
+      });
     });
-    // กดสลับธีมด้วยปุ่มของหน้าใดหน้าหนึ่ง: หัวเว็บและหน้าอื่นเปลี่ยนตาม (หน้าที่กดเองเป็นธีมใหม่อยู่แล้ว)
+
     window.addEventListener("storage", (e) => {
       if (!THEME_KEYS.includes(e.key) || (e.newValue !== "light" && e.newValue !== "dark") || e.newValue === theme()) return;
       setTheme(e.newValue, e.key);
@@ -212,9 +890,14 @@
     });
 
     setTheme(theme());
-    const route = () => show(location.hash.replace(/^#\/?/, ""));
+    const route = () => {
+      const raw = location.hash.replace(/^#\/?/, "");
+      show(raw || "overview");
+    };
     window.addEventListener("hashchange", route);
-    if (!location.hash) history.replaceState(null, "", `#/${PAGES[0].id}`);
+    if (!location.hash || location.hash === "#" || location.hash === "#/") {
+      history.replaceState(null, "", "#/overview");
+    }
     route();
   </script>
 </body>
