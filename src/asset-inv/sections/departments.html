@@ -5,14 +5,26 @@
       <p class="page-intro">ใช้สัดส่วนและอัตราเพื่อเทียบหน่วยงานที่มีขนาดพอร์ตต่างกัน</p>
     </div>
   </header>
-  <article class="panel">
+  <article class="panel department-matrix-panel" aria-labelledby="department-matrix-title">
     <div class="panel-heading">
-      <div><h2>ตารางสรุปหน่วยงาน</h2><p class="panel-description">เลือกหัวคอลัมน์เพื่อเรียงลำดับ · อัตราสินทรัพย์เก่าใช้ข้อมูลอายุที่ระบุได้</p></div>
+      <div>
+        <h2 id="department-matrix-title">ตัวชี้วัดเปรียบเทียบ</h2>
+        <p class="panel-description">เรียงตามตัวชี้วัดและเปรียบเทียบค่าแต่ละหน่วยงานในตารางเดียว</p>
+      </div>
     </div>
-    <div id="department-scorecard" class="dashboard-table-wrap"></div>
+    <p class="department-matrix-guide" id="department-matrix-guide">
+      สีเขียวแทนความพร้อม สีแดงแทนชำรุด สีเหลืองแทนไม่มีตำแหน่ง และสีน้ำเงินแทนอายุเก่า · ค่าสูงของความพร้อมเป็นผลดี ส่วนค่าสูงของอัตราประเด็นหมายถึงพบประเด็นนั้นมากขึ้น · ความเข้มสีเทียบเฉพาะคอลัมน์ ไม่ใช่เกณฑ์ความเสี่ยงอย่างเป็นทางการ · — หมายถึงไม่มีข้อมูล
+    </p>
+    <p class="department-scroll-hint">เลื่อนตารางในแนวนอนเพื่อดูตัวชี้วัดเพิ่มเติม</p>
+    <div id="department-matrix" aria-describedby="department-matrix-guide"></div>
   </article>
-  <section class="dashboard-panel-grid department-highlight-grid" aria-label="หน่วยงานที่ควรติดตาม">
-    <article class="panel"><div class="panel-heading"><h2>สินทรัพย์อายุเกินเกณฑ์</h2></div><div id="department-old-ranking" class="dashboard-chart"></div></article>
-    <article class="panel"><div class="panel-heading"><h2>สถานที่ไม่ครบถ้วน</h2></div><div id="department-location-ranking" class="dashboard-chart"></div></article>
-  </section>
+  <article class="panel department-focus-panel" aria-labelledby="department-focus-title">
+    <div class="panel-heading">
+      <div>
+        <h2 id="department-focus-title">รายละเอียดหน่วยงานที่เลือก</h2>
+        <p class="panel-description">สรุปตัวชี้วัดของหน่วยงานจากชุดข้อมูลและตัวกรองปัจจุบัน</p>
+      </div>
+    </div>
+    <div id="department-focus" aria-live="polite"></div>
+  </article>
 </section>

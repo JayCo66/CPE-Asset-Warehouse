@@ -2,6 +2,17 @@ import {
   buildInventoryDashboardUrl,
   hasComparableSnapshots,
 } from "./inventory-dashboard-data.mjs?v=20261026.1";
+import {
+  createDepartmentComparisonState,
+  DEPARTMENT_COMPARISON_PAGE_SIZES,
+  getDepartmentHeatLevel,
+  getDepartmentKey,
+  paginateDepartmentRows,
+  resolveSelectedDepartment,
+  setDepartmentPage,
+  setDepartmentPageSize,
+  setDepartmentSort,
+} from "./department-comparison.mjs?v=20261026.1";
 import { squarifyTreemap } from "./treemap-layout.mjs?v=20261025.1";
 
 const DASHBOARD_API = new URL("../../assets_api/asset_inventory_dashboard.php", import.meta.url).href;
@@ -60,6 +71,8 @@ let latestPayload = null;
 let requestId = 0;
 let onFiltersChange = () => {};
 let departmentSort = { key: "totalAssets", direction: "desc" };
+let departmentComparisonState = createDepartmentComparisonState();
+let selectedDepartmentKey = null;
 let issueHeatmapSort = { key: "missingLocationRate", direction: "desc" };
 let issueHeatmapExpanded = false;
 let ageTreemapObserver = null;
@@ -743,36 +756,164 @@ function renderPortfolio(data) {
   ], data.departmentDiversity);
 }
 
-function sortDepartmentRows(rows) {
-  return [...(rows || [])].sort((left, right) => {
-    const a = left[departmentSort.key];
-    const b = right[departmentSort.key];
-    const result = typeof a === "number" || typeof b === "number"
-      ? (Number(a ?? -Infinity) - Number(b ?? -Infinity))
-      : String(a ?? "").localeCompare(String(b ?? ""), "th");
-    return departmentSort.direction === "asc" ? result : -result;
-  });
+const DEPARTMENT_COMPARISON_SORT_KEYS = new Set([
+  "totalAssets",
+  "assetShareRate",
+  "availabilityRate",
+  "damageRate",
+  "missingLocationRate",
+  "averageAssetAge",
+  "assetsOlderThanThreshold",
+  "oldAssetRate",
+]);
+
+function departmentMetricText(value, formatter) {
+  if (value === null || value === undefined || (typeof value === "string" && value.trim() === "") || !Number.isFinite(Number(value))) return "—";
+  return formatter(value);
+}
+
+function renderDepartmentMatrixCell(row, column, allRows) {
+  const value = row?.[column.key];
+  const text = departmentMetricText(value, column.format);
+  if (!column.heatColor) {
+    return `<td class="department-matrix-number">${escapeHtml(text)}</td>`;
+  }
+
+  const heatValues = allRows.map((item) => item?.[column.key]);
+  const heatLevel = getDepartmentHeatLevel(value, heatValues);
+  if (heatLevel === null) {
+    return `<td class="department-matrix-number"><span class="department-heat-value is-unavailable" title="ไม่มีข้อมูลสำหรับตัวชี้วัดนี้">—</span></td>`;
+  }
+
+  const tint = `${4 + Math.round(heatLevel * 12)}%`;
+  return `<td class="department-matrix-number"><span class="department-heat-value" style="--department-heat-color:${column.heatColor};--department-heat-tint:${tint}" title="${escapeHtml(`${column.label}: ${text} · สีแสดงค่าเปรียบเทียบภายในคอลัมน์`)}">${escapeHtml(text)}</span></td>`;
+}
+
+function renderDepartmentPagination(page) {
+  if (page.totalRows === 0) return "";
+  const start = page.pageSize === "all" ? 1 : ((page.page - 1) * page.pageSize) + 1;
+  const end = page.pageSize === "all" ? page.totalRows : Math.min(page.page * page.pageSize, page.totalRows);
+  const disabled = (action) => {
+    if (action === "first" || action === "previous") return page.page <= 1;
+    return page.page >= page.totalPages;
+  };
+  const button = (action, label, accessibleLabel) => `<button class="button button-secondary department-page-button" type="button" data-department-comparison-page="${action}" aria-label="${accessibleLabel}"${disabled(action) ? " disabled" : ""}>${label}</button>`;
+
+  return `<nav class="department-pagination" aria-label="แบ่งหน้าตารางเปรียบเทียบหน่วยงาน">
+    <p class="department-pagination-range" role="status" aria-live="polite">แสดง ${formatCount(start)}–${formatCount(end)} จาก ${formatCount(page.totalRows)} หน่วยงาน</p>
+    <div class="department-pagination-controls">
+      <label class="department-page-size-label">รายการต่อหน้า
+        <select data-department-comparison-page-size aria-label="จำนวนหน่วยงานต่อหน้า">
+          ${DEPARTMENT_COMPARISON_PAGE_SIZES.map((size) => `<option value="${size}"${page.pageSize === size ? " selected" : ""}>${size === "all" ? "ทั้งหมด" : size}</option>`).join("")}
+        </select>
+      </label>
+      <div class="department-page-actions">
+        ${button("first", "หน้าแรก", "ไปหน้าแรก")}
+        ${button("previous", "ก่อนหน้า", "ไปหน้าก่อนหน้า")}
+        <span class="department-page-current" aria-current="page">หน้า ${formatCount(page.page)} จาก ${formatCount(page.totalPages)}</span>
+        ${button("next", "ถัดไป", "ไปหน้าถัดไป")}
+        ${button("last", "หน้าสุดท้าย", "ไปหน้าสุดท้าย")}
+      </div>
+    </div>
+  </nav>`;
+}
+
+function renderDepartmentMatrix(rows) {
+  const target = document.getElementById("department-matrix");
+  if (!target) return;
+  if (rows.length === 0) {
+    target.innerHTML = emptyMarkup("ไม่พบข้อมูลหน่วยงาน", "ปรับตัวกรองหรือเลือกชุดข้อมูลอื่นเพื่อดูผลเปรียบเทียบ");
+    return;
+  }
+
+  const columns = [
+    { key: "totalAssets", label: "สินทรัพย์ทั้งหมด", format: formatCount },
+    { key: "assetShareRate", label: "สัดส่วนพอร์ต", format: formatPercent },
+    { key: "availabilityRate", label: "พร้อมใช้งาน", format: formatPercent, heatColor: "var(--cpe-success)" },
+    { key: "damageRate", label: "ชำรุด", format: formatPercent, heatColor: "var(--cpe-danger)" },
+    { key: "missingLocationRate", label: "ไม่มีตำแหน่ง", format: formatPercent, heatColor: "var(--cpe-warning)" },
+    { key: "averageAssetAge", label: "อายุเฉลี่ย", format: (value) => `${Number(value).toFixed(1)} ปี` },
+    { key: "assetsOlderThanThreshold", label: `อายุเกิน ${filters.ageThreshold} ปี`, format: formatCount },
+    { key: "oldAssetRate", label: "อัตราสินทรัพย์อายุเก่า", format: formatPercent, heatColor: "var(--cpe-info)" },
+  ];
+  const page = paginateDepartmentRows(rows, departmentComparisonState);
+  departmentComparisonState = { ...departmentComparisonState, page: page.page };
+  const headers = columns.map((column) => {
+    const active = departmentComparisonState.sortKey === column.key;
+    const direction = departmentComparisonState.direction;
+    const indicator = active ? (direction === "asc" ? " ↑" : " ↓") : "";
+    const sortLabel = active && direction === "asc" ? "จากน้อยไปมาก" : "จากมากไปน้อย";
+    return `<th scope="col" aria-sort="${active ? (direction === "asc" ? "ascending" : "descending") : "none"}"><button class="table-sort-button department-sort-button" type="button" data-department-comparison-sort="${column.key}" aria-label="เรียง${sortLabel}ตาม${escapeHtml(column.label)}">${escapeHtml(column.label)}<span aria-hidden="true">${indicator}</span></button></th>`;
+  }).join("");
+  const body = page.rows.map((row) => {
+    const key = getDepartmentKey(row);
+    const selected = key === selectedDepartmentKey;
+    const label = displayValue(row?.label);
+    const metricCells = columns.map((column) => renderDepartmentMatrixCell(row, column, rows)).join("");
+    return `<tr data-department-row="${escapeHtml(key)}" aria-selected="${selected}">
+      <th scope="row"><button class="department-row-select" type="button" data-department-select="${escapeHtml(key)}" aria-controls="department-focus" aria-pressed="${selected}" aria-label="เลือกหน่วยงาน ${escapeHtml(label)}">${escapeHtml(label)}</button></th>
+      ${metricCells}
+    </tr>`;
+  }).join("");
+
+  target.innerHTML = `<div class="dashboard-table-wrap department-comparison-scroll" role="region" tabindex="0" aria-label="ตารางเปรียบเทียบหน่วยงาน เลื่อนแนวนอนเพื่อดูตัวชี้วัดทั้งหมด">
+    <table class="dashboard-data-table department-comparison-table" aria-describedby="department-matrix-guide">
+      <caption class="sr-only">ตารางเปรียบเทียบหน่วยงาน เรียงตามตัวชี้วัดที่เลือก</caption>
+      <thead><tr><th scope="col">หน่วยงาน</th>${headers}</tr></thead>
+      <tbody>${body}</tbody>
+    </table>
+  </div>${renderDepartmentPagination(page)}`;
+}
+
+function renderDepartmentFocus(row) {
+  const target = document.getElementById("department-focus");
+  if (!target) return;
+  if (!row) {
+    target.innerHTML = emptyMarkup("ไม่พบข้อมูลหน่วยงาน", "หน่วยงานที่ตรงกับตัวกรองจะแสดงที่นี่");
+    return;
+  }
+
+  const label = displayValue(row.label);
+  const total = departmentMetricText(row.totalAssets, formatCount);
+  const share = departmentMetricText(row.assetShareRate, formatPercent);
+  const averageAge = departmentMetricText(row.averageAssetAge, (value) => `${Number(value).toFixed(1)} ปี`);
+  const oldRateNote = "อัตราสินทรัพย์อายุเก่าคำนวณจากรายการที่ทราบอายุ";
+  const explorerAction = row.filterValue && row.filterValue !== "__unknown__"
+    ? drillButton("ดูสินทรัพย์ของหน่วยงานนี้", "department", row.filterValue)
+    : `<span class="department-focus-unavailable">ไม่สามารถกรองหน่วยงานที่ไม่ระบุได้</span>`;
+
+  target.innerHTML = `<div class="department-focus-identity">
+      <h3>${escapeHtml(label)}</h3>
+      <p><strong>${escapeHtml(total)}</strong><span>รายการ · สัดส่วนพอร์ต ${escapeHtml(share)}</span></p>
+    </div>
+    <div class="department-focus-metrics">
+      <section class="department-focus-group" aria-labelledby="department-focus-operational-title">
+        <h3 id="department-focus-operational-title">ความพร้อมและสภาพ</h3>
+        <dl>
+          <div><dt>พร้อมใช้งาน</dt><dd>${escapeHtml(departmentMetricText(row.availabilityRate, formatPercent))}</dd></div>
+          <div><dt>ชำรุด</dt><dd>${escapeHtml(departmentMetricText(row.damageRate, formatPercent))}</dd></div>
+          <div><dt>ไม่มีตำแหน่ง</dt><dd>${escapeHtml(departmentMetricText(row.missingLocationRate, formatPercent))}</dd></div>
+        </dl>
+      </section>
+      <section class="department-focus-group" aria-labelledby="department-focus-aging-title">
+        <h3 id="department-focus-aging-title">อายุสินทรัพย์</h3>
+        <dl>
+          <div><dt>อายุเฉลี่ย</dt><dd>${escapeHtml(averageAge)}</dd></div>
+          <div><dt>อายุเกิน ${formatCount(filters.ageThreshold)} ปี</dt><dd>${escapeHtml(departmentMetricText(row.assetsOlderThanThreshold, formatCount))}</dd></div>
+          <div><dt>อัตราสินทรัพย์อายุเก่า</dt><dd>${escapeHtml(departmentMetricText(row.oldAssetRate, formatPercent))}</dd></div>
+        </dl>
+        <p class="department-focus-note">${oldRateNote}</p>
+      </section>
+    </div>
+    <div class="department-focus-action">${explorerAction}</div>`;
 }
 
 function renderDepartments(data) {
-  const rows = sortDepartmentRows(data.rows);
-  renderTable("department-scorecard", "ตารางเปรียบเทียบหน่วยงาน", [
-    { label: "หน่วยงาน", render: (row) => drillButton(row.label, "department", row.filterValue) },
-    { label: "สินทรัพย์", key: "totalAssets", sortKey: "totalAssets", render: (row) => formatCount(row.totalAssets) },
-    { label: "สัดส่วน", key: "assetShareRate", sortKey: "assetShareRate", render: (row) => formatPercent(row.assetShareRate) },
-    { label: "พร้อมใช้", key: "availabilityRate", sortKey: "availabilityRate", render: (row) => formatPercent(row.availabilityRate) },
-    { label: "ชำรุด", key: "damageRate", sortKey: "damageRate", render: (row) => formatPercent(row.damageRate) },
-    { label: "ไม่มีตำแหน่ง", key: "missingLocationRate", sortKey: "missingLocationRate", render: (row) => formatPercent(row.missingLocationRate) },
-    { label: "อายุเฉลี่ย", key: "averageAssetAge", sortKey: "averageAssetAge", render: (row) => row.averageAssetAge === null ? "—" : `${row.averageAssetAge} ปี` },
-    { label: `อายุเกิน ${filters.ageThreshold}`, key: "assetsOlderThanThreshold", sortKey: "assetsOlderThanThreshold", render: (row) => formatCount(row.assetsOlderThanThreshold) },
-    { label: "อัตราสินทรัพย์เก่า", key: "oldAssetRate", sortKey: "oldAssetRate", render: (row) => formatPercent(row.oldAssetRate) },
-  ], rows);
-  renderRankedBars("department-old-ranking", [...rows].sort((a, b) => (b.oldAssetRate ?? -1) - (a.oldAssetRate ?? -1)), {
-    labelKey: "label", countKey: "assetsOlderThanThreshold", rateKey: "oldAssetRate", filterKey: "department", valueKey: "filterValue", limit: 10, sort: false,
-  });
-  renderRankedBars("department-location-ranking", [...rows].sort((a, b) => (b.missingLocationRate ?? -1) - (a.missingLocationRate ?? -1)), {
-    labelKey: "label", countKey: "missingLocationAssets", rateKey: "missingLocationRate", filterKey: "department", valueKey: "filterValue", limit: 10, sort: false,
-  });
+  const rows = Array.isArray(data?.rows) ? data.rows : [];
+  const selected = resolveSelectedDepartment(rows, selectedDepartmentKey);
+  selectedDepartmentKey = getDepartmentKey(selected);
+  renderDepartmentMatrix(rows);
+  renderDepartmentFocus(selected);
 }
 
 function renderLocationCompleteness(data) {
@@ -1162,6 +1303,7 @@ function clearDashboardData() {
 function applyFilterAndRefresh(key, value, { navigateToExplorer = false } = {}) {
   if (!Object.hasOwn(FILTER_DEFAULTS, key)) return;
   filters[key] = key === "ageThreshold" ? Number(value) : String(value);
+  departmentComparisonState = { ...departmentComparisonState, page: 1 };
   syncFilterControls();
   updateFilterCount();
   loadDashboard();
@@ -1175,6 +1317,7 @@ function applyDrillFiltersAndRefresh(nextFilters) {
     !Object.hasOwn(FILTER_DEFAULTS, key) || value === null || value === undefined || value === "",
   )) return;
   for (const [key, value] of entries) filters[key] = String(value);
+  departmentComparisonState = { ...departmentComparisonState, page: 1 };
   syncFilterControls();
   updateFilterCount();
   loadDashboard();
@@ -1202,6 +1345,7 @@ async function importUniversitySnapshot(button) {
     }
 
     filters.snapshot = String(result.data.snapshot.key);
+    departmentComparisonState = { ...departmentComparisonState, page: 1 };
     syncFilterControls();
     updateFilterCount();
     onFiltersChange({ ...filters });
@@ -1222,6 +1366,16 @@ export function initExecutiveDashboard({ onFilterChange = () => {} } = {}) {
   onFiltersChange = onFilterChange;
   const dashboardSections = document.getElementById("dashboard-sections");
   dashboardSections?.addEventListener("change", (event) => {
+    const pageSizeSelect = event.target.closest("[data-department-comparison-page-size]");
+    if (pageSizeSelect) {
+      departmentComparisonState = setDepartmentPageSize(
+        departmentComparisonState,
+        pageSizeSelect.value === "all" ? "all" : Number(pageSizeSelect.value),
+      );
+      if (latestPayload) renderDepartments(latestPayload.departments);
+      document.querySelector("[data-department-comparison-page-size]")?.focus();
+      return;
+    }
     const select = event.target.closest("[data-dashboard-filter]");
     if (select) applyFilterAndRefresh(select.dataset.dashboardFilter, select.value);
   });
@@ -1251,6 +1405,7 @@ export function initExecutiveDashboard({ onFilterChange = () => {} } = {}) {
     const resetButton = event.target.closest("[data-dashboard-filter-reset]");
     if (resetButton) {
       filters = { ...FILTER_DEFAULTS };
+      departmentComparisonState = { ...departmentComparisonState, page: 1 };
       syncFilterControls();
       const threshold = document.getElementById("age-threshold-input");
       if (threshold) threshold.value = "10";
@@ -1270,6 +1425,72 @@ export function initExecutiveDashboard({ onFilterChange = () => {} } = {}) {
     applyFilterAndRefresh("ageThreshold", value);
   });
   document.getElementById("dashboard-sections")?.addEventListener("click", (event) => {
+    const comparisonSortButton = event.target.closest("[data-department-comparison-sort]");
+    if (comparisonSortButton) {
+      const key = comparisonSortButton.dataset.departmentComparisonSort;
+      if (!DEPARTMENT_COMPARISON_SORT_KEYS.has(key)) return;
+      const direction = departmentComparisonState.sortKey === key && departmentComparisonState.direction === "desc"
+        ? "asc"
+        : "desc";
+      departmentComparisonState = setDepartmentSort(departmentComparisonState, key, direction);
+      if (latestPayload) renderDepartments(latestPayload.departments);
+      [...document.querySelectorAll("[data-department-comparison-sort]")]
+        .find((button) => button.dataset.departmentComparisonSort === key)
+        ?.focus();
+      return;
+    }
+
+    const pageButton = event.target.closest("[data-department-comparison-page]");
+    if (pageButton && latestPayload) {
+      const rows = latestPayload.departments?.rows || [];
+      const currentPage = paginateDepartmentRows(rows, departmentComparisonState);
+      const action = pageButton.dataset.departmentComparisonPage;
+      const requestedPage = {
+        first: 1,
+        previous: currentPage.page - 1,
+        next: currentPage.page + 1,
+        last: currentPage.totalPages,
+      }[action];
+      if (requestedPage !== undefined) {
+        departmentComparisonState = setDepartmentPage(departmentComparisonState, requestedPage, currentPage.totalRows);
+        renderDepartments(latestPayload.departments);
+        const nextFocusTarget = [...document.querySelectorAll("[data-department-comparison-page]")]
+          .find((button) => button.dataset.departmentComparisonPage === action && !button.disabled);
+        (nextFocusTarget || document.querySelector("[data-department-comparison-page-size]"))?.focus();
+      }
+      return;
+    }
+
+    const departmentSelect = event.target.closest("[data-department-select]");
+    if (departmentSelect) {
+      const key = departmentSelect.dataset.departmentSelect;
+      const row = latestPayload?.departments?.rows?.find((item) => getDepartmentKey(item) === key);
+      if (!row) return;
+      selectedDepartmentKey = key;
+      document.querySelectorAll("[data-department-row]").forEach((tableRow) => {
+        const selected = tableRow.dataset.departmentRow === key;
+        tableRow.setAttribute("aria-selected", String(selected));
+        tableRow.querySelector("[data-department-select]")?.setAttribute("aria-pressed", String(selected));
+      });
+      renderDepartmentFocus(row);
+      return;
+    }
+
+    const departmentRow = event.target.closest("[data-department-row]");
+    if (departmentRow && !event.target.closest("button, a, select, input")) {
+      const key = departmentRow.dataset.departmentRow;
+      const row = latestPayload?.departments?.rows?.find((item) => getDepartmentKey(item) === key);
+      if (!row) return;
+      selectedDepartmentKey = key;
+      document.querySelectorAll("[data-department-row]").forEach((tableRow) => {
+        const selected = tableRow.dataset.departmentRow === key;
+        tableRow.setAttribute("aria-selected", String(selected));
+        tableRow.querySelector("[data-department-select]")?.setAttribute("aria-pressed", String(selected));
+      });
+      renderDepartmentFocus(row);
+      return;
+    }
+
     const sortButton = event.target.closest("[data-department-sort]");
     if (sortButton) {
       const key = sortButton.dataset.departmentSort;
