@@ -2827,16 +2827,182 @@ tbody tr:hover td {
   min-width: 420px;
 }
 
+.age-treemap-stage {
+  position: relative;
+  height: 300px;
+  overflow: visible;
+  background: var(--cpe-surface-raised);
+  border: 1px solid var(--cpe-border);
+  border-radius: var(--radius-control);
+  isolation: isolate;
+}
+
+.age-treemap-tile {
+  position: absolute;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  align-items: stretch;
+  justify-content: center;
+  overflow: hidden;
+  padding: 8px;
+  color: var(--cpe-text);
+  border: 0;
+  border-radius: 5px;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition: filter 140ms ease-out;
+}
+
+.age-treemap-tone-0 { background: color-mix(in srgb, var(--cpe-brand-blue) 62%, var(--cpe-surface-raised)); }
+.age-treemap-tone-1 { background: color-mix(in srgb, var(--cpe-brand-blue) 52%, var(--cpe-surface-raised)); }
+.age-treemap-tone-2 { background: color-mix(in srgb, var(--cpe-info) 45%, var(--cpe-surface-raised)); }
+.age-treemap-tone-3 { background: color-mix(in srgb, var(--cpe-brand-blue-deep) 46%, var(--cpe-surface-raised)); }
+.age-treemap-tone-4 { background: color-mix(in srgb, var(--cpe-brand-blue) 36%, var(--cpe-surface-raised)); }
+.age-treemap-tone-5 { background: color-mix(in srgb, var(--cpe-info) 32%, var(--cpe-surface-raised)); }
+.age-treemap-tone-6 { background: color-mix(in srgb, var(--cpe-brand-blue-deep) 28%, var(--cpe-surface-raised)); }
+
+.age-treemap-tile:hover {
+  z-index: 2;
+  filter: brightness(1.1);
+}
+
+.age-treemap-tile:focus-visible {
+  z-index: 3;
+  outline: 3px solid var(--cpe-focus);
+  outline-offset: -3px;
+}
+
+.age-treemap-content,
+.age-treemap-index {
+  display: none;
+}
+
+.age-treemap-content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 3px;
+  overflow: hidden;
+}
+
+.age-treemap-count,
+.age-treemap-label,
+.age-treemap-share {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.age-treemap-count {
+  font-size: 1.5rem;
+  font-weight: 750;
+  line-height: 1.1;
+}
+
+.age-treemap-label {
+  font-size: 0.9rem;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.age-treemap-share {
+  color: var(--cpe-text);
+  font-size: 0.75rem;
+  line-height: 1.2;
+  opacity: 0.88;
+}
+
+.age-treemap-tile.is-large .age-treemap-content,
+.age-treemap-tile.is-medium .age-treemap-content,
+.age-treemap-tile.is-small .age-treemap-content {
+  display: flex;
+}
+
+.age-treemap-tile.is-medium .age-treemap-count { font-size: 1.1rem; }
+.age-treemap-tile.is-medium .age-treemap-label { font-size: 0.78rem; }
+.age-treemap-tile.is-medium .age-treemap-share { font-size: 0.68rem; }
+.age-treemap-tile.is-small { padding: 4px; }
+.age-treemap-tile.is-small .age-treemap-count { font-size: 0.78rem; }
+.age-treemap-tile.is-small .age-treemap-label { font-size: 0.66rem; }
+.age-treemap-tile.is-small .age-treemap-share { display: none; }
+.age-treemap-tile.is-tiny { padding: 0; }
+
+.age-treemap-tile.is-large .age-treemap-index {
+  position: absolute;
+  top: -0.08em;
+  right: 0.02em;
+  display: block;
+  color: var(--cpe-text);
+  font-size: 4.25rem;
+  font-weight: 800;
+  line-height: 1;
+  opacity: 0.13;
+  pointer-events: none;
+}
+
+.age-treemap-tooltip {
+  position: fixed;
+  z-index: 1000;
+  max-width: min(17rem, calc(100vw - 1rem));
+  padding: 0.6rem 0.75rem;
+  color: var(--cpe-text);
+  background: var(--cpe-surface);
+  border: 1px solid var(--cpe-border);
+  border-radius: var(--radius-control);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  white-space: pre-line;
+  pointer-events: none;
+}
+
+.age-treemap-tooltip[hidden] { display: none; }
+.age-treemap-empty .empty-state { min-height: 160px; }
+
+.age-treemap-details {
+  margin-top: 8px;
+  color: var(--cpe-text-subtle);
+  font-size: 0.78rem;
+}
+
+.age-treemap-details > summary {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  color: var(--cpe-link);
+  cursor: pointer;
+  font-weight: 700;
+  text-underline-offset: 3px;
+}
+
+.age-treemap-details > summary:focus-visible {
+  outline: 2px solid var(--cpe-focus);
+  outline-offset: 2px;
+}
+
+.age-treemap-detail-table { min-width: 420px; }
+
 @media (max-width: 720px) {
   .treemap-stage {
     height: 260px;
   }
+
+  .age-treemap-stage { height: 260px; }
 }
 
 @media (max-width: 420px) {
   .treemap-stage {
     height: 230px;
   }
+
+  .age-treemap-stage { height: 230px; }
 
   .treemap-tile {
     gap: 2px;

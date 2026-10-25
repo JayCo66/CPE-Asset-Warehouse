@@ -2,6 +2,7 @@ import {
   buildInventoryDashboardUrl,
   hasComparableSnapshots,
 } from "./inventory-dashboard-data.mjs?v=20261025.1";
+import { squarifyTreemap } from "./treemap-layout.mjs?v=20261025.1";
 
 const DASHBOARD_API = new URL("../../assets_api/asset_inventory_dashboard.php", import.meta.url).href;
 const PAGE_IDS = ["overview", "portfolio", "departments", "locations", "aging", "acquisition", "governance", "explorer"];
@@ -56,6 +57,8 @@ let latestPayload = null;
 let requestId = 0;
 let onFiltersChange = () => {};
 let departmentSort = { key: "totalAssets", direction: "desc" };
+let ageTreemapObserver = null;
+const ageTreemapTooltipTargets = new WeakSet();
 
 const formatCount = (value) => NUMBER_FORMAT.format(Number(value || 0));
 const formatPercent = (value) => value === null || value === undefined ? "—" : `${Number(value).toFixed(1)}%`;
@@ -429,6 +432,167 @@ function renderTable(id, caption, columns, rows, { emptyTitle = "ไม่มี
   target.innerHTML = `<table class="dashboard-data-table"><caption class="sr-only">${escapeHtml(caption)}</caption><thead><tr>${header}</tr></thead><tbody>${body}</tbody></table>`;
 }
 
+function bindAgeTreemapTooltip(target) {
+  if (ageTreemapTooltipTargets.has(target)) return;
+
+  const state = { hovered: null, focused: null, active: null };
+  const update = () => {
+    const tile = [state.focused, state.hovered].find((candidate) => candidate?.isConnected);
+    const tooltip = target.querySelector(".age-treemap-tooltip");
+    if (!tooltip || !tile) {
+      if (state.active?.isConnected) state.active.removeAttribute("aria-describedby");
+      state.active = null;
+      if (tooltip) tooltip.hidden = true;
+      return;
+    }
+
+    if (state.active !== tile) {
+      if (state.active?.isConnected) state.active.removeAttribute("aria-describedby");
+      state.active = tile;
+    }
+    tooltip.textContent = tile.dataset.tooltip || "";
+    tooltip.hidden = false;
+    tile.setAttribute("aria-describedby", tooltip.id);
+
+    const bounds = tile.getBoundingClientRect();
+    const tooltipBounds = tooltip.getBoundingClientRect();
+    const inset = 8;
+    const left = Math.max(inset, Math.min(
+      window.innerWidth - tooltipBounds.width - inset,
+      bounds.left + bounds.width / 2 - tooltipBounds.width / 2,
+    ));
+    const above = bounds.top - tooltipBounds.height - inset;
+    const top = above >= inset
+      ? above
+      : Math.min(window.innerHeight - tooltipBounds.height - inset, bounds.bottom + inset);
+    tooltip.style.left = String(left) + "px";
+    tooltip.style.top = String(Math.max(inset, top)) + "px";
+  };
+
+  target.addEventListener("pointerover", (event) => {
+    const tile = event.target?.closest?.(".age-treemap-tile");
+    if (!tile || !target.contains(tile)) return;
+    if (event.relatedTarget?.closest?.(".age-treemap-tile") === tile) return;
+    state.hovered = tile;
+    update();
+  });
+  target.addEventListener("pointerout", (event) => {
+    const tile = event.target?.closest?.(".age-treemap-tile");
+    if (!tile || event.relatedTarget?.closest?.(".age-treemap-tile") === tile) return;
+    state.hovered = null;
+    update();
+  });
+  target.addEventListener("focusin", (event) => {
+    const tile = event.target?.closest?.(".age-treemap-tile");
+    if (!tile) return;
+    state.focused = tile;
+    update();
+  });
+  target.addEventListener("focusout", (event) => {
+    const tile = event.target?.closest?.(".age-treemap-tile");
+    if (!tile || event.relatedTarget?.closest?.(".age-treemap-tile") === tile) return;
+    state.focused = null;
+    update();
+  });
+  ageTreemapTooltipTargets.add(target);
+}
+
+function renderAgeTreemap(id, source, totalAssets) {
+  const target = document.getElementById(id);
+  if (!target) return;
+
+  ageTreemapObserver?.disconnect();
+  ageTreemapObserver = null;
+
+  const sourceCounts = source && typeof source === "object" ? source : {};
+  const rows = Object.entries(AGE_LABELS).map(([key, label], index) => {
+    const count = Number(sourceCounts[key]);
+    return {
+      key,
+      label,
+      index,
+      assets: Number.isFinite(count) && count > 0 ? count : 0,
+    };
+  });
+  const total = Number(totalAssets);
+  const denominator = Number.isFinite(total) && total > 0 ? total : 0;
+  const populatedRows = rows.filter((row) => row.assets > 0);
+  const detailRows = rows.map((row) => {
+    const share = denominator > 0 ? (row.assets / denominator) * 100 : 0;
+    return '<tr><th scope="row">' + drillButton(row.label, "ageBand", row.key) + '</th><td>' +
+      formatCount(row.assets) + '</td><td>' + formatPercent(share) + '</td></tr>';
+  }).join("");
+
+  const tiles = populatedRows.map((row) => {
+    const share = denominator > 0 ? (row.assets / denominator) * 100 : 0;
+    const tooltip = row.label + "\nจำนวน: " + formatCount(row.assets) + " รายการ\nสัดส่วน: " + formatPercent(share);
+    const accessibleLabel = "กรองตามช่วงอายุ " + row.label;
+    return '<button class="age-treemap-tile age-treemap-tone-' + row.index + ' is-tiny" type="button" data-band-key="' +
+      escapeHtml(row.key) + '" data-drill-filter="ageBand" data-filter-value="' + escapeHtml(row.key) +
+      '" data-tooltip="' + escapeHtml(tooltip) + '" aria-label="' + escapeHtml(accessibleLabel) +
+      '" title="' + escapeHtml(tooltip) + '">' +
+      '<span class="age-treemap-index" aria-hidden="true">' + String(row.index + 1).padStart(2, "0") + '</span>' +
+      '<span class="age-treemap-content"><strong class="age-treemap-count">' + formatCount(row.assets) +
+      '</strong><span class="age-treemap-label">' + escapeHtml(row.label) +
+      '</span><span class="age-treemap-share">' + formatPercent(share) + '</span></span></button>';
+  }).join("");
+
+  const treemap = populatedRows.length > 0
+    ? '<div class="age-treemap-stage" role="group" aria-label="โครงสร้างอายุครุภัณฑ์ พื้นที่ของแต่ละช่องแทนจำนวนสินทรัพย์">' +
+      tiles + '<div id="overview-age-treemap-tooltip" class="age-treemap-tooltip" role="tooltip" hidden></div></div>'
+    : '<div class="age-treemap-empty">' + emptyMarkup("ไม่มีข้อมูลอายุครุภัณฑ์ในชุดที่เลือก") + '</div>';
+
+  target.innerHTML = treemap +
+    '<details class="age-treemap-details">' +
+      '<summary>ดูจำนวนและสัดส่วนครบทุกช่วงอายุ</summary>' +
+      '<div class="dashboard-table-wrap">' +
+        '<table class="dashboard-data-table age-treemap-detail-table">' +
+          '<caption class="sr-only">โครงสร้างอายุครุภัณฑ์ จำนวน และสัดส่วนของทุกช่วงอายุ</caption>' +
+          '<thead><tr><th scope="col">ช่วงอายุ</th><th scope="col">จำนวนสินทรัพย์</th><th scope="col">สัดส่วนจากสินทรัพย์ทั้งหมด</th></tr></thead>' +
+          '<tbody>' + detailRows + '</tbody>' +
+        '</table>' +
+      '</div>' +
+    '</details>';
+
+  if (populatedRows.length === 0) return;
+  bindAgeTreemapTooltip(target);
+
+  const stage = target.querySelector(".age-treemap-stage");
+  const tilesByKey = new Map([...stage.querySelectorAll(".age-treemap-tile")]
+    .map((tile) => [tile.dataset.bandKey, tile]));
+  const updateLayout = () => {
+    const width = stage.clientWidth;
+    const height = stage.clientHeight;
+    if (width <= 0 || height <= 0) return;
+
+    const cells = squarifyTreemap(populatedRows, width, height);
+    for (const cell of cells) {
+      const tile = tilesByKey.get(cell.item.key);
+      if (!tile) continue;
+      const inset = Math.min(1, Math.floor(Math.min(cell.width, cell.height) / 3));
+      tile.style.left = String(cell.x + inset) + "px";
+      tile.style.top = String(cell.y + inset) + "px";
+      tile.style.width = String(Math.max(0, cell.width - inset * 2)) + "px";
+      tile.style.height = String(Math.max(0, cell.height - inset * 2)) + "px";
+      const sizeClass = cell.width >= 150 && cell.height >= 92
+        ? "is-large"
+        : cell.width >= 88 && cell.height >= 50
+          ? "is-medium"
+          : cell.width >= 54 && cell.height >= 32
+            ? "is-small"
+            : "is-tiny";
+      tile.classList.remove("is-large", "is-medium", "is-small", "is-tiny");
+      tile.classList.add(sizeClass);
+    }
+  };
+
+  updateLayout();
+  if (typeof ResizeObserver === "function") {
+    ageTreemapObserver = new ResizeObserver(updateLayout);
+    ageTreemapObserver.observe(stage);
+  }
+}
+
 function renderComboTable(id, caption, rows, firstFilter, secondFilter, firstLabel, secondLabel, limit = 40) {
   const mapped = (rows || []).slice(0, limit).map((row) => ({
     first: row.first,
@@ -449,14 +613,7 @@ function renderComboTable(id, caption, rows, firstFilter, secondFilter, firstLab
 function renderOverview(data, payload) {
   renderMetrics(data);
   renderUnavailableBreakdown(data);
-  const ageRows = Object.entries(payload.aging.ageDistribution || {}).map(([key, assets]) => ({
-    key,
-    label: AGE_LABELS[key] || key,
-    assets,
-  }));
-  renderRankedBars("overview-age-distribution", ageRows, {
-    labelKey: "label", countKey: "assets", filterKey: "ageBand", valueKey: "key", limit: 7, sort: false,
-  });
+  renderAgeTreemap("overview-age-distribution", payload?.aging?.ageDistribution, data?.totalAssets);
   renderRateHeatmap("overview-issue-heatmap", "อัตราประเด็นสินทรัพย์ตามหน่วยงาน", payload.departments?.rows, [
     {
       label: "ไม่มีตำแหน่ง",

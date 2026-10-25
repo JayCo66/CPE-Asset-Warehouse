@@ -7,6 +7,7 @@ const overviewHtml = readFileSync(new URL("../src/asset-inv/sections/executive-o
 const analysisHtml = readFileSync(new URL("../src/asset-inv/sections/analysis.html", import.meta.url), "utf8");
 const dashboardApp = readFileSync(new URL("../src/asset-inv/app.js", import.meta.url), "utf8");
 const executiveDashboard = readFileSync(new URL("../src/asset-inv/executive-dashboard.mjs", import.meta.url), "utf8");
+const dashboardStyles = readFileSync(new URL("../src/asset-inv/styles.css", import.meta.url), "utf8");
 const executiveFilters = readFileSync(new URL("../src/asset-inv/sections/executive-filters.html", import.meta.url), "utf8");
 const inventoryDashboardApi = readFileSync(new URL("../assets_api/asset_inventory_dashboard.php", import.meta.url), "utf8");
 const inventoryDisposalApi = readFileSync(new URL("../assets_api/inventory_disposal.php", import.meta.url), "utf8");
@@ -50,6 +51,15 @@ test("uses a decision-first overview with API-backed readiness, aging, and unava
   assert.match(overviewHtml, /id="overview-readiness-meter"/u);
   assert.match(overviewHtml, /class="overview-supporting-kpis" id="executive-metrics"/u);
   assert.match(overviewHtml, /id="overview-age-distribution"/u);
+  assert.match(overviewHtml, /<h2>โครงสร้างอายุครุภัณฑ์<\/h2>/u);
+  assert.match(executiveDashboard, /squarifyTreemap\(populatedRows, width, height\)/u);
+  assert.match(executiveDashboard, /data-drill-filter="ageBand"/u);
+  assert.match(executiveDashboard, /role="tooltip"/u);
+  assert.match(executiveDashboard, /new ResizeObserver\(updateLayout\)/u);
+  assert.match(dashboardStyles, /\.age-treemap-tile\.is-tiny\s*\{\s*padding:\s*0;\s*\}/u);
+  for (const band of ["0-2", "3-5", "6-10", "11-15", "16-20", "over-20", "unknown"]) {
+    assert.ok(executiveDashboard.includes('"' + band + '"'), "age band " + band + " remains supported");
+  }
   assert.match(overviewHtml, /id="overview-unavailable-breakdown"/u);
   assert.doesNotMatch(overviewHtml, /overview-status-distribution|overview-availability-distribution/u);
   assert.doesNotMatch(overviewHtml, /คิวประเด็นที่ต้องตรวจสอบ|ข้อเสนอแนะ|คำแนะนำ/u);
