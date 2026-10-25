@@ -8,16 +8,7 @@
       content="แดชบอร์ดทะเบียนและวงจรชีวิตสินทรัพย์ของคลังสินทรัพย์ CPE"
     />
     <title>คลังสินทรัพย์ CPE</title>
-    <script>
-      (() => {
-        if (window.location.protocol !== "file:") return;
 
-        const serverUrl = new URL("http://localhost/CPE-Asset-Warehouse/src/asset-inv/index.html");
-        serverUrl.search = window.location.search;
-        serverUrl.hash = window.location.hash || "#/inventory/overview";
-        window.location.replace(serverUrl.href);
-      })();
-    </script>
     <script>
       (() => {
         const systemTheme =

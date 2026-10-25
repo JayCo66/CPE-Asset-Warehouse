@@ -1395,7 +1395,7 @@
     // -------------------------------------------------------------------------
     // 5. Data Fetching
     // -------------------------------------------------------------------------
-    const API_URL = 'http://localhost/assets_api/dw_borrow.php';
+    const API_URL = '../../assets_api/dw_borrow.php';
     const CACHED_URL = '../../data/dw_borrow_cached.json';
 
     async function loadData() {
@@ -1403,14 +1403,14 @@
       let rawData = null;
 
       try {
-        badge.innerHTML = '<span>🔄 เชื่อมต่อ PHP API (localhost)...</span>';
+        badge.innerHTML = '<span>🔄 เชื่อมต่อ PHP API...</span>';
         const res = await fetch(API_URL);
         if (res.ok) {
           const json = await res.json();
           if (json.success && Array.isArray(json.data) && json.data.length > 0) {
             rawData = json.data;
             badge.className = 'badge-status status-ready';
-            badge.innerHTML = '🟢 เชื่อมต่อสด: PHP API (localhost)';
+            badge.innerHTML = '🟢 เชื่อมต่อสด: PHP API';
           }
         }
       } catch (e) {
