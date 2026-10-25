@@ -1,0 +1,1906 @@
+{
+  "snapshot_date": "2026-10-25",
+  "description": "100 synthetic demo assets for a repeatable 2026-10-25 inventory snapshot.",
+  "assets": [
+    {
+      "asset_code": "DEMO-SNAP-20261025-001/001-70",
+      "asset_name": "DEMO Snapshot - Computer workstation",
+      "type_code": "FA18",
+      "category_code": "18",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้อง Server คณะ",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "ห้อง server"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-002/001-70",
+      "asset_name": "DEMO Snapshot - Office printer",
+      "type_code": "FA05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักงานเลขานุการคณะ",
+        "building": "อาคาร 9",
+        "floor": "3",
+        "room_detail": null
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-003/001-69",
+      "asset_name": "DEMO Snapshot - Network switch",
+      "type_code": "FA07",
+      "category_code": "07",
+      "brand": "DEMO",
+      "year_purchase": "2025",
+      "year_fiscal": "2569",
+      "source": "เงินงบประมาณ",
+      "asset_status": "ชำรุด",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องเรียน 8302",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "E8302"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-004/001-68",
+      "asset_name": "DEMO Snapshot - Projector",
+      "type_code": "FA09",
+      "category_code": "09",
+      "brand": "DEMO",
+      "year_purchase": "2024",
+      "year_fiscal": "2568",
+      "source": "เงินรายได้",
+      "asset_status": "ส่งซ่อม",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักประสานงานโลจิสติกส์",
+        "building": "อาคาร 9",
+        "floor": "2",
+        "room_detail": "9204"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-005/001-70",
+      "asset_name": "DEMO Snapshot - Low-value office equipment",
+      "type_code": "FN05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องปฏิบัติการคอมพิวเตอร์ 1",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "8314"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-006/001-70",
+      "asset_name": "DEMO Snapshot - Computer equipment 006",
+      "type_code": "FA18",
+      "category_code": "18",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้อง Server คณะ",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "ห้อง server"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-007/001-70",
+      "asset_name": "DEMO Snapshot - Office equipment 007",
+      "type_code": "FA05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักงานเลขานุการคณะ",
+        "building": "อาคาร 9",
+        "floor": "3",
+        "room_detail": null
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-008/001-70",
+      "asset_name": "DEMO Snapshot - Electrical equipment 008",
+      "type_code": "FA07",
+      "category_code": "07",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องเรียน 8302",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "E8302"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-009/001-70",
+      "asset_name": "DEMO Snapshot - Presentation equipment 009",
+      "type_code": "FA09",
+      "category_code": "09",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักประสานงานโลจิสติกส์",
+        "building": "อาคาร 9",
+        "floor": "2",
+        "room_detail": "9204"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-010/001-70",
+      "asset_name": "DEMO Snapshot - Low-value office equipment 010",
+      "type_code": "FN05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องปฏิบัติการคอมพิวเตอร์ 1",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "8314"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-011/001-70",
+      "asset_name": "DEMO Snapshot - Computer equipment 011",
+      "type_code": "FA18",
+      "category_code": "18",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "ถูกยืม",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้อง Server คณะ",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "ห้อง server"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-012/001-70",
+      "asset_name": "DEMO Snapshot - Office equipment 012",
+      "type_code": "FA05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "ชำรุด",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักงานเลขานุการคณะ",
+        "building": "อาคาร 9",
+        "floor": "3",
+        "room_detail": null
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-013/001-70",
+      "asset_name": "DEMO Snapshot - Electrical equipment 013",
+      "type_code": "FA07",
+      "category_code": "07",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "ส่งซ่อม",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องเรียน 8302",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "E8302"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-014/001-70",
+      "asset_name": "DEMO Snapshot - Presentation equipment 014",
+      "type_code": "FA09",
+      "category_code": "09",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักประสานงานโลจิสติกส์",
+        "building": "อาคาร 9",
+        "floor": "2",
+        "room_detail": "9204"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-015/001-70",
+      "asset_name": "DEMO Snapshot - Low-value office equipment 015",
+      "type_code": "FN05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องปฏิบัติการคอมพิวเตอร์ 1",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "8314"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-016/001-70",
+      "asset_name": "DEMO Snapshot - Computer equipment 016",
+      "type_code": "FA18",
+      "category_code": "18",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้อง Server คณะ",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "ห้อง server"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-017/001-70",
+      "asset_name": "DEMO Snapshot - Office equipment 017",
+      "type_code": "FA05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักงานเลขานุการคณะ",
+        "building": "อาคาร 9",
+        "floor": "3",
+        "room_detail": null
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-018/001-70",
+      "asset_name": "DEMO Snapshot - Electrical equipment 018",
+      "type_code": "FA07",
+      "category_code": "07",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องเรียน 8302",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "E8302"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-019/001-70",
+      "asset_name": "DEMO Snapshot - Presentation equipment 019",
+      "type_code": "FA09",
+      "category_code": "09",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักประสานงานโลจิสติกส์",
+        "building": "อาคาร 9",
+        "floor": "2",
+        "room_detail": "9204"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-020/001-70",
+      "asset_name": "DEMO Snapshot - Low-value office equipment 020",
+      "type_code": "FN05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องปฏิบัติการคอมพิวเตอร์ 1",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "8314"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-021/001-70",
+      "asset_name": "DEMO Snapshot - Computer equipment 021",
+      "type_code": "FA18",
+      "category_code": "18",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "ถูกยืม",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้อง Server คณะ",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "ห้อง server"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-022/001-70",
+      "asset_name": "DEMO Snapshot - Office equipment 022",
+      "type_code": "FA05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "ชำรุด",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักงานเลขานุการคณะ",
+        "building": "อาคาร 9",
+        "floor": "3",
+        "room_detail": null
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-023/001-70",
+      "asset_name": "DEMO Snapshot - Electrical equipment 023",
+      "type_code": "FA07",
+      "category_code": "07",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "ส่งซ่อม",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องเรียน 8302",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "E8302"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-024/001-70",
+      "asset_name": "DEMO Snapshot - Presentation equipment 024",
+      "type_code": "FA09",
+      "category_code": "09",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักประสานงานโลจิสติกส์",
+        "building": "อาคาร 9",
+        "floor": "2",
+        "room_detail": "9204"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-025/001-70",
+      "asset_name": "DEMO Snapshot - Low-value office equipment 025",
+      "type_code": "FN05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องปฏิบัติการคอมพิวเตอร์ 1",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "8314"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-026/001-70",
+      "asset_name": "DEMO Snapshot - Computer equipment 026",
+      "type_code": "FA18",
+      "category_code": "18",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้อง Server คณะ",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "ห้อง server"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-027/001-70",
+      "asset_name": "DEMO Snapshot - Office equipment 027",
+      "type_code": "FA05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักงานเลขานุการคณะ",
+        "building": "อาคาร 9",
+        "floor": "3",
+        "room_detail": null
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-028/001-70",
+      "asset_name": "DEMO Snapshot - Electrical equipment 028",
+      "type_code": "FA07",
+      "category_code": "07",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องเรียน 8302",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "E8302"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-029/001-70",
+      "asset_name": "DEMO Snapshot - Presentation equipment 029",
+      "type_code": "FA09",
+      "category_code": "09",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักประสานงานโลจิสติกส์",
+        "building": "อาคาร 9",
+        "floor": "2",
+        "room_detail": "9204"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-030/001-70",
+      "asset_name": "DEMO Snapshot - Low-value office equipment 030",
+      "type_code": "FN05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องปฏิบัติการคอมพิวเตอร์ 1",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "8314"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-031/001-70",
+      "asset_name": "DEMO Snapshot - Computer equipment 031",
+      "type_code": "FA18",
+      "category_code": "18",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "ถูกยืม",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้อง Server คณะ",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "ห้อง server"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-032/001-70",
+      "asset_name": "DEMO Snapshot - Office equipment 032",
+      "type_code": "FA05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "ชำรุด",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักงานเลขานุการคณะ",
+        "building": "อาคาร 9",
+        "floor": "3",
+        "room_detail": null
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-033/001-70",
+      "asset_name": "DEMO Snapshot - Electrical equipment 033",
+      "type_code": "FA07",
+      "category_code": "07",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "ส่งซ่อม",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องเรียน 8302",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "E8302"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-034/001-70",
+      "asset_name": "DEMO Snapshot - Presentation equipment 034",
+      "type_code": "FA09",
+      "category_code": "09",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักประสานงานโลจิสติกส์",
+        "building": "อาคาร 9",
+        "floor": "2",
+        "room_detail": "9204"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-035/001-70",
+      "asset_name": "DEMO Snapshot - Low-value office equipment 035",
+      "type_code": "FN05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องปฏิบัติการคอมพิวเตอร์ 1",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "8314"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-036/001-70",
+      "asset_name": "DEMO Snapshot - Computer equipment 036",
+      "type_code": "FA18",
+      "category_code": "18",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้อง Server คณะ",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "ห้อง server"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-037/001-70",
+      "asset_name": "DEMO Snapshot - Office equipment 037",
+      "type_code": "FA05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักงานเลขานุการคณะ",
+        "building": "อาคาร 9",
+        "floor": "3",
+        "room_detail": null
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-038/001-70",
+      "asset_name": "DEMO Snapshot - Electrical equipment 038",
+      "type_code": "FA07",
+      "category_code": "07",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องเรียน 8302",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "E8302"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-039/001-70",
+      "asset_name": "DEMO Snapshot - Presentation equipment 039",
+      "type_code": "FA09",
+      "category_code": "09",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักประสานงานโลจิสติกส์",
+        "building": "อาคาร 9",
+        "floor": "2",
+        "room_detail": "9204"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-040/001-70",
+      "asset_name": "DEMO Snapshot - Low-value office equipment 040",
+      "type_code": "FN05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องปฏิบัติการคอมพิวเตอร์ 1",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "8314"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-041/001-70",
+      "asset_name": "DEMO Snapshot - Computer equipment 041",
+      "type_code": "FA18",
+      "category_code": "18",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "ถูกยืม",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้อง Server คณะ",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "ห้อง server"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-042/001-70",
+      "asset_name": "DEMO Snapshot - Office equipment 042",
+      "type_code": "FA05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "ชำรุด",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักงานเลขานุการคณะ",
+        "building": "อาคาร 9",
+        "floor": "3",
+        "room_detail": null
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-043/001-70",
+      "asset_name": "DEMO Snapshot - Electrical equipment 043",
+      "type_code": "FA07",
+      "category_code": "07",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "ส่งซ่อม",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องเรียน 8302",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "E8302"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-044/001-70",
+      "asset_name": "DEMO Snapshot - Presentation equipment 044",
+      "type_code": "FA09",
+      "category_code": "09",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักประสานงานโลจิสติกส์",
+        "building": "อาคาร 9",
+        "floor": "2",
+        "room_detail": "9204"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-045/001-70",
+      "asset_name": "DEMO Snapshot - Low-value office equipment 045",
+      "type_code": "FN05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องปฏิบัติการคอมพิวเตอร์ 1",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "8314"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-046/001-70",
+      "asset_name": "DEMO Snapshot - Computer equipment 046",
+      "type_code": "FA18",
+      "category_code": "18",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้อง Server คณะ",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "ห้อง server"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-047/001-70",
+      "asset_name": "DEMO Snapshot - Office equipment 047",
+      "type_code": "FA05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักงานเลขานุการคณะ",
+        "building": "อาคาร 9",
+        "floor": "3",
+        "room_detail": null
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-048/001-70",
+      "asset_name": "DEMO Snapshot - Electrical equipment 048",
+      "type_code": "FA07",
+      "category_code": "07",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องเรียน 8302",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "E8302"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-049/001-70",
+      "asset_name": "DEMO Snapshot - Presentation equipment 049",
+      "type_code": "FA09",
+      "category_code": "09",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักประสานงานโลจิสติกส์",
+        "building": "อาคาร 9",
+        "floor": "2",
+        "room_detail": "9204"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-050/001-70",
+      "asset_name": "DEMO Snapshot - Low-value office equipment 050",
+      "type_code": "FN05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องปฏิบัติการคอมพิวเตอร์ 1",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "8314"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-051/001-70",
+      "asset_name": "DEMO Snapshot - Computer equipment 051",
+      "type_code": "FA18",
+      "category_code": "18",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "ถูกยืม",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้อง Server คณะ",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "ห้อง server"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-052/001-70",
+      "asset_name": "DEMO Snapshot - Office equipment 052",
+      "type_code": "FA05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "ชำรุด",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักงานเลขานุการคณะ",
+        "building": "อาคาร 9",
+        "floor": "3",
+        "room_detail": null
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-053/001-70",
+      "asset_name": "DEMO Snapshot - Electrical equipment 053",
+      "type_code": "FA07",
+      "category_code": "07",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "ส่งซ่อม",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องเรียน 8302",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "E8302"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-054/001-70",
+      "asset_name": "DEMO Snapshot - Presentation equipment 054",
+      "type_code": "FA09",
+      "category_code": "09",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักประสานงานโลจิสติกส์",
+        "building": "อาคาร 9",
+        "floor": "2",
+        "room_detail": "9204"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-055/001-70",
+      "asset_name": "DEMO Snapshot - Low-value office equipment 055",
+      "type_code": "FN05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องปฏิบัติการคอมพิวเตอร์ 1",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "8314"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-056/001-70",
+      "asset_name": "DEMO Snapshot - Computer equipment 056",
+      "type_code": "FA18",
+      "category_code": "18",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้อง Server คณะ",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "ห้อง server"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-057/001-70",
+      "asset_name": "DEMO Snapshot - Office equipment 057",
+      "type_code": "FA05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักงานเลขานุการคณะ",
+        "building": "อาคาร 9",
+        "floor": "3",
+        "room_detail": null
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-058/001-70",
+      "asset_name": "DEMO Snapshot - Electrical equipment 058",
+      "type_code": "FA07",
+      "category_code": "07",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องเรียน 8302",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "E8302"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-059/001-70",
+      "asset_name": "DEMO Snapshot - Presentation equipment 059",
+      "type_code": "FA09",
+      "category_code": "09",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักประสานงานโลจิสติกส์",
+        "building": "อาคาร 9",
+        "floor": "2",
+        "room_detail": "9204"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-060/001-70",
+      "asset_name": "DEMO Snapshot - Low-value office equipment 060",
+      "type_code": "FN05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องปฏิบัติการคอมพิวเตอร์ 1",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "8314"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-061/001-70",
+      "asset_name": "DEMO Snapshot - Computer equipment 061",
+      "type_code": "FA18",
+      "category_code": "18",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "ถูกยืม",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้อง Server คณะ",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "ห้อง server"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-062/001-70",
+      "asset_name": "DEMO Snapshot - Office equipment 062",
+      "type_code": "FA05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "ชำรุด",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักงานเลขานุการคณะ",
+        "building": "อาคาร 9",
+        "floor": "3",
+        "room_detail": null
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-063/001-70",
+      "asset_name": "DEMO Snapshot - Electrical equipment 063",
+      "type_code": "FA07",
+      "category_code": "07",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "ส่งซ่อม",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องเรียน 8302",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "E8302"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-064/001-70",
+      "asset_name": "DEMO Snapshot - Presentation equipment 064",
+      "type_code": "FA09",
+      "category_code": "09",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักประสานงานโลจิสติกส์",
+        "building": "อาคาร 9",
+        "floor": "2",
+        "room_detail": "9204"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-065/001-70",
+      "asset_name": "DEMO Snapshot - Low-value office equipment 065",
+      "type_code": "FN05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องปฏิบัติการคอมพิวเตอร์ 1",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "8314"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-066/001-70",
+      "asset_name": "DEMO Snapshot - Computer equipment 066",
+      "type_code": "FA18",
+      "category_code": "18",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้อง Server คณะ",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "ห้อง server"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-067/001-70",
+      "asset_name": "DEMO Snapshot - Office equipment 067",
+      "type_code": "FA05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักงานเลขานุการคณะ",
+        "building": "อาคาร 9",
+        "floor": "3",
+        "room_detail": null
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-068/001-70",
+      "asset_name": "DEMO Snapshot - Electrical equipment 068",
+      "type_code": "FA07",
+      "category_code": "07",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องเรียน 8302",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "E8302"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-069/001-70",
+      "asset_name": "DEMO Snapshot - Presentation equipment 069",
+      "type_code": "FA09",
+      "category_code": "09",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักประสานงานโลจิสติกส์",
+        "building": "อาคาร 9",
+        "floor": "2",
+        "room_detail": "9204"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-070/001-70",
+      "asset_name": "DEMO Snapshot - Low-value office equipment 070",
+      "type_code": "FN05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องปฏิบัติการคอมพิวเตอร์ 1",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "8314"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-071/001-70",
+      "asset_name": "DEMO Snapshot - Computer equipment 071",
+      "type_code": "FA18",
+      "category_code": "18",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "ถูกยืม",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้อง Server คณะ",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "ห้อง server"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-072/001-70",
+      "asset_name": "DEMO Snapshot - Office equipment 072",
+      "type_code": "FA05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "ชำรุด",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักงานเลขานุการคณะ",
+        "building": "อาคาร 9",
+        "floor": "3",
+        "room_detail": null
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-073/001-70",
+      "asset_name": "DEMO Snapshot - Electrical equipment 073",
+      "type_code": "FA07",
+      "category_code": "07",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "ส่งซ่อม",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องเรียน 8302",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "E8302"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-074/001-70",
+      "asset_name": "DEMO Snapshot - Presentation equipment 074",
+      "type_code": "FA09",
+      "category_code": "09",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักประสานงานโลจิสติกส์",
+        "building": "อาคาร 9",
+        "floor": "2",
+        "room_detail": "9204"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-075/001-70",
+      "asset_name": "DEMO Snapshot - Low-value office equipment 075",
+      "type_code": "FN05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องปฏิบัติการคอมพิวเตอร์ 1",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "8314"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-076/001-70",
+      "asset_name": "DEMO Snapshot - Computer equipment 076",
+      "type_code": "FA18",
+      "category_code": "18",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้อง Server คณะ",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "ห้อง server"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-077/001-70",
+      "asset_name": "DEMO Snapshot - Office equipment 077",
+      "type_code": "FA05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักงานเลขานุการคณะ",
+        "building": "อาคาร 9",
+        "floor": "3",
+        "room_detail": null
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-078/001-70",
+      "asset_name": "DEMO Snapshot - Electrical equipment 078",
+      "type_code": "FA07",
+      "category_code": "07",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องเรียน 8302",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "E8302"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-079/001-70",
+      "asset_name": "DEMO Snapshot - Presentation equipment 079",
+      "type_code": "FA09",
+      "category_code": "09",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักประสานงานโลจิสติกส์",
+        "building": "อาคาร 9",
+        "floor": "2",
+        "room_detail": "9204"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-080/001-70",
+      "asset_name": "DEMO Snapshot - Low-value office equipment 080",
+      "type_code": "FN05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องปฏิบัติการคอมพิวเตอร์ 1",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "8314"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-081/001-70",
+      "asset_name": "DEMO Snapshot - Computer equipment 081",
+      "type_code": "FA18",
+      "category_code": "18",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "ถูกยืม",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้อง Server คณะ",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "ห้อง server"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-082/001-70",
+      "asset_name": "DEMO Snapshot - Office equipment 082",
+      "type_code": "FA05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "ชำรุด",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักงานเลขานุการคณะ",
+        "building": "อาคาร 9",
+        "floor": "3",
+        "room_detail": null
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-083/001-70",
+      "asset_name": "DEMO Snapshot - Electrical equipment 083",
+      "type_code": "FA07",
+      "category_code": "07",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "ส่งซ่อม",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องเรียน 8302",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "E8302"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-084/001-70",
+      "asset_name": "DEMO Snapshot - Presentation equipment 084",
+      "type_code": "FA09",
+      "category_code": "09",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักประสานงานโลจิสติกส์",
+        "building": "อาคาร 9",
+        "floor": "2",
+        "room_detail": "9204"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-085/001-70",
+      "asset_name": "DEMO Snapshot - Low-value office equipment 085",
+      "type_code": "FN05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องปฏิบัติการคอมพิวเตอร์ 1",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "8314"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-086/001-70",
+      "asset_name": "DEMO Snapshot - Computer equipment 086",
+      "type_code": "FA18",
+      "category_code": "18",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้อง Server คณะ",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "ห้อง server"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-087/001-70",
+      "asset_name": "DEMO Snapshot - Office equipment 087",
+      "type_code": "FA05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักงานเลขานุการคณะ",
+        "building": "อาคาร 9",
+        "floor": "3",
+        "room_detail": null
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-088/001-70",
+      "asset_name": "DEMO Snapshot - Electrical equipment 088",
+      "type_code": "FA07",
+      "category_code": "07",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องเรียน 8302",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "E8302"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-089/001-70",
+      "asset_name": "DEMO Snapshot - Presentation equipment 089",
+      "type_code": "FA09",
+      "category_code": "09",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักประสานงานโลจิสติกส์",
+        "building": "อาคาร 9",
+        "floor": "2",
+        "room_detail": "9204"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-090/001-70",
+      "asset_name": "DEMO Snapshot - Low-value office equipment 090",
+      "type_code": "FN05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องปฏิบัติการคอมพิวเตอร์ 1",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "8314"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-091/001-70",
+      "asset_name": "DEMO Snapshot - Computer equipment 091",
+      "type_code": "FA18",
+      "category_code": "18",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "ถูกยืม",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้อง Server คณะ",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "ห้อง server"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-092/001-70",
+      "asset_name": "DEMO Snapshot - Office equipment 092",
+      "type_code": "FA05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "ชำรุด",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักงานเลขานุการคณะ",
+        "building": "อาคาร 9",
+        "floor": "3",
+        "room_detail": null
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-093/001-70",
+      "asset_name": "DEMO Snapshot - Electrical equipment 093",
+      "type_code": "FA07",
+      "category_code": "07",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "ส่งซ่อม",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องเรียน 8302",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "E8302"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-094/001-70",
+      "asset_name": "DEMO Snapshot - Presentation equipment 094",
+      "type_code": "FA09",
+      "category_code": "09",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักประสานงานโลจิสติกส์",
+        "building": "อาคาร 9",
+        "floor": "2",
+        "room_detail": "9204"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-095/001-70",
+      "asset_name": "DEMO Snapshot - Low-value office equipment 095",
+      "type_code": "FN05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องปฏิบัติการคอมพิวเตอร์ 1",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "8314"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-096/001-70",
+      "asset_name": "DEMO Snapshot - Computer equipment 096",
+      "type_code": "FA18",
+      "category_code": "18",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้อง Server คณะ",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "ห้อง server"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-097/001-70",
+      "asset_name": "DEMO Snapshot - Office equipment 097",
+      "type_code": "FA05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักงานเลขานุการคณะ",
+        "building": "อาคาร 9",
+        "floor": "3",
+        "room_detail": null
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-098/001-70",
+      "asset_name": "DEMO Snapshot - Electrical equipment 098",
+      "type_code": "FA07",
+      "category_code": "07",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องเรียน 8302",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "E8302"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-099/001-70",
+      "asset_name": "DEMO Snapshot - Presentation equipment 099",
+      "type_code": "FA09",
+      "category_code": "09",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินรายได้",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "สำนักงานเลขานุการคณะ",
+      "location": {
+        "location_name": "สำนักประสานงานโลจิสติกส์",
+        "building": "อาคาร 9",
+        "floor": "2",
+        "room_detail": "9204"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    },
+    {
+      "asset_code": "DEMO-SNAP-20261025-100/001-70",
+      "asset_name": "DEMO Snapshot - Low-value office equipment 100",
+      "type_code": "FN05",
+      "category_code": "05",
+      "brand": "DEMO",
+      "year_purchase": "2026",
+      "year_fiscal": "2570",
+      "source": "เงินงบประมาณ",
+      "asset_status": "พร้อมใช้งาน",
+      "department_name": "ภาควิชาวิศวกรรมคอมพิวเตอร์",
+      "location": {
+        "location_name": "ห้องปฏิบัติการคอมพิวเตอร์ 1",
+        "building": "อาคาร 8",
+        "floor": "3",
+        "room_detail": "8314"
+      },
+      "update_date": "2026-10-25 09:00:00"
+    }
+  ]
+}
