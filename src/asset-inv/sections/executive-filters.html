@@ -4,6 +4,10 @@
     <select id="dashboard-filter-snapshot" data-dashboard-filter="snapshot">
       <option value="latest">ชุดข้อมูลล่าสุด</option>
     </select>
+    <button class="button button-secondary snapshot-import-button" id="import-university-snapshot" data-university-snapshot-import type="button">
+      นำเข้าชุดข้อมูลจากมหาวิทยาลัย
+    </button>
+    <span class="snapshot-import-status" id="snapshot-import-status" data-snapshot-import-status role="status" aria-live="polite" aria-atomic="true"></span>
   </div>
 
   <div class="api-state dashboard-request-state api-state-loading" id="dashboard-request-state" data-dashboard-request-state role="status" aria-live="polite" hidden>
@@ -11,12 +15,13 @@
     <button class="button button-secondary" type="button" id="dashboard-retry" data-dashboard-retry hidden>ลองอีกครั้ง</button>
   </div>
 
-  <details class="dashboard-filter-details" id="dashboard-filter-details">
-    <summary>
-      <span>ตัวกรองร่วม</span>
-      <span class="filter-count" id="dashboard-filter-count" data-dashboard-filter-count>ยังไม่ได้กรอง</span>
-    </summary>
-    <div class="dashboard-filter-grid">
+  <div class="dashboard-filter-toolbar">
+    <details class="dashboard-filter-details" id="dashboard-filter-details">
+      <summary>
+        <span>ตัวกรองร่วม</span>
+        <span class="filter-count" id="dashboard-filter-count" data-dashboard-filter-count>ยังไม่ได้กรอง</span>
+      </summary>
+      <div class="dashboard-filter-grid">
       <label class="select-label" for="dashboard-filter-department">
         หน่วยงาน
         <select id="dashboard-filter-department" data-dashboard-filter="department"><option value="all">ทุกหน่วยงาน</option></select>
@@ -107,9 +112,8 @@
           <option value="unknown">ไม่ระบุสถานะ</option>
         </select>
       </label>
-      <div class="dashboard-filter-actions">
-        <button class="button button-secondary" type="button" id="dashboard-filter-reset" data-dashboard-filter-reset>ล้างตัวกรอง</button>
       </div>
-    </div>
-  </details>
+    </details>
+    <button class="button button-secondary dashboard-filter-reset" type="button" id="dashboard-filter-reset" data-dashboard-filter-reset>ล้างตัวกรอง</button>
+  </div>
 </section>

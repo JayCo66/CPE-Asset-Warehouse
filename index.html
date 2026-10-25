@@ -5,6 +5,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>
+    if (window.location.protocol === "file:") {
+      window.location.replace("http://localhost/CPE-Asset-Warehouse/index.html");
+    }
+  </script>
   <title>CPE Asset Warehouse — ศูนย์ข้อมูลและวิเคราะห์สินทรัพย์</title>
   <script>document.documentElement.setAttribute("data-theme", (() => { try { return localStorage.getItem("cpe_theme") || "dark"; } catch { return "dark"; } })());</script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -493,7 +498,7 @@
     // ข้อมูลโมดูลและแดชบอร์ดของระบบ (ขับเคลื่อนด้วย Module Metadata ตาม Frontend Guide)
     const PAGES = [
       { id: "overview", label: "ภาพรวมระบบ", isOverview: true },
-      { id: "assets", label: "ทะเบียนสินทรัพย์", src: "src/asset-inv/", hide: [".app-header", ".module-nav"], theme: true },
+      { id: "assets", label: "ทะเบียนสินทรัพย์", src: "src/asset-inv/index.html#/inventory/overview", hide: [".app-header", ".module-nav"], theme: true },
       { id: "borrow", label: "ยืม-คืน", src: "src/borrow/", hide: [".app-header"], theme: true },
       { id: "facility", label: "แจ้งซ่อมอาคาร", src: "src/maintenance/#/facility", hide: [".app-header", ".module-nav"], theme: false },
       { id: "repair", label: "ซ่อมครุภัณฑ์", src: "src/maintenance/#/repair", hide: [".app-header", ".module-nav"], theme: false }

@@ -47,6 +47,9 @@ test(
     assert.equal(payload.success, true);
     assert.equal(payload.data.overview.totalAssets, payload.data.snapshot.assets);
     assert.equal(payload.data.history.available, payload.data.snapshotOptions.length > 1);
+    const snapshotIds = payload.data.snapshotOptions.map((snapshot) => snapshot.snapshotId);
+    assert.equal(new Set(snapshotIds).size, snapshotIds.length, "snapshot options must have unique identities");
+    assert.ok(payload.data.snapshotOptions.every((snapshot) => snapshot.key === `id:${snapshot.snapshotId}` && snapshot.label));
     if (payload.data.snapshotOptions.length < 2) {
       assert.deepEqual(payload.data.history.series, []);
       assert.equal(payload.data.history.comparison, null);
@@ -70,6 +73,31 @@ test(
     const factEndpoint = new URL(endpoint);
     factEndpoint.pathname = factEndpoint.pathname.replace(/asset_inventory_dashboard\.php$/u, "fact_asset_inventory.php");
     factEndpoint.searchParams.set("limit", "100");
+    for (const snapshot of payload.data.snapshotOptions) {
+      const selectedUrl = new URL(endpoint);
+      selectedUrl.searchParams.set("snapshot", snapshot.key);
+      const selectedResponse = await fetch(selectedUrl);
+      const selectedPayload = await selectedResponse.json();
+      assert.equal(selectedResponse.status, 200);
+      assert.equal(selectedPayload.data.snapshot.snapshotId, snapshot.snapshotId);
+      assert.equal(selectedPayload.data.overview.totalAssets, snapshot.assets);
+
+      const explorerUrl = new URL(factEndpoint);
+      explorerUrl.searchParams.set("snapshot", snapshot.key);
+      explorerUrl.searchParams.set("limit", "1");
+      const explorerResponse = await fetch(explorerUrl);
+      const explorerPayload = await explorerResponse.json();
+      assert.equal(explorerResponse.status, 200);
+      assert.equal(explorerPayload.total, snapshot.assets);
+      assert.equal(explorerPayload.data[0]?.snapshot_id, snapshot.snapshotId);
+    }
+    const legacyDateUrl = new URL(endpoint);
+    legacyDateUrl.searchParams.set("snapshot", "20261025");
+    const legacyDateResponse = await fetch(legacyDateUrl);
+    const legacyDatePayload = await legacyDateResponse.json();
+    assert.equal(legacyDateResponse.status, 200);
+    assert.equal(legacyDatePayload.data.snapshot.label, "DEMO-2026-10-25");
+
     const firstPageResponse = await fetch(factEndpoint);
     const firstPage = await firstPageResponse.json();
     assert.equal(firstPageResponse.status, 200);
@@ -243,5 +271,29 @@ test(
     assert.equal(emptyPayload.data.overview.averageAssetAge, null);
     assert.deepEqual(emptyPayload.data.history.series, []);
     assert.equal(emptyPayload.data.history.comparison, null);
+  },
+);
+
+test(
+  "university snapshot import rejects GET and cross-origin POST without fetching or changing data",
+  { skip: !endpoint },
+  async () => {
+    const importUrl = new URL(endpoint);
+    importUrl.pathname = importUrl.pathname.replace(/asset_inventory_dashboard\.php$/u, "import_university_snapshot.php");
+
+    const getResponse = await fetch(importUrl);
+    assert.equal(getResponse.status, 405);
+    assert.equal(getResponse.headers.get("allow"), "POST");
+
+    const rejectedPost = await fetch(importUrl, {
+      method: "POST",
+      headers: {
+        Origin: "https://attacker.example",
+        "X-CPE-Snapshot-Import": "1",
+      },
+    });
+    const payload = await rejectedPost.json();
+    assert.equal(rejectedPost.status, 403);
+    assert.equal(payload.success, false);
   },
 );

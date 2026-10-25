@@ -133,6 +133,16 @@ runTest('validates executive filters and age thresholds', static function (): vo
     );
 });
 
+runTest('accepts stable snapshot IDs while retaining date-based snapshot filters', static function (): void {
+    $snapshotId = 'id:8d3b8504-c8f8-4e3a-a450-84776d8a121f';
+    expectSame($snapshotId, warehouseInventoryParseFilters(['snapshot' => $snapshotId])['snapshot'], 'UUID snapshot selections should be preserved.');
+    expectSame('20261025', warehouseInventoryParseFilters(['snapshot' => '20261025'])['snapshot'], 'Legacy date-based snapshot selections should remain valid.');
+    expectInvalidArgument(
+        static fn() => warehouseInventoryParseFilters(['snapshot' => 'id:not-a-uuid']),
+        'Malformed snapshot IDs must be rejected.',
+    );
+});
+
 runTest('builds dimension and flag filters with bound values', static function (): void {
     $filters = warehouseInventoryParseFilters([
         'department' => "Unit'; DROP TABLE dim_department;--",
@@ -171,6 +181,14 @@ runTest('builds dimension and flag filters with bound values', static function (
     expectSame('2567', $where['params']['filter_fiscal_year'], 'Asset fiscal years must remain bound data.');
     expectSame('2568', $where['params']['filter_acquisition_fiscal_year'], 'Acquisition fiscal years must remain bound data.');
     expectTrue(!str_contains($where['sql'], 'DROP TABLE'), 'User values must never be concatenated into SQL.');
+});
+
+runTest('filters inventory by snapshot ID instead of combining same-day snapshots', static function (): void {
+    $snapshotId = '8d3b8504-c8f8-4e3a-a450-84776d8a121f';
+    $where = warehouseInventoryBuildWhere(warehouseInventoryParseFilters([]), null, $snapshotId);
+    expectTrue(str_contains($where['sql'], 'fai.`snapshot_id` = :snapshot_id'), 'A selected snapshot must constrain facts by snapshot identity.');
+    expectTrue(!str_contains($where['sql'], 'snapshot_date_key'), 'Snapshot ID filtering must not include every snapshot on the same date.');
+    expectSame($snapshotId, $where['params']['snapshot_id'], 'Snapshot identity must remain a bound value.');
 });
 
 runTest('filters missing dimension values explicitly without binding sentinels', static function (): void {

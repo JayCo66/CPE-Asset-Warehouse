@@ -53,10 +53,13 @@ test("does not enable snapshot comparison or trends with a single real snapshot"
 
 test("shows historical comparisons only when two snapshot records and a real comparison exist", () => {
   assert.equal(hasComparableSnapshots({
-    snapshotOptions: [{ key: 20261022 }, { key: 20250930 }],
+    snapshotOptions: [
+      { key: "id:8d3b8504-c8f8-4e3a-a450-84776d8a121f", snapshotId: "8d3b8504-c8f8-4e3a-a450-84776d8a121f" },
+      { key: "id:be5166d5-2bc0-5ecc-8176-54a6260df3f4", snapshotId: "be5166d5-2bc0-5ecc-8176-54a6260df3f4" },
+    ],
     history: {
       available: true,
-      series: [{ snapshotDateKey: 20261022 }, { snapshotDateKey: 20250930 }],
+      series: [{ snapshotDateKey: 20261022 }, { snapshotDateKey: 20261022 }],
       comparison: { totalAssets: 12 },
     },
   }), true);

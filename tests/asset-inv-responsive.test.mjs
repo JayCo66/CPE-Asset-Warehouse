@@ -17,6 +17,13 @@ test("improves Thai asset-table typography without changing other tables", () =>
   assert.match(styles, /\.table-wrap\s*\{[^}]*overflow-x:\s*auto/su);
 });
 
+test("keeps the overview explorer action readable and vertically centered for Thai text", () => {
+  assert.match(overviewHtml, /<a class="button button-secondary overview-explorer-action"/u);
+  assert.match(styles, /\.overview-explorer-action\s*\{[^}]*display:\s*inline-flex;[^}]*align-items:\s*center;[^}]*justify-content:\s*center;[^}]*min-height:\s*44px;[^}]*font-size:\s*0\.875rem;[^}]*line-height:\s*1\.5;/su);
+  assert.match(styles, /\.overview-explorer-action:hover\s*\{[^}]*transform:\s*none;/su);
+  assert.match(styles, /@media\s*\(max-width:\s*720px\)[\s\S]*?\.overview-explorer-action\s*\{[^}]*width:\s*100%;[^}]*white-space:\s*normal;/su);
+});
+
 test("provides a keyboard-accessible horizontal table region and scroll cue", () => {
   assert.match(registerHtml, /class="table-scroll-hint asset-api-table-scroll-hint"/u);
   assert.match(registerHtml, /id="asset-api-table-wrap" role="region"[^>]*tabindex="0"/u);

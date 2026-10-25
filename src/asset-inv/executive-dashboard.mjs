@@ -1,10 +1,11 @@
 import {
   buildInventoryDashboardUrl,
   hasComparableSnapshots,
-} from "./inventory-dashboard-data.mjs?v=20261025.1";
+} from "./inventory-dashboard-data.mjs?v=20261026.1";
 import { squarifyTreemap } from "./treemap-layout.mjs?v=20261025.1";
 
 const DASHBOARD_API = new URL("../../assets_api/asset_inventory_dashboard.php", import.meta.url).href;
+const SNAPSHOT_IMPORT_API = new URL("../../assets_api/import_university_snapshot.php", import.meta.url).href;
 const PAGE_IDS = ["overview", "portfolio", "departments", "locations", "aging", "acquisition", "governance", "explorer"];
 const FILTER_DEFAULTS = Object.freeze({
   snapshot: "latest",
@@ -660,7 +661,9 @@ function renderOverview(data, payload) {
     { label: "จำนวนไม่มีตำแหน่ง", change: formatSigned(comparison.missingLocationAssets) },
     { label: `จำนวนอายุเกิน ${filters.ageThreshold} ปี`, change: formatSigned(comparison.assetsOlderThanThreshold) },
   ];
-  historyTarget.innerHTML = `<p class="history-date-caption">${escapeHtml(formatDate(comparison.currentSnapshot))} เทียบกับ ${escapeHtml(formatDate(comparison.previousSnapshot))}</p>${tableMarkup("ตารางเปรียบเทียบชุดข้อมูล", columns, rows)}`;
+  const currentName = `${formatDate(comparison.currentSnapshot)} · ${comparison.currentLabel || ""}`;
+  const previousName = `${formatDate(comparison.previousSnapshot)} · ${comparison.previousLabel || ""}`;
+  historyTarget.innerHTML = `<p class="history-date-caption">${escapeHtml(currentName)} เทียบกับ ${escapeHtml(previousName)}</p>${tableMarkup("ตารางเปรียบเทียบชุดข้อมูล", columns, rows)}`;
 }
 
 function tableMarkup(caption, columns, rows) {
@@ -970,9 +973,9 @@ function updateSnapshotLabel(payload) {
     return;
   }
   const snapshotDate = formatDate(payload.snapshot.date);
-  if (date) date.textContent = snapshotDate;
+  if (date) date.textContent = payload.snapshot.label || snapshotDate;
   if (state) state.textContent = "ข้อมูลเชื่อมต่อจากคลัง MySQL";
-  if (detail) detail.textContent = "สรุปจำนวนสินทรัพย์ด้วย SUM(asset_count)";
+  if (detail) detail.textContent = `${snapshotDate} · สรุปจำนวนสินทรัพย์ด้วย SUM(asset_count)`;
 }
 
 function updateSelect(select, values, selected, allLabel, mapValue = (value) => [value, value]) {
@@ -989,10 +992,10 @@ function updateSelect(select, values, selected, allLabel, mapValue = (value) => 
 
 function populateFilterOptions(payload) {
   const options = payload.filterOptions || {};
-  const latestDate = payload.snapshotOptions?.[0]?.date;
+  const latestSnapshot = payload.snapshotOptions?.[0];
   const snapshotOptions = [
-    ["latest", `ชุดข้อมูลล่าสุด${latestDate ? ` · ${formatDate(latestDate)}` : ""}`],
-    ...(payload.snapshotOptions || []).map((snapshot) => [String(snapshot.key), formatDate(snapshot.date)]),
+    ["latest", `ชุดข้อมูลล่าสุด${latestSnapshot ? ` · ${latestSnapshot.label} · ${formatDate(latestSnapshot.date)}` : ""}`],
+    ...(payload.snapshotOptions || []).map((snapshot) => [String(snapshot.key), `${snapshot.label} · ${formatDate(snapshot.date)}`]),
   ];
   document.querySelectorAll('[data-dashboard-filter="snapshot"]').forEach((snapshotSelect) => {
     snapshotSelect.innerHTML = snapshotOptions.map(([value, label]) =>
@@ -1058,6 +1061,10 @@ async function loadDashboard() {
     if (!result || result.success !== true || !result.data || typeof result.data !== "object") {
       throw new Error(result?.message || "ได้รับสรุปจากคลังสินทรัพย์ในรูปแบบที่ไม่คาดคิด");
     }
+    if (result.data.selectedFilters?.snapshot) {
+      filters.snapshot = String(result.data.selectedFilters.snapshot);
+      onFiltersChange({ ...filters });
+    }
     populateFilterOptions(result.data);
     updateSnapshotLabel(result.data);
     renderDashboard(result.data);
@@ -1122,6 +1129,42 @@ function applyDrillFiltersAndRefresh(nextFilters) {
   window.location.hash = "#/inventory/explorer";
 }
 
+async function importUniversitySnapshot(button) {
+  const status = button.closest(".snapshot-filter-row")?.querySelector("[data-snapshot-import-status]");
+  button.disabled = true;
+  button.setAttribute("aria-busy", "true");
+  if (status) status.textContent = "กำลังดึงและตรวจสอบข้อมูลทุกหน้า…";
+
+  try {
+    const response = await fetch(SNAPSHOT_IMPORT_API, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "X-CPE-Snapshot-Import": "1",
+      },
+    });
+    const result = await response.json();
+    if (!response.ok || result?.success !== true || !result?.data?.snapshot?.key) {
+      throw new Error(result?.message || `นำเข้าข้อมูลไม่สำเร็จ (HTTP ${response.status})`);
+    }
+
+    filters.snapshot = String(result.data.snapshot.key);
+    syncFilterControls();
+    updateFilterCount();
+    onFiltersChange({ ...filters });
+    if (status) {
+      status.textContent = `นำเข้าสำเร็จ ${formatCount(result.data.importedCount)} รายการ · ${result.data.snapshot.label}`;
+    }
+    loadDashboard();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "นำเข้าข้อมูลไม่สำเร็จ";
+    if (status) status.textContent = message;
+  } finally {
+    button.disabled = false;
+    button.removeAttribute("aria-busy");
+  }
+}
+
 export function initExecutiveDashboard({ onFilterChange = () => {} } = {}) {
   onFiltersChange = onFilterChange;
   const dashboardSections = document.getElementById("dashboard-sections");
@@ -1130,6 +1173,11 @@ export function initExecutiveDashboard({ onFilterChange = () => {} } = {}) {
     if (select) applyFilterAndRefresh(select.dataset.dashboardFilter, select.value);
   });
   dashboardSections?.addEventListener("click", (event) => {
+    const importButton = event.target.closest("[data-university-snapshot-import]");
+    if (importButton) {
+      importUniversitySnapshot(importButton);
+      return;
+    }
     const resetButton = event.target.closest("[data-dashboard-filter-reset]");
     if (resetButton) {
       filters = { ...FILTER_DEFAULTS };

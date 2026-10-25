@@ -34,7 +34,7 @@ export function buildInventoryDashboardUrl(endpoint, filters = {}) {
 export function hasComparableSnapshots(payload) {
   const snapshots = Array.isArray(payload?.snapshotOptions) ? payload.snapshotOptions : [];
   const series = Array.isArray(payload?.history?.series) ? payload.history.series : [];
-  const keys = new Set(snapshots.map((snapshot) => Number(snapshot?.key)).filter(Number.isSafeInteger));
+  const keys = new Set(snapshots.map((snapshot) => snapshot?.snapshotId ?? snapshot?.key).filter((key) => typeof key === "string" && key.length > 0));
   return Boolean(
     payload?.history?.available === true &&
     keys.size >= 2 &&

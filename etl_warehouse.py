@@ -5,7 +5,7 @@
                     -> dim_asset ฯลฯ, fact_asset_inventory (snapshot), fact_asset_maintenance,
                        fact_borrow_transaction, fact_general_maintenance
 ผลลัพธ์ (<out-dir>): warehouse_load.sql, warehouse/*.csv, raw/*.json (API ที่ดึงมา),
-                    history/assets_YYYYMMDD.json (snapshot ครุภัณฑ์ทุกรอบ ห้ามลบ),
+                    history/assets_YYYYMMDD[__snapshot-id].json (snapshot ครุภัณฑ์ทุกรอบ ห้ามลบ),
                     repair_requests_clean.xlsx/.csv (Excel ที่ clean แล้ว + cleaning_log + rejected_place)
 """
 import argparse
@@ -14,8 +14,9 @@ import os
 import re
 import sys
 import urllib.request
+import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pandas as pd
 from openpyxl import Workbook
@@ -736,15 +737,95 @@ def acquisition_date(a):
     return datetime(int(y), 1, 1) if y and y.isdigit() and 1950 <= int(y) <= 2100 else None
 
 
-def load_history(history_dir):
-    """snapshot ครุภัณฑ์ที่เคยดึงไว้ทุกครั้ง: {datetime: [asset, ...]} จากไฟล์ assets_YYYYMMDD.json"""
-    snaps = {}
-    for f in sorted(os.listdir(history_dir)):
-        m = re.fullmatch(r"assets_(\d{8})\.json", f)
-        if m:
-            with open(os.path.join(history_dir, f), encoding="utf-8") as fh:
-                snaps[datetime.strptime(m.group(1), "%Y%m%d")] = json.load(fh)["data"]
-    return snaps
+def load_history(history_dir, metadata=None):
+    """Load immutable snapshot archives with stable identities, including multiple files per date."""
+    metadata = metadata or {}
+    snapshots, seen_ids = [], set()
+    if not os.path.isdir(history_dir):
+        return snapshots
+
+    for filename in sorted(os.listdir(history_dir)):
+        match = re.fullmatch(r"assets_(\d{8})(?:__([0-9a-fA-F-]{36}))?\.json", filename)
+        if not match:
+            continue
+        with open(os.path.join(history_dir, filename), encoding="utf-8") as archive_file:
+            archive = json.load(archive_file)
+        if not isinstance(archive, dict) or not isinstance(archive.get("data"), list):
+            raise ValueError(f"Invalid inventory snapshot archive: {filename}")
+
+        file_metadata = metadata.get(filename, {})
+        snapshot_date = archive.get("snapshot_date") or datetime.strptime(match.group(1), "%Y%m%d").strftime("%Y-%m-%d")
+        capture_date = datetime.strptime(str(snapshot_date)[:10], "%Y-%m-%d")
+        snapshot_id = archive.get("snapshot_id") or file_metadata.get("snapshot_id")
+        if snapshot_id is None:
+            snapshot_id = str(uuid.uuid5(uuid.NAMESPACE_URL, f"cpe-asset-warehouse:{filename}"))
+        try:
+            snapshot_id = str(uuid.UUID(str(snapshot_id)))
+        except (ValueError, AttributeError) as error:
+            raise ValueError(f"Invalid snapshot identity in archive: {filename}") from error
+        if snapshot_id in seen_ids:
+            raise ValueError(f"Duplicate snapshot identity in history: {snapshot_id}")
+        seen_ids.add(snapshot_id)
+
+        assets = archive["data"]
+        asset_ids = [asset.get("asset_id") for asset in assets if isinstance(asset, dict)]
+        if len(asset_ids) != len(assets) or any(asset_id is None for asset_id in asset_ids) or len(set(asset_ids)) != len(asset_ids):
+            raise ValueError(f"Snapshot archive has missing or duplicate asset IDs: {filename}")
+        expected_count = file_metadata.get("asset_count", archive.get("asset_count", archive.get("total")))
+        if expected_count is not None and int(expected_count) != len(assets):
+            raise ValueError(f"Snapshot archive count differs from its metadata: {filename}")
+
+        snapshots.append({
+            "snapshot_id": snapshot_id,
+            "snapshot_date": capture_date,
+            "snapshot_label": archive.get("snapshot_label") or file_metadata.get("snapshot_label") or capture_date.strftime("%Y-%m-%d"),
+            "source_system": archive.get("source_system") or file_metadata.get("source_system") or "legacy_warehouse",
+            "imported_at": archive.get("imported_at", file_metadata.get("imported_at")),
+            "asset_count": len(assets),
+            "archive_key": archive.get("archive_key") or file_metadata.get("archive_key") or filename,
+            "data": assets,
+        })
+
+    snapshots.sort(key=lambda snapshot: (
+        snapshot["snapshot_date"], snapshot["imported_at"] or "", snapshot["snapshot_id"],
+    ))
+    return snapshots
+
+
+def archive_assets_snapshot(history_dir, snapshot_date, assets, source_system):
+    """Archive a new capture without replacing any existing snapshot file."""
+    date_text = snapshot_date.strftime("%Y-%m-%d")
+    canonical = lambda rows: json.dumps(sorted(rows, key=lambda row: int(row["asset_id"])), ensure_ascii=False, sort_keys=True)
+    for filename in sorted(os.listdir(history_dir)):
+        match = re.fullmatch(r"assets_(\d{8})(?:__[0-9a-fA-F-]{36})?\.json", filename)
+        if not match or match.group(1) != snapshot_date.strftime("%Y%m%d"):
+            continue
+        with open(os.path.join(history_dir, filename), encoding="utf-8") as archive_file:
+            prior = json.load(archive_file)
+        if isinstance(prior, dict) and isinstance(prior.get("data"), list) and canonical(prior["data"]) == canonical(assets):
+            return None
+
+    snapshot_id = str(uuid.uuid4())
+    imported_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    filename = f"assets_{snapshot_date:%Y%m%d}__{snapshot_id}.json"
+    label = f"ETL-{date_text}-{snapshot_id[:8].upper()}"
+    archive = {
+        "snapshot_id": snapshot_id,
+        "snapshot_date": date_text,
+        "snapshot_label": label,
+        "source_system": source_system,
+        "imported_at": imported_at,
+        "asset_count": len(assets),
+        "archive_key": filename,
+        "data": assets,
+    }
+    path = os.path.join(history_dir, filename)
+    temporary_path = path + ".tmp"
+    with open(temporary_path, "x", encoding="utf-8") as archive_file:
+        json.dump(archive, archive_file, ensure_ascii=False)
+        archive_file.write("\n")
+    os.rename(temporary_path, path)
+    return archive
 
 
 
@@ -770,7 +851,7 @@ def build_warehouse(excel, api, snapshots, as_of):
     # ---------- dim_department ----------
     # แถวที่ถูกลบ (is_deleted = 1) เก็บไว้เฉพาะที่ยังมีข้อมูลอ้างถึง เพื่อไม่ให้ประวัติเดิมหาย
     dep_used = {r.get("department_id") for ep in ("assets", "users", "borrow", "maintenance_general") for r in api[ep]}
-    dep_used |= {a.get("department_id") for rows in snapshots.values() for a in rows}
+    dep_used |= {a.get("department_id") for snapshot in snapshots for a in snapshot["data"]}
     dep = Dim(["department_key", "department_id", "department_name"])
     dep_by_id, name_to_key = {}, {}
     for d in api["departments"]:
@@ -781,6 +862,15 @@ def build_warehouse(excel, api, snapshots, as_of):
         for n in (txt(d["department_name"]), txt(d.get("shortname"))):
             if n:
                 name_to_key.setdefault(n, k)
+    archived_assets = [a for snapshot in snapshots for a in snapshot["data"]]
+    for a in [*archived_assets, *api["assets"]]:
+        department_id = a.get("department_id")
+        if department_id is not None and department_id not in dep_by_id:
+            name = txt(a.get("department_name"))
+            k = dep.add(("id", department_id), department_id=department_id, department_name=name)
+            dep_by_id[department_id] = k
+            if name:
+                name_to_key.setdefault(name, k)
 
     def dep_from_excel(name):
         """Excel ไม่มี department_id -> จับคู่ด้วยชื่อ (alias / ชื่อเต็ม / shortname); ไม่เจอ = แถวใหม่ department_id NULL"""
@@ -818,7 +908,7 @@ def build_warehouse(excel, api, snapshots, as_of):
     # ตาราง location ของระบบครุภัณฑ์ (location_name, building, floor, room_detail) กรอกอิสระ
     # -> ผ่านตัวแยกสถานที่ตัวเดียวกับ Excel เพื่อให้ห้องเดียวกันได้ location_key เดียวกัน
     loc_by_id, loc_issue = {}, []
-    loc_used = {a["location_id"] for rows in [api["assets"], *snapshots.values()] for a in rows}
+    loc_used = {a["location_id"] for rows in [api["assets"], *(snapshot["data"] for snapshot in snapshots)] for a in rows}
     for l in api["locations"]:
         if l.get("is_deleted") and l["location_id"] not in loc_used:
             continue
@@ -831,14 +921,20 @@ def build_warehouse(excel, api, snapshots, as_of):
         else:
             loc_issue.append(f"{l['location_id']} ({pl.reason})")
             loc_by_id[l["location_id"]] = loc_key(b, f, rd, name, l["location_id"])
+    for location_id in loc_used:
+        if location_id is not None and loc_by_id.get(location_id) is None:
+            loc_by_id[location_id] = loc.add(
+                ("id", location_id), location_id=location_id,
+                building=None, floor=None, room=None, area_name=None,
+            )
     if loc_issue:
         notes.append("locations: แยกอาคาร/ชั้น/ห้องไม่ได้ ใช้ค่าตามที่กรอก: " + ", ".join(loc_issue))
 
     # ---------- dim_asset_category / dim_asset_type / dim_asset ----------
     # asset ใช้รายการล่าสุด + ครุภัณฑ์ที่มีเฉพาะใน snapshot เก่า (ถูกลบไปแล้ว) เพื่อให้ snapshot เก่ายังหา asset_key ได้
     latest = {}
-    for d in sorted(snapshots):
-        for a in snapshots[d]:
+    for snapshot in snapshots:
+        for a in snapshot["data"]:
             latest[a["asset_id"]] = a
     for a in api["assets"]:
         latest[a["asset_id"]] = a
@@ -851,6 +947,10 @@ def build_warehouse(excel, api, snapshots, as_of):
         cat_by_id[c["category_id"]] = k
         if c.get("category_code"):
             cat_by_code[txt(c["category_code"])] = k
+    for a in all_assets:
+        category_id = a.get("category_id")
+        if category_id is not None and category_id not in cat_by_id:
+            cat_by_id[category_id] = cat.add(category_id, category_id=category_id, category_name=None)
 
     typ = Dim(["type_key", "type_id", "type_code", "type_name"])
     type_used = {a["type_id"] for a in all_assets}
@@ -904,14 +1004,25 @@ def build_warehouse(excel, api, snapshots, as_of):
 
     # ---------- fact_asset_inventory (periodic snapshot: 1 แถว = ครุภัณฑ์ 1 ชิ้น ณ วันที่ดึงข้อมูล) ----------
     fai = []
-    for snap in sorted(snapshots):
-        for a in snapshots[snap]:
+    snapshot_dimension = []
+    for snapshot in snapshots:
+        snap = snapshot["snapshot_date"]
+        snapshot_dimension.append({
+            "snapshot_id": snapshot["snapshot_id"],
+            "snapshot_date_key": dkey(snap),
+            "snapshot_label": snapshot["snapshot_label"],
+            "source_system": snapshot["source_system"],
+            "imported_at": snapshot["imported_at"],
+            "asset_count": snapshot["asset_count"],
+            "archive_key": snapshot["archive_key"],
+        })
+        for a in snapshot["data"]:
             acq = acquisition_date(a)
             tid = type_id_of(a)
             tcode = txt(a.get("type_code")) or type_code_of.get(tid) or ""
             status = txt(a["asset_status"])
             lk = loc_by_id.get(a["location_id"])
-            fai.append({"snapshot_date_key": dkey(snap), "acquisition_date_key": dkey(acq),
+            fai.append({"snapshot_date_key": dkey(snap), "snapshot_id": snapshot["snapshot_id"], "acquisition_date_key": dkey(acq),
                         "asset_key": ast.get(a["asset_id"]), "department_key": dep_by_id.get(a["department_id"]),
                         "type_key": typ.get(tid), "category_key": category_key_of(a), "location_key": lk,
                         "asset_count": 1, "is_available_flag": int(status == "พร้อมใช้งาน"),
@@ -997,12 +1108,14 @@ def build_warehouse(excel, api, snapshots, as_of):
 
     # ---------- dim_date: ทุกวันของปีที่ครอบทุก date key ----------
     keys = [v for rows in (fgm, fam, fbt, fai) for r in rows for k, v in r.items() if k.endswith("date_key") and v]
+    keys.extend(dkey(snapshot["snapshot_date"]) for snapshot in snapshots)
     d0, d1 = (datetime.strptime(str(min(keys)), "%Y%m%d"), datetime.strptime(str(max(keys)), "%Y%m%d"))
     dim_date = [dict(zip(["date_key", "full_date", "day_of_week", "month", "month_name", "quarter", "year", "fiscal_year"], r))
                 for r in date_rows(d0, d1)]
 
     tables = {
-        "dim_date": dim_date, "dim_department": dep.rows, "dim_user": usr.rows,
+        "dim_date": dim_date, "dim_inventory_snapshot": snapshot_dimension,
+        "dim_department": dep.rows, "dim_user": usr.rows,
         "dim_maintenance_type": mt.rows, "dim_asset_category": cat.rows, "dim_asset_type": typ.rows,
         "dim_location": loc.rows, "dim_asset": ast.rows,
         "fact_borrow_transaction": fbt, "fact_asset_maintenance": fam, "fact_asset_inventory": fai,
@@ -1012,7 +1125,7 @@ def build_warehouse(excel, api, snapshots, as_of):
     return tables, notes, src_count
 
 
-WAREHOUSE_ORDER = ["dim_date", "dim_department", "dim_user", "dim_maintenance_type", "dim_asset_category",
+WAREHOUSE_ORDER = ["dim_date", "dim_inventory_snapshot", "dim_department", "dim_user", "dim_maintenance_type", "dim_asset_category",
                    "dim_asset_type", "dim_location", "dim_asset",
                    "fact_borrow_transaction", "fact_asset_maintenance", "fact_general_maintenance",
                    "fact_asset_inventory"]
@@ -1100,10 +1213,19 @@ def main(args):
             snap = datetime.fromisoformat(json.load(f).get("fetched_at") or as_of.isoformat())
     else:
         snap = as_of
-    with open(os.path.join(history_dir, f"assets_{snap:%Y%m%d}.json"), "w", encoding="utf-8") as f:
-        json.dump({"snapshot_date": f"{snap:%Y-%m-%d}", "total": len(api["assets"]), "data": api["assets"]}, f, ensure_ascii=False)
-    snapshots = load_history(history_dir)
-    print(f"[history] snapshot ครุภัณฑ์ {len(snapshots)} ครั้ง: {', '.join(f'{d:%Y-%m-%d}' for d in sorted(snapshots))}")
+    snapshot_source = "etl_assets_api" if USED.get("assets") in ("api", "cache") else "etl_assets_file"
+    archived_snapshot = archive_assets_snapshot(history_dir, snap, api["assets"], snapshot_source)
+    if archived_snapshot is None:
+        print(f"[history] ไม่เพิ่ม snapshot ซ้ำ: {snap:%Y-%m-%d} (ข้อมูลเหมือน archive เดิม)")
+
+    metadata_path = args.snapshot_metadata
+    with open(metadata_path, encoding="utf-8") as metadata_file:
+        snapshot_metadata = json.load(metadata_file)
+    snapshots = load_history(history_dir, snapshot_metadata)
+    snapshot_summary = ", ".join(
+        f"{snapshot['snapshot_date']:%Y-%m-%d} [{snapshot['snapshot_label']}]" for snapshot in snapshots
+    )
+    print(f"[history] snapshot ครุภัณฑ์ {len(snapshots)} ชุด: {snapshot_summary}")
 
     tables, notes, src_count = build_warehouse(excel, api, snapshots, as_of)
 
@@ -1147,6 +1269,8 @@ if __name__ == "__main__":
     ap.add_argument("--as-of", help="วันที่อ้างอิงคำนวณวันเกินกำหนดของรายการยืมที่ยังไม่คืน YYYY-MM-DD (default: วันนี้)")
     ap.add_argument("--snapshot-date", help="วันที่ของ snapshot ครุภัณฑ์รอบนี้ YYYY-MM-DD "
                                             "(default: วันที่ดึง assets API หรือวันที่แก้ไขไฟล์ assets ล่าสุด)")
+    ap.add_argument("--snapshot-metadata", default=os.path.join(here, "data", "inventory_snapshot_metadata.json"),
+                    help="manifest IDs/labels ของ archive เดิม (default: data/inventory_snapshot_metadata.json)")
     ap.add_argument("--keep-invalid-place", action="store_true",
                     help="เก็บแถวที่สถานที่ใช้ไม่ได้ไว้ (เว้นสถานที่ว่าง) แทนการลบแถว")
     args = ap.parse_args()

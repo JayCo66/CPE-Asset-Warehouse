@@ -29,25 +29,10 @@ function warehouseDashboardBind(PDOStatement $statement, array $parameters): voi
 
 function warehouseDashboardSnapshotOptions(PDO $pdo): array
 {
-    $statement = $pdo->query(
-        'SELECT
-            fai.`snapshot_date_key` AS `key`,
-            snapshot_date.`full_date` AS `date`,
-            SUM(COALESCE(fai.`asset_count`, 0)) AS `assets`
-        FROM `fact_asset_inventory` fai
-        LEFT JOIN `dim_date` snapshot_date
-            ON snapshot_date.`date_key` = fai.`snapshot_date_key`
-        GROUP BY fai.`snapshot_date_key`, snapshot_date.`full_date`
-        ORDER BY fai.`snapshot_date_key` DESC'
-    );
-    return array_map(static fn(array $row): array => [
-        'key' => (int)$row['key'],
-        'date' => $row['date'],
-        'assets' => (int)$row['assets'],
-    ], $statement->fetchAll(PDO::FETCH_ASSOC));
+    return warehouseInventorySnapshotOptions($pdo);
 }
 
-function warehouseDashboardFilterOptions(PDO $pdo, int $snapshotDateKey): array
+function warehouseDashboardFilterOptions(PDO $pdo, string $snapshotId): array
 {
     $optionDefinitions = [
         'departments' => ['department.`department_name`', '(department.`department_name` IS NULL OR TRIM(department.`department_name`) = \'\')'],
@@ -68,10 +53,10 @@ function warehouseDashboardFilterOptions(PDO $pdo, int $snapshotDateKey): array
         $statement = $pdo->prepare(
             'SELECT DISTINCT CASE WHEN ' . $missingCondition . '
                 THEN \'__missing__\' ELSE CAST(' . $expression . ' AS CHAR) END AS `value` ' . warehouseInventoryFromSql() . '
-            WHERE fai.`snapshot_date_key` = :snapshot_date_key
+            WHERE fai.`snapshot_id` = :snapshot_id
             ORDER BY `value`'
         );
-        $statement->bindValue(':snapshot_date_key', $snapshotDateKey, PDO::PARAM_INT);
+        $statement->bindValue(':snapshot_id', $snapshotId, PDO::PARAM_STR);
         $statement->execute();
         $options[$name] = array_map(
             static fn(mixed $value): string => (string)$value,
@@ -83,9 +68,9 @@ function warehouseDashboardFilterOptions(PDO $pdo, int $snapshotDateKey): array
     return $options;
 }
 
-function warehouseDashboardFetchAnalytics(PDO $pdo, array $filters, int $snapshotDateKey): array
+function warehouseDashboardFetchAnalytics(PDO $pdo, array $filters, string $snapshotId): array
 {
-    $where = warehouseInventoryBuildWhere($filters, $snapshotDateKey);
+    $where = warehouseInventoryBuildWhere($filters, null, $snapshotId);
     $statement = $pdo->prepare(
         'SELECT
             fai.`asset_count`,
@@ -131,17 +116,18 @@ function warehouseDashboardFetchAnalytics(PDO $pdo, array $filters, int $snapsho
     return warehouseInventoryAnalyticsFinalize($analytics);
 }
 
-function warehouseDashboardHistory(PDO $pdo, array $filters, array $snapshotOptions, int $selectedSnapshot): array
+function warehouseDashboardHistory(PDO $pdo, array $filters, array $snapshotOptions, string $selectedSnapshotId): array
 {
-    $keys = array_values(array_map(
-        static fn(array $option): int => $option['key'],
-        array_filter($snapshotOptions, static fn(array $option): bool => $option['key'] <= $selectedSnapshot),
-    ));
-    $keys = array_slice($keys, 0, 24);
-    $selectedIndex = array_search($selectedSnapshot, $keys, true);
-    $previousSnapshot = $selectedIndex === false ? null : ($keys[$selectedIndex + 1] ?? null);
+    $snapshotIds = array_column($snapshotOptions, 'snapshotId');
+    $selectedIndex = array_search($selectedSnapshotId, $snapshotIds, true);
+    if ($selectedIndex === false) {
+        return ['available' => false, 'series' => [], 'previousSnapshot' => null, 'comparison' => null];
+    }
+    $historyOptions = array_slice($snapshotOptions, $selectedIndex, 24);
+    $snapshotIds = array_column($historyOptions, 'snapshotId');
+    $previousSnapshot = $historyOptions[1] ?? null;
 
-    if (count($keys) < 2) {
+    if (count($snapshotIds) < 2) {
         return [
             'available' => false,
             'series' => [],
@@ -153,26 +139,30 @@ function warehouseDashboardHistory(PDO $pdo, array $filters, array $snapshotOpti
     $where = warehouseInventoryBuildWhere($filters, null);
     $placeholders = [];
     $parameters = $where['params'];
-    foreach ($keys as $index => $key) {
+    foreach ($snapshotIds as $index => $snapshotId) {
         $name = 'history_snapshot_' . $index;
         $placeholders[] = ':' . $name;
-        $parameters[$name] = $key;
+        $parameters[$name] = $snapshotId;
     }
     $conditions = $where['sql'] === '' ? [] : [preg_replace('/^WHERE\s+/i', '', $where['sql'])];
-    $conditions[] = 'fai.`snapshot_date_key` IN (' . implode(', ', $placeholders) . ')';
+    $conditions[] = 'fai.`snapshot_id` IN (' . implode(', ', $placeholders) . ')';
     $statement = $pdo->prepare(
         'SELECT
+            snapshot.`snapshot_id`,
             fai.`snapshot_date_key`,
             snapshot_date.`full_date` AS `snapshot_date`,
+            snapshot.`snapshot_label`,
             SUM(COALESCE(fai.`asset_count`, 0)) AS `total_assets`,
             SUM(CASE WHEN fai.`is_available_flag` = 1 THEN COALESCE(fai.`asset_count`, 0) ELSE 0 END) AS `available_assets`,
             SUM(CASE WHEN fai.`is_damaged_flag` = 1 THEN COALESCE(fai.`asset_count`, 0) ELSE 0 END) AS `damaged_assets`,
             SUM(CASE WHEN fai.`has_location_flag` = 0 THEN COALESCE(fai.`asset_count`, 0) ELSE 0 END) AS `missing_location_assets`,
             SUM(CASE WHEN fai.`asset_age_years` > :history_age_threshold THEN COALESCE(fai.`asset_count`, 0) ELSE 0 END) AS `old_assets`
         ' . warehouseInventoryFromSql() . '
+        LEFT JOIN `dim_inventory_snapshot` snapshot
+            ON snapshot.`snapshot_id` = fai.`snapshot_id`
         WHERE ' . implode(' AND ', $conditions) . '
-        GROUP BY fai.`snapshot_date_key`, snapshot_date.`full_date`
-        ORDER BY fai.`snapshot_date_key` DESC'
+        GROUP BY snapshot.`snapshot_id`, fai.`snapshot_date_key`, snapshot_date.`full_date`, snapshot.`snapshot_label`
+        ORDER BY fai.`snapshot_date_key` DESC, snapshot.`imported_at` DESC, snapshot.`snapshot_id` DESC'
     );
     $parameters['history_age_threshold'] = $filters['ageThreshold'];
     warehouseDashboardBind($statement, $parameters);
@@ -181,9 +171,11 @@ function warehouseDashboardHistory(PDO $pdo, array $filters, array $snapshotOpti
     $series = [];
     foreach ($statement->fetchAll(PDO::FETCH_ASSOC) as $row) {
         $total = (int)$row['total_assets'];
-        $series[(int)$row['snapshot_date_key']] = [
+        $series[(string)$row['snapshot_id']] = [
+            'snapshotId' => (string)$row['snapshot_id'],
             'snapshotDateKey' => (int)$row['snapshot_date_key'],
             'snapshotDate' => $row['snapshot_date'],
+            'snapshotLabel' => $row['snapshot_label'],
             'totalAssets' => $total,
             'availableAssets' => (int)$row['available_assets'],
             'availabilityRate' => warehouseInventoryAnalyticsRate((int)$row['available_assets'], $total),
@@ -195,11 +187,39 @@ function warehouseDashboardHistory(PDO $pdo, array $filters, array $snapshotOpti
         ];
     }
 
-    $current = $series[$selectedSnapshot] ?? null;
-    $previous = $previousSnapshot === null ? null : ($series[$previousSnapshot] ?? null);
+    if ($series === []) {
+        return ['available' => false, 'series' => [], 'previousSnapshot' => null, 'comparison' => null];
+    }
+
+    foreach ($historyOptions as $option) {
+        if (!isset($series[$option['snapshotId']])) {
+            $series[$option['snapshotId']] = [
+                'snapshotId' => $option['snapshotId'],
+                'snapshotDateKey' => $option['dateKey'],
+                'snapshotDate' => $option['date'],
+                'snapshotLabel' => $option['label'],
+                'totalAssets' => 0,
+                'availableAssets' => 0,
+                'availabilityRate' => null,
+                'damagedAssets' => 0,
+                'damageRate' => null,
+                'missingLocationAssets' => 0,
+                'missingLocationRate' => null,
+                'assetsOlderThanThreshold' => 0,
+            ];
+        }
+    }
+    $orderedSeries = array_map(
+        static fn(array $option): array => $series[$option['snapshotId']],
+        $historyOptions,
+    );
+    $current = $series[$selectedSnapshotId] ?? null;
+    $previous = $previousSnapshot === null ? null : ($series[$previousSnapshot['snapshotId']] ?? null);
     $comparison = $current === null || $previous === null ? null : [
         'currentSnapshot' => $current['snapshotDate'],
         'previousSnapshot' => $previous['snapshotDate'],
+        'currentLabel' => $current['snapshotLabel'],
+        'previousLabel' => $previous['snapshotLabel'],
         'totalAssets' => $current['totalAssets'] - $previous['totalAssets'],
         'availableAssets' => $current['availableAssets'] - $previous['availableAssets'],
         'availabilityRatePoints' => $current['availabilityRate'] === null || $previous['availabilityRate'] === null
@@ -217,9 +237,9 @@ function warehouseDashboardHistory(PDO $pdo, array $filters, array $snapshotOpti
     ];
 
     return [
-        'available' => count($series) >= 2,
-        'series' => array_values($series),
-        'previousSnapshot' => $previousSnapshot,
+        'available' => count($historyOptions) >= 2,
+        'series' => $orderedSeries,
+        'previousSnapshot' => $previousSnapshot['key'] ?? null,
         'comparison' => $comparison,
     ];
 }
@@ -253,33 +273,26 @@ try {
         ]);
     }
 
-    $latestSnapshot = $snapshotOptions[0]['key'];
-    $selectedSnapshot = $filters['snapshot'] === 'latest' ? $latestSnapshot : (int)$filters['snapshot'];
-    $knownSnapshots = array_column($snapshotOptions, 'key');
-    if (!in_array($selectedSnapshot, $knownSnapshots, true)) {
+    $snapshot = warehouseInventoryResolveSnapshot($warehousePdo, $filters['snapshot']);
+    if ($snapshot === null) {
         warehouseDashboardRespond(false, 'ไม่พบชุดข้อมูล snapshot ที่เลือก', [], 400);
     }
 
-    $analytics = warehouseDashboardFetchAnalytics($warehousePdo, $filters, $selectedSnapshot);
+    $selectedSnapshotId = $snapshot['snapshotId'];
+    $filters['snapshot'] = $snapshot['key'];
+    $analytics = warehouseDashboardFetchAnalytics($warehousePdo, $filters, $selectedSnapshotId);
     $analytics['overview']['disposalEstimate'] = warehouseDashboardDisposalEstimate(
         $warehousePdo,
         $filters,
-        $selectedSnapshot,
+        $selectedSnapshotId,
     );
-    $snapshot = null;
-    foreach ($snapshotOptions as $option) {
-        if ($option['key'] === $selectedSnapshot) {
-            $snapshot = $option;
-            break;
-        }
-    }
 
-    $history = warehouseDashboardHistory($warehousePdo, $filters, $snapshotOptions, $selectedSnapshot);
+    $history = warehouseDashboardHistory($warehousePdo, $filters, $snapshotOptions, $selectedSnapshotId);
     warehouseDashboardRespond(true, 'โหลดข้อมูลวิเคราะห์สินทรัพย์สำเร็จ', [
         'snapshot' => $snapshot,
         'snapshotOptions' => $snapshotOptions,
-        'filterOptions' => warehouseDashboardFilterOptions($warehousePdo, $selectedSnapshot),
-        'selectedFilters' => [...$filters, 'snapshot' => (string)$selectedSnapshot],
+        'filterOptions' => warehouseDashboardFilterOptions($warehousePdo, $selectedSnapshotId),
+        'selectedFilters' => $filters,
         ...$analytics,
         'history' => $history,
     ]);
