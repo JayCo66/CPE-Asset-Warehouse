@@ -1,6 +1,6 @@
 # ETL ระบบครุภัณฑ์ + ใบแจ้งซ่อม → Data Warehouse
 
-`etl_warehouse.py` รวมข้อมูลจาก 2 แหล่งให้เป็นรูปแบบเดียวกัน แล้วสร้างไฟล์ SQL สำหรับโหลดเข้า warehouse ตาม `warehouse schema.sql` ซึ่งมี 8 dimension และ 4 fact
+`etl_warehouse.py` รวมข้อมูลจาก 2 แหล่งให้เป็นรูปแบบเดียวกัน แล้วสร้างไฟล์ SQL สำหรับโหลดเข้า warehouse ตาม `database/warehouse_schema.sql` ซึ่งมี 8 dimension และ 4 fact
 
 | แหล่ง | มาจาก | ไปที่ warehouse |
 |---|---|---|
@@ -18,7 +18,7 @@ python etl_warehouse.py
 
 ค่า default อ่านใบแจ้งซ่อมจากไฟล์ `.xlsx` ในโฟลเดอร์ `data/` และดึงครุภัณฑ์จาก assets API จริง ถ้าเรียก API ไม่ได้จะใช้ `data/assets_real.json` แทนอัตโนมัติ ถ้าจะใช้ไฟล์ใบแจ้งซ่อมอื่นใส่ path ต่อท้าย เช่น `python etl_warehouse.py "ใบแจ้งซ่อม.xlsx" -o output`
 
-แล้วรัน `output/warehouse_load.sql` บน MySQL 8 ที่สร้างตารางจาก `warehouse schema.sql` ไว้แล้ว ไฟล์นี้ TRUNCATE ทุกตารางก่อน INSERT จึงรันซ้ำได้
+แล้วรัน `output/warehouse_load.sql` บน MySQL 8 ที่สร้างตารางจาก `database/warehouse_schema.sql` ไว้แล้ว ไฟล์นี้ TRUNCATE ทุกตารางก่อน INSERT จึงรันซ้ำได้
 
 รัน ETL เป็นรอบ (เช่น สัปดาห์ละครั้ง) เพื่อเก็บ snapshot ครุภัณฑ์ใน `fact_asset_inventory` ไว้ดูแนวโน้มตามเวลา (ดู [snapshot ครุภัณฑ์](#snapshot-ครุภัณฑ์-fact_asset_inventory))
 
@@ -410,11 +410,11 @@ source-db ──► source-api ──► etl ──► warehouse-db ──► wa
 
 | service | ทำอะไร | port บนเครื่อง |
 |---|---|---|
-| `source-db` | MySQL ของระบบครุภัณฑ์ สร้างตารางจาก `DB warehouse project schema.sql` + `docker/source-db/02-extend.sql` | 3308 |
+| `source-db` | MySQL ของระบบครุภัณฑ์ สร้างตารางจาก `database/source_schema.sql` + `docker/source-db/02-extend.sql` | 3308 |
 | `source-seed` | เติมข้อมูลครั้งแรก: `asset` จาก `data/assets_real.json` (จริง) ตารางอื่นจาก `mock_api/` (จำลอง) แล้วจบ | – |
 | `source-api` | PHP ของทีมใน `assets_api/` | 8089 |
 | `etl` | ดึง**ทุก endpoint** จาก `source-api` (`--all-api`) → `output/warehouse_load.sql` → โหลดเข้า warehouse แล้วจบ | – |
-| `warehouse-db` | MySQL ของ warehouse (ฐานข้อมูล `cpe_warehouse` ชื่อเดียวกับที่ทีมใช้ใน XAMPP) สร้างตารางจาก `warehouse schema.sql` | 3307 |
+| `warehouse-db` | MySQL ของ warehouse (ฐานข้อมูล `cpe_warehouse` ชื่อเดียวกับที่ทีมใช้ใน XAMPP) สร้างตารางจาก `database/warehouse_schema.sql` | 3307 |
 | `warehouse-api` | backend ของ dashboard (`web/public/api/*.php`) อ่าน warehouse อย่างเดียว | ผ่าน frontend |
 | `frontend` | Nginx ส่งหน้าเว็บ `web/public` และส่งต่อ `/api/` ไปที่ `warehouse-api` | **8088** |
 | `report-web` | PHP วาง `dashboard_report.html`, `dashboard_borrow.html` และ `assets_api/` แบบเดียวกับ XAMPP | **8090** |

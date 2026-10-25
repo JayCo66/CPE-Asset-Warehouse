@@ -96,7 +96,7 @@ def main():
     parser.add_argument("--password", default="", help="MySQL Password (default: empty)")
     parser.add_argument("--db", default="cpeasset", help="ชื่อฐานข้อมูล (default: cpeasset)")
     parser.add_argument("--mysql-bin", default=None, help="พาธของโปรแกรม mysql.exe")
-    parser.add_argument("--schema", default="DB warehouse project schema.sql", help="ไฟล์ DDL Schema")
+    parser.add_argument("--schema", default="database/source_schema.sql", help="ไฟล์ DDL Schema (default: database/source_schema.sql)")
     parser.add_argument("--mock-dir", default="mock_api", help="โฟลเดอร์ไฟล์ mock JSON")
     parser.add_argument("--assets-json", default="data/assets_real.json", help="ไฟล์แคชข้อมูลครุภัณฑ์จริง")
     parser.add_argument("--reset", action="store_true", help="ล้างฐานข้อมูลเดิมแล้วสร้างโครงสร้างใหม่หมด")
