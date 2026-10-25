@@ -496,18 +496,19 @@ docker/
 
 ### dashboard_report.html (ไฟล์เดียว แบบเดียวกับ dashboard_borrow.html)
 
-หน้ารายงานประจำปี ขอเงินลงทุน ครุภัณฑ์ แจ้งซ่อมอาคาร ซ่อมครุภัณฑ์ และยืม-คืน รวมอยู่ในไฟล์ `dashboard_report.html` ที่ root ของ repo ดึงข้อมูลจาก `assets_api/report_*.php` ซึ่งอ่าน Data Warehouse อย่างเดียว
+งานส่วนของเรา คือ **แจ้งซ่อมอาคาร** และ **ซ่อมครุภัณฑ์** (ภาพรวม + คุ้มซ่อมไหม) อยู่ในไฟล์ `dashboard_report.html` ที่ root ของ repo ดึงข้อมูลจาก `assets_api/report_*.php` ซึ่งอ่าน Data Warehouse อย่างเดียว
 
 | ไฟล์ | หน้าที่ |
 |---|---|
 | `dashboard_report.html` | หน้าเว็บทั้งหมด (CSS/JS ในไฟล์เดียว, d3 จาก CDN) มีปุ่มสลับโหมดมืด/สว่าง ใช้ค่า `cpe_theme` ร่วมกับ `dashboard_borrow.html` |
 | `assets_api/report_common.php` | เชื่อมต่อ warehouse + ฟังก์ชันกลาง (วันทำการ, ราคาจำลอง, อายุการใช้งาน, ความคุ้มค่าการซ่อม) |
 | `assets_api/report_config.json` | เกณฑ์ทั้งหมด (SLA, เกณฑ์ซ่อม 50% + ครึ่งอายุ, อายุการใช้งานตามหมวด, วันหยุดราชการ) |
-| `assets_api/report_annual.php`, `report_invest.php`, `report_inventory.php`, `report_facility.php`, `report_repair.php`, `report_borrow.php` | ข้อมูลของแต่ละหน้า |
+| `assets_api/report_facility.php`, `report_repair.php` | ข้อมูลของแต่ละหน้า |
 
 - **XAMPP**: วาง repo ไว้ใน `htdocs` แล้วเปิด `http://localhost/<โฟลเดอร์>/dashboard_report.html` ตัวหน้าเรียก `assets_api/` ที่อยู่ข้างไฟล์ ถ้า API อยู่ที่อื่นให้เติม `?api=http://localhost/assets_api/` ท้าย URL
 - **ฐานข้อมูล**: `report_*.php` ใช้ `WAREHOUSE_DB_HOST` / `WAREHOUSE_DB_PORT` / `WAREHOUSE_DB_NAME` / `WAREHOUSE_DB_USER` / `WAREHOUSE_DB_PASS` ค่าเริ่มต้นคือ `localhost`, `3306`, `cpe_warehouse`, `root`, ไม่มีรหัสผ่าน (ชื่อฐานข้อมูลเดียวกับ `dw_borrow.php` ของหน้ายืม-คืน)
 - **Docker**: เปิด <http://localhost:8090/dashboard_report.html> (service `report-web`)
+- ครุภัณฑ์อยู่ที่ `src/asset-inv/` และยืม-คืนอยู่ที่ `dashboard_borrow.html` ของเพื่อนร่วมทีม ส่วนรายงานประจำปีและขอเงินลงทุนยังอยู่ในเว็บ `web/public` (Docker พอร์ต 8088)
 - เนื้อหาเหมือนหน้าใน `web/public` แต่เป็นไฟล์แยก แก้หน้าใดหน้าหนึ่งแล้วอีกหน้าจะไม่เปลี่ยนตาม
 
 ## ข้อจำกัดที่ควรรู้

@@ -99,11 +99,29 @@
       const a = document.createElement("a");
       a.href = `#${m.path}/${v.id}`;
       a.textContent = v.label;
+      a.dataset.view = v.id;
       if (v.id === active.view.id) a.setAttribute("aria-current", "page");
       li.appendChild(a);
       return li;
     }));
+    if (m.badges) loadBadges(m);
     document.title = `${m.label}${views.length > 1 ? " · " + active.view.label : ""} · ${registry.app?.name || "CPE Asset Warehouse"}`;
+  }
+
+  // ตัวเลขบนแท็บ (เช่น จำนวนรายการที่มีสัญญาณ) จาก endpoint ใน modules.json ; ดึงครั้งเดียวต่อโมดูล ถ้าดึงไม่ได้ก็แสดงแท็บตามปกติ
+  const badgeCache = new Map();
+  async function loadBadges(m) {
+    try {
+      if (!badgeCache.has(m.id)) badgeCache.set(m.id, await window.ViewApi(m.badges));
+      const b = badgeCache.get(m.id);
+      localList.querySelectorAll("a").forEach((a) => {
+        if (b[a.dataset.view] === undefined || a.querySelector(".tab-badge")) return;
+        const s = document.createElement("span");
+        s.className = "tab-badge";
+        s.textContent = b[a.dataset.view];
+        a.appendChild(s);
+      });
+    } catch { /* ไม่มีตัวเลขก็ใช้แท็บได้ */ }
   }
 
   async function route(focus) {
