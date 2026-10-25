@@ -162,16 +162,70 @@ try {
         return $s;
     }
 
-    $data = array_map(function($r) {
+    // คำนวณพฤติกรรมผูกขาดเครื่อง: ยืมชิ้นเดิมติดต่อกันเกิน 3 ครั้ง โดยแต่ละครั้งห่างกันไม่เกิน 1 สัปดาห์ (<= 7 วัน)
+    $monopolyFactIds = [];
+    $monopolyChainCounts = [];
+    $userAssetGroups = [];
+    foreach ($rows as $r) {
+        $k = $r['borrower_user_key'] . '_' . $r['asset_key'];
+        $userAssetGroups[$k][] = $r;
+    }
+
+    foreach ($userAssetGroups as $k => $items) {
+        if (count($items) < 4) continue;
+        usort($items, fn($a, $b) => (int)$a['borrow_date_key'] - (int)$b['borrow_date_key']);
+
+        $curChain = [$items[0]];
+        for ($i = 1; $i < count($items); $i++) {
+            $prev = $items[$i - 1];
+            $curr = $items[$i];
+
+            $prevEndKey = (int)($prev['actual_return_date_key'] ?: ($prev['return_date_key'] ?: $prev['borrow_date_key']));
+            $currStartKey = (int)$curr['borrow_date_key'];
+
+            $prevEndDate = DateTime::createFromFormat('Ymd', (string)$prevEndKey);
+            $currStartDate = DateTime::createFromFormat('Ymd', (string)$currStartKey);
+
+            $gapDays = 999;
+            if ($prevEndDate && $currStartDate) {
+                $diff = $prevEndDate->diff($currStartDate);
+                $gapDays = $diff->invert ? 0 : (int)$diff->days;
+            }
+
+            if ($gapDays <= 7) {
+                $curChain[] = $curr;
+            } else {
+                if (count($curChain) >= 4) {
+                    $cLen = count($curChain);
+                    foreach ($curChain as $c) {
+                        $monopolyFactIds[$c['borrow_fact_id']] = true;
+                        $monopolyChainCounts[$c['borrow_fact_id']] = $cLen;
+                    }
+                }
+                $curChain = [$curr];
+            }
+        }
+        if (count($curChain) >= 4) {
+            $cLen = count($curChain);
+            foreach ($curChain as $c) {
+                $monopolyFactIds[$c['borrow_fact_id']] = true;
+                $monopolyChainCounts[$c['borrow_fact_id']] = $cLen;
+            }
+        }
+    }
+
+    $data = array_map(function($r) use ($monopolyFactIds, $monopolyChainCounts) {
         $anomalies = [];
+        $factId = (int)$r['borrow_fact_id'];
         
-        // 1. Repeat asset (ผูกขาดเครื่องเดิมซ้ำ >= 3 ครั้ง)
-        if ((int)$r['is_repeat_asset_flag'] === 1 || (int)$r['repeat_asset_times'] >= 3) {
+        // 1. Repeat consecutive asset monopoly (ผูกขาดเครื่องเดิมต่อเนื่องเกิน 3 ครั้ง ห่าง <= 7 วัน)
+        if (isset($monopolyFactIds[$factId])) {
+            $chainLen = $monopolyChainCounts[$factId] ?? 4;
             $anomalies[] = [
                 'type' => 'REPEAT_ASSET',
-                'title' => 'ผูกขาดเครื่องเดิมซ้ำ',
+                'title' => 'ผูกขาดเครื่องเดิมต่อเนื่อง',
                 'severity' => 'HIGH',
-                'detail' => "ผู้ใช้ยืมครุภัณฑ์ชิ้นนี้ซ้ำรวม {$r['repeat_asset_times']} ครั้ง (≥3)"
+                'detail' => "ยืมครุภัณฑ์ชิ้นเดิมติดต่อกัน {$chainLen} ครั้ง (แต่ละครั้งห่างกันไม่เกิน 1 สัปดาห์)"
             ];
         }
 

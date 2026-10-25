@@ -1522,6 +1522,91 @@
       return DOW_NAMES[idx] || 'ไม่ระบุ';
     }
 
+    function getDaysBetween(endStr, startStr) {
+      if (!endStr || !startStr) return 999;
+      const d1 = new Date(endStr.substring(0, 10) + 'T00:00:00Z');
+      const d2 = new Date(startStr.substring(0, 10) + 'T00:00:00Z');
+      if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return 999;
+      const diffDays = Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
+      return diffDays < 0 ? 0 : diffDays;
+    }
+
+    // คำนวณพฤติกรรมผูกขาดเครื่อง: ยืมของชิ้นเดิมติดต่อกันเกิน 3 ครั้ง (>= 4 ครั้ง) โดยแต่ละครั้งห่างกันไม่เกิน 1 สัปดาห์ (<= 7 วัน)
+    function calculateConsecutiveMonopoly(records, maxGapDays = 7, minConsecutiveCount = 4) {
+      const groups = {};
+      records.forEach(r => {
+        const userKey = r.user?.key || r.user_key || r.user?.name;
+        const assetId = r.asset?.key || r.asset?.code || r.assetCode || r.assetName;
+        const groupKey = `${userKey}_${assetId}`;
+        if (!groups[groupKey]) groups[groupKey] = [];
+        groups[groupKey].push(r);
+      });
+
+      const monopolyFactIds = new Set();
+      const monopolyPatterns = [];
+      const recordPatternMap = new Map();
+
+      Object.entries(groups).forEach(([groupKey, groupRecords]) => {
+        const sorted = [...groupRecords].sort((a, b) => {
+          const da = new Date((a.borrow_date || a.borrowDate || '0').substring(0, 10));
+          const db = new Date((b.borrow_date || b.borrowDate || '0').substring(0, 10));
+          return da - db;
+        });
+
+        let curChain = [];
+        for (let i = 0; i < sorted.length; i++) {
+          const curr = sorted[i];
+          if (curChain.length === 0) {
+            curChain.push(curr);
+            continue;
+          }
+          const prev = curChain[curChain.length - 1];
+          const prevEnd = prev.actual_return_date || prev.actualReturnDate || prev.return_date || prev.expectedReturnDate || prev.borrow_date || prev.borrowDate;
+          const currStart = curr.borrow_date || curr.borrowDate;
+          const gap = getDaysBetween(prevEnd, currStart);
+
+          if (gap <= maxGapDays) {
+            curChain.push(curr);
+          } else {
+            if (curChain.length >= minConsecutiveCount) {
+              const pattern = {
+                groupKey,
+                userName: curChain[0].user?.name || 'ไม่ระบุ',
+                assetName: curChain[0].assetName || curChain[0].asset?.name || 'ไม่ระบุ',
+                assetCode: curChain[0].assetCode || curChain[0].asset?.code || '-',
+                chainCount: curChain.length,
+                records: curChain
+              };
+              monopolyPatterns.push(pattern);
+              curChain.forEach(c => {
+                monopolyFactIds.add(c.fact_id);
+                recordPatternMap.set(c.fact_id, pattern);
+              });
+            }
+            curChain = [curr];
+          }
+        }
+        if (curChain.length >= minConsecutiveCount) {
+          const pattern = {
+            groupKey,
+            userName: curChain[0].user?.name || 'ไม่ระบุ',
+            assetName: curChain[0].assetName || curChain[0].asset?.name || 'ไม่ระบุ',
+            assetCode: curChain[0].assetCode || curChain[0].asset?.code || '-',
+            chainCount: curChain.length,
+            records: curChain
+          };
+          monopolyPatterns.push(pattern);
+          curChain.forEach(c => {
+            monopolyFactIds.add(c.fact_id);
+            recordPatternMap.set(c.fact_id, pattern);
+          });
+        }
+      });
+
+      return { monopolyFactIds, monopolyPatterns, recordPatternMap };
+    }
+
+
     // -------------------------------------------------------------------------
     // 3. State & Global Filters
     // -------------------------------------------------------------------------
@@ -3674,13 +3759,9 @@
       const replacedList = filteredRecords.filter(r => r.is_replaced === 1);
       const overdueList = filteredRecords.filter(r => r.is_overdue === 1);
 
-      // Repeat monopoly
-      const repeatMap = {};
-      filteredRecords.forEach(r => {
-        const k = `${r.user?.key}_${r.assetCode}`;
-        repeatMap[k] = (repeatMap[k] || 0) + 1;
-      });
-      const repeatCount = Object.values(repeatMap).filter(c => c >= 3).length;
+      // Repeat consecutive monopoly (>3 consecutive within 7-day gap)
+      const { monopolyFactIds, monopolyPatterns, recordPatternMap } = calculateConsecutiveMonopoly(filteredRecords, 7, 4);
+      const repeatCount = monopolyPatterns.length;
 
       // KPIs
       document.getElementById('kpiTitle1').textContent = 'รายการชำรุดตอนส่งคืน';
@@ -3698,10 +3779,10 @@
       document.getElementById('kpiVal3').textContent = `${overdueList.length} รายการ`;
       document.getElementById('kpiSub3').textContent = 'เกินกำหนดเวลาตามใบคำขอ';
 
-      document.getElementById('kpiTitle4').textContent = 'พฤติกรรมผูกขาดเครื่องซ้ำ (≥3)';
+      document.getElementById('kpiTitle4').textContent = 'พฤติกรรมผูกขาดเครื่อง (>3 ครั้ง)';
       document.getElementById('kpiIcon4').textContent = '🔒';
       document.getElementById('kpiVal4').textContent = `${repeatCount} รูปแบบ`;
-      document.getElementById('kpiSub4').textContent = 'ผู้ยืมเดิมเบิกเครื่องเดิมต่อเนื่อง';
+      document.getElementById('kpiSub4').textContent = 'ยืมชิ้นเดิมต่อเนื่อง ห่างกัน ≤ 7 วัน';
 
       document.getElementById('kpiTitle5').textContent = 'ระดับความเสี่ยงโดยรวม';
       document.getElementById('kpiIcon5').textContent = '🛡️';
@@ -3730,7 +3811,7 @@
       const kpiCard4 = document.getElementById('kpiCard4');
       if (kpiCard4) {
         kpiCard4.style.cursor = 'pointer';
-        kpiCard4.title = '👆 คลิกเพื่อดูรายการคำขอที่มีพฤติกรรมผูกขาดเครื่องซ้ำ (≥3 ครั้ง)';
+        kpiCard4.title = '👆 คลิกเพื่อดูรายการคำขอที่มีพฤติกรรมผูกขาดเครื่องติดต่อกันเกิน 3 ครั้ง (ห่าง ≤7 วัน)';
         kpiCard4.onclick = () => openRiskBorrowModal('REPEAT');
       }
 
@@ -3742,14 +3823,14 @@
       document.getElementById('chartTitleC').textContent = '🔄 ภาควิชาที่มีรายการเปลี่ยนเครื่องทดแทนสูงสุด';
       document.getElementById('chartTitleD').textContent = '⏱️ วันที่เกินกำหนดเฉลี่ยในกลุ่มที่มีรายงานชำรุด';
 
-      // Combine risk records (damaged, replaced, and repeat monopoly) without duplicates
-      const repeatRecords = filteredRecords.filter(r => (repeatMap[`${r.user?.key}_${r.assetCode}`] || 0) >= 3);
+      // Combine risk records (damaged, replaced, and consecutive repeat monopoly) without duplicates
+      const repeatRecords = filteredRecords.filter(r => monopolyFactIds.has(r.fact_id));
       const riskMapUnique = new Map();
       [...damagedList, ...replacedList, ...repeatRecords].forEach(r => riskMapUnique.set(r.fact_id, r));
       const riskList = Array.from(riskMapUnique.values());
 
       renderChartsTopicRisk(damagedList, replacedList, overdueList, repeatCount);
-      renderTableTopicRisk(riskList, repeatMap);
+      renderTableTopicRisk(riskList, recordPatternMap);
     }
 
     function renderChartsTopicRisk(damagedList, replacedList, overdueList, repeatCount) {
@@ -3761,7 +3842,7 @@
       chartAInst = new Chart(ctxA, {
         type: 'doughnut',
         data: {
-          labels: ['ชำรุดตอนคืน', 'เปลี่ยนเครื่องทดแทน', 'ส่งคืนล่าช้า', 'ผูกขาดเครื่องซ้ำ'],
+          labels: ['ชำรุดตอนคืน', 'เปลี่ยนเครื่องทดแทน', 'ส่งคืนล่าช้า', 'ผูกขาดเครื่องต่อเนื่อง'],
           datasets: [{ data: [damagedList.length, replacedList.length, overdueList.length, repeatCount], backgroundColor: ['#E43F0B', '#106BDA', '#FFC107', '#7C3AED'], borderColor, borderWidth: 2 }]
         },
         options: {
@@ -3954,7 +4035,7 @@
       });
     }
 
-    function renderTableTopicRisk(riskList, repeatMap) {
+    function renderTableTopicRisk(riskList, recordPatternMap) {
       document.getElementById('tablePanelTitle').textContent = '📋 รายการครุภัณฑ์ที่มีสัญญาณเตือนความเสี่ยงและพฤติกรรมผิดปกติ (Risk & Anomaly Ledger)';
       document.getElementById('tableHeadRow').innerHTML = `
         <tr>
@@ -3971,8 +4052,8 @@
       `;
 
       renderGenericTable(riskList, (r, rank) => {
-        const repCount = repeatMap ? (repeatMap[`${r.user?.key}_${r.assetCode}`] || 0) : 0;
-        const isRepeat = repCount >= 3;
+        const pattern = recordPatternMap ? recordPatternMap.get(r.fact_id) : null;
+        const isRepeat = !!pattern;
         let anomalyBadges = [];
         if (r.return_condition === 'ชำรุด') {
           anomalyBadges.push('<span class="badge-status status-danger" style="margin-right:3px;">⚠️ ชำรุด</span>');
@@ -3981,7 +4062,7 @@
           anomalyBadges.push('<span class="badge-status" style="background: rgba(16, 107, 218, 0.15); color: #106BDA; margin-right:3px;">🔄 เปลี่ยนเครื่อง</span>');
         }
         if (isRepeat) {
-          anomalyBadges.push(`<span class="badge-status" style="background: rgba(124, 58, 237, 0.15); color: #9061F9; font-weight: 600; cursor: pointer;" onclick="openRiskBorrowModal('REPEAT')" title="คลิกดูประวัติการผูกขาดเครื่องนี้">🔒 ผูกขาดซ้ำ (${repCount} ครั้ง)</span>`);
+          anomalyBadges.push(`<span class="badge-status" style="background: rgba(124, 58, 237, 0.15); color: #9061F9; font-weight: 600; cursor: pointer;" onclick="openRiskBorrowModal('REPEAT')" title="คลิกดูประวัติการผูกขาดเครื่องนี้">🔒 ผูกขาดต่อเนื่อง (${pattern.chainCount} ครั้ง, ห่าง ≤7 วัน)</span>`);
         }
         if (anomalyBadges.length === 0) {
           anomalyBadges.push('<span style="color:var(--cpe-text-muted)">-</span>');
@@ -4480,8 +4561,8 @@
         title = '⏰ รายการที่มีประวัติส่งคืนเกินกำหนด';
         sub = 'ผู้ยืมส่งคืนช้ากว่าวันที่ระบุในสัญญา';
       } else if (riskType === 'REPEAT') {
-        title = '🔒 รายการที่มีพฤติกรรมผูกขาดเครื่องเดิม (≥3 ครั้ง)';
-        sub = 'ผู้ยืมคนเดิมทำการเบิกยืมครุภัณฑ์รหัสเดิมซ้ำตั้งแต่ 3 ครั้งขึ้นไป';
+        title = '🔒 รายการที่มีพฤติกรรมผูกขาดเครื่องต่อเนื่อง (>3 ครั้ง)';
+        sub = 'ผู้ยืมคนเดิมทำการเบิกยืมครุภัณฑ์รหัสเดิมติดต่อกันเกิน 3 ครั้ง โดยแต่ละครั้งห่างกันไม่เกิน 1 สัปดาห์';
       }
       if (monthStr) {
         title += ` (${monthStr})`;
@@ -4563,12 +4644,8 @@
         } else if (rt === 'OVERDUE') {
           base = base.filter(r => r.is_overdue === 1);
         } else if (rt === 'REPEAT') {
-          const repMap = {};
-          allRecords.forEach(r => {
-            const k = `${r.user?.key}_${r.assetCode}`;
-            repMap[k] = (repMap[k] || 0) + 1;
-          });
-          base = base.filter(r => (repMap[`${r.user?.key}_${r.assetCode}`] || 0) >= 3);
+          const { monopolyFactIds } = calculateConsecutiveMonopoly(allRecords, 7, 4);
+          base = base.filter(r => monopolyFactIds.has(r.fact_id));
         } else if (rt === 'NORMAL') {
           base = base.filter(r => r.return_condition !== 'ชำรุด' && r.is_replaced !== 1 && r.is_overdue !== 1);
         } else if (rt === 'ALL_RISK') {
