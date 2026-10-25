@@ -199,31 +199,6 @@
       color: var(--cpe-info);
     }
 
-    .caution-banner {
-      background: rgba(255, 193, 7, 0.08);
-      border: 1px solid rgba(255, 193, 7, 0.28);
-      border-radius: var(--radius-md);
-      padding: 12px 18px;
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      margin-top: 14px;
-      margin-bottom: 16px;
-    }
-    .caution-banner .caution-icon {
-      font-size: 20px;
-      flex-shrink: 0;
-      line-height: 1.2;
-    }
-    .caution-banner .caution-text {
-      font-size: 13px;
-      color: var(--cpe-text);
-      line-height: 1.5;
-    }
-    .caution-banner .caution-text strong {
-      color: var(--cpe-warning);
-    }
-
     .table-sub-tabs {
       display: inline-flex;
       background: var(--cpe-surface-subtle);
@@ -402,20 +377,6 @@
       display: flex;
       align-items: center;
       gap: 10px;
-    }
-    .context-question {
-      font-size: 13.5px;
-      color: var(--cpe-brand-blue);
-      font-weight: 600;
-      margin-top: 4px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .context-title p {
-      font-size: 12.5px;
-      color: var(--cpe-text-dim);
-      margin-top: 2px;
     }
 
     .semester-scope-wrapper {
@@ -622,11 +583,6 @@
       display: flex;
       align-items: center;
       gap: 8px;
-    }
-    .chart-title-block p {
-      font-size: 12px;
-      color: var(--cpe-text-dim);
-      margin-top: 3px;
     }
 
     .chart-controls {
@@ -979,10 +935,6 @@
     <div class="context-header">
       <div class="context-title">
         <h2 id="activeTopicTitle">📦 1. ความต้องการใช้งานครุภัณฑ์ (Equipment Demand)</h2>
-        <div class="context-question" id="activeTopicQuestion">
-          <span>❓ คำถามที่ต้องการหาคำตอบ: ครุภัณฑ์ประเภทใดเป็นที่ต้องการมากที่สุด?</span>
-        </div>
-        <p id="activeTopicDesc">วิเคราะห์จำนวนครั้งที่ยืม จำนวนผู้ยืมที่แตกต่างกัน และแนวโน้มการยืมรายเดือนหรือรายภาคเรียน</p>
       </div>
 
       <!-- Quick Semester Selection -->
@@ -999,14 +951,6 @@
           <option value="SEM1_2567">ภาคต้น 2567 (มิ.ย. - ต.ค. 67)</option>
           <option value="SUMMER">ภาคฤดูร้อน (เม.ย. - พ.ค.)</option>
         </select>
-      </div>
-    </div>
-
-    <!-- Administrative Caution Banner (Dynamic per Topic) -->
-    <div class="caution-banner" id="topicCautionBanner" style="display: none;">
-      <span class="caution-icon">⚠️</span>
-      <div class="caution-text" id="topicCautionText">
-        <!-- Injected via JS -->
       </div>
     </div>
 
@@ -1106,7 +1050,6 @@
         <div class="chart-header">
           <div class="chart-title-block">
             <h3 id="chartTitleA">📊 สัดส่วนความต้องการตามประเภทครุภัณฑ์ (Category Share)</h3>
-            <p id="chartDescA">ตอบโจทย์: ครุภัณฑ์ประเภทใดเป็นที่ต้องการมากที่สุด?</p>
           </div>
         </div>
         <div class="chart-container">
@@ -1119,7 +1062,6 @@
         <div class="chart-header">
           <div class="chart-title-block">
             <h3 id="chartTitleB">🏆 10 ครุภัณฑ์ที่เป็นที่ต้องการสูงสุด (Top 10 Equipment)</h3>
-            <p id="chartDescB">จัดอันดับตามจำนวนครั้งที่มีการยืมใช้งาน</p>
           </div>
           <div class="chart-controls" id="chartControlsB">
             <button class="btn-chart-toggle active" id="btnSort1" data-sort="1">จำนวนครั้งที่ยืม</button>
@@ -1137,7 +1079,6 @@
       <div class="chart-header">
         <div class="chart-title-block">
           <h3 id="chartTitleFull">📅 แนวโน้มความต้องการยืมข้ามเวลา & รายภาคการศึกษา (Monthly & Semester Demand Trend)</h3>
-          <p id="chartDescFull">วิเคราะห์ความผันแปรตามช่วงเวลาเทียบกับเปิดภาคเรียน (ภาคต้น มิ.ย.-ต.ค. / ภาคปลาย พ.ย.-มี.ค. / ฤดูร้อน)</p>
         </div>
         <div style="display:flex; gap:10px; align-items:center;">
           <label style="font-size:12px; color:var(--cpe-text-dim);">แยกดูกราฟตาม:</label>
@@ -1159,7 +1100,6 @@
         <div class="chart-header">
           <div class="chart-title-block">
             <h3 id="chartTitleC">👤 สัดส่วนผู้ยืมตามสถานภาพในแต่ละประเภทครุภัณฑ์</h3>
-            <p id="chartDescC">วิเคราะห์ว่ากลุ่ม นิสิต / อาจารย์ / เจ้าหน้าที่ ต้องการใช้งานครุภัณฑ์ประเภทใด</p>
           </div>
         </div>
         <div class="chart-container">
@@ -1172,7 +1112,6 @@
         <div class="chart-header">
           <div class="chart-title-block">
             <h3 id="chartTitleD">🏢 ภาควิชา/สังกัดที่มีความต้องการยืมสูงสุด (Top Departments)</h3>
-            <p id="chartDescD">ภาควิชาที่เบิกยืมครุภัณฑ์ไปใช้งานมากที่สุด</p>
           </div>
         </div>
         <div class="chart-container">
@@ -1609,14 +1548,6 @@
       // Update Context Header
       const meta = TOPICS[topicId];
       document.getElementById('activeTopicTitle').textContent = meta.title;
-      document.getElementById('activeTopicQuestion').innerHTML = `<span>${meta.question}</span>`;
-      document.getElementById('activeTopicDesc').textContent = meta.desc;
-
-      // Show/Hide Caution Banner
-      const cautionEl = document.getElementById('topicCautionBanner');
-      if (cautionEl) {
-        cautionEl.style.display = (topicId === 'utilization') ? 'flex' : 'none';
-      }
 
       // Reset Table Header Actions when not in utilization
       if (topicId !== 'utilization') {
@@ -1748,17 +1679,12 @@
 
       // Chart Titles
       document.getElementById('chartTitleA').textContent = '📊 สัดส่วนความต้องการตามประเภทครุภัณฑ์ (Category Share)';
-      document.getElementById('chartDescA').textContent = 'ตอบโจทย์: ครุภัณฑ์ประเภทใดเป็นที่ต้องการมากที่สุด?';
       document.getElementById('chartTitleB').textContent = '🏆 10 ครุภัณฑ์ที่เป็นที่ต้องการสูงสุด (Top 10 Equipment)';
-      document.getElementById('chartDescB').textContent = currentSortMode === '1' ? 'จัดอันดับตามจำนวนครั้งที่มีการยืมใช้งาน' : 'จัดอันดับตามจำนวนผู้ยืมที่ไม่ซ้ำ (Unique)';
       document.getElementById('btnSort1').textContent = 'จำนวนครั้งที่ยืม';
       document.getElementById('btnSort2').textContent = 'ผู้ยืมไม่ซ้ำ (Unique)';
       document.getElementById('chartTitleFull').textContent = '📅 แนวโน้มความต้องการยืมข้ามเวลา & รายภาคการศึกษา (Monthly & Semester Demand Trend)';
-      document.getElementById('chartDescFull').textContent = 'วิเคราะห์ความผันแปรตามช่วงเวลาเทียบกับเปิดภาคเรียน (ภาคต้น มิ.ย.-ต.ค. / ภาคปลาย พ.ย.-มี.ค. / ฤดูร้อน)';
       document.getElementById('chartTitleC').textContent = '👤 สัดส่วนผู้ยืมตามสถานภาพในแต่ละประเภทครุภัณฑ์';
-      document.getElementById('chartDescC').textContent = 'วิเคราะห์ว่ากลุ่ม นิสิต / อาจารย์ / เจ้าหน้าที่ ต้องการใช้งานครุภัณฑ์ประเภทใด';
       document.getElementById('chartTitleD').textContent = '🏢 ภาควิชา/สังกัดที่มีความต้องการยืมสูงสุด (Top Departments)';
-      document.getElementById('chartDescD').textContent = 'ภาควิชาที่เบิกยืมครุภัณฑ์ไปใช้งานมากที่สุด';
 
       // Render Charts
       renderChartsTopicDemand(sortedCats, sortedAssets, assetUsers);
@@ -2008,17 +1934,12 @@
 
       // Chart Titles
       document.getElementById('chartTitleA').textContent = '📊 ปริมาณการยืมจำแนกตามวันในสัปดาห์ (Day of Week Distribution)';
-      document.getElementById('chartDescA').textContent = 'คำถาม: วันไหนในสัปดาห์ที่มีการเบิกยืมอุปกรณ์หนาแน่นที่สุด?';
       document.getElementById('chartTitleB').textContent = '⏱️ การกระจายของระยะเวลาการยืม (Borrow Duration Distribution)';
-      document.getElementById('chartDescB').textContent = 'สัดส่วนระยะเวลาการยืมตั้งแต่ระยะสั้น (1-3 วัน) ถึงระยะยาว (>30 วัน)';
       document.getElementById('btnSort1').textContent = 'มุมมองสัปดาห์';
       document.getElementById('btnSort2').textContent = 'มุมมองเดือน';
       document.getElementById('chartTitleFull').textContent = '📅 แนวโน้มความต้องการยืมตลอดทั้งปีเทียบกับช่วงสอบ & โครงงาน';
-      document.getElementById('chartDescFull').textContent = 'เปรียบเทียบความผันแปรของการยืมตามเดือนและช่วงสำคัญของภาคการศึกษา';
       document.getElementById('chartTitleC').textContent = '👥 วันที่ยืมยอดนิยมจำแนกตามสถานภาพผู้ยืม (Role vs Day)';
-      document.getElementById('chartDescC').textContent = 'นิสิต อาจารย์ และเจ้าหน้าที่ นิยมยืมในวันใดมากที่สุด';
       document.getElementById('chartTitleD').textContent = '📦 หมวดหมู่ครุภัณฑ์ที่ยืมมากที่สุดในวันจันทร์ (Peak Day)';
-      document.getElementById('chartDescD').textContent = 'อุปกรณ์ที่ต้องเตรียมความพร้อมล่วงหน้าสำหรับเช้าวันจันทร์';
 
       renderChartsTopicPatterns(dowMap);
       renderTableTopicPatterns();
@@ -2222,15 +2143,6 @@
     };
 
     function renderTopicUtilization() {
-      // Caution banner
-      const cautionEl = document.getElementById('topicCautionBanner');
-      if (cautionEl) {
-        cautionEl.style.display = 'flex';
-        document.getElementById('topicCautionText').innerHTML = `
-          <strong>⚠️ ข้อควรระวังเชิงบริหาร (Administrative Caution):</strong> 
-          จำนวนครั้งที่ถูกยืมต่ำ หรือไม่เคยถูกยืมเลย ไม่ได้แปลว่าครุภัณฑ์ไม่มีประโยชน์ เพราะอาจเป็นอุปกรณ์เฉพาะทางสำหรับการทดลอง/งานวิจัยขั้นสูง หรือเป็นเครื่องมือจำเป็นที่ต้องมีสำรองไว้ตามเกณฑ์มาตรฐานการรับรองหลักสูตรวิศวกรรมศาสตร์ การพิจารณาจัดสรรใหม่หรือโอนย้ายทรัพยากรต้องประเมินร่วมกับอาจารย์ผู้รับผิดชอบห้องปฏิบัติการและสาขาวิชา
-        `;
-      }
 
       const inv = window.ASSET_INVENTORY_DATA || {
         summary: {
@@ -2283,21 +2195,16 @@
 
       // Chart Titles
       document.getElementById('chartTitleA').textContent = '📊 ความถี่การยืม vs จำนวนคงเหลือในคลัง (Borrow Frequency vs Stock Matrix)';
-      document.getElementById('chartDescA').textContent = 'ตอบโจทย์: มีรายการใดที่ความต้องการสูงเทียบสต็อก หรือของเยอะแต่ไม่ค่อยถูกยืม?';
 
       document.getElementById('chartTitleB').textContent = '🍩 สัดส่วนสถานะการใช้งานคลังครุภัณฑ์ (Inventory Utilization)';
-      document.getElementById('chartDescB').textContent = 'เปรียบเทียบสัดส่วน: ไม่เคยถูกยืมเลย vs ใช้น้อย vs หมุนเวียนสูง';
       document.getElementById('btnSort1').textContent = 'สัดส่วนทั้งระบบ';
       document.getElementById('btnSort2').textContent = 'Top 10 ใช้น้อย (1-2 ครั้ง)';
 
       document.getElementById('chartTitleFull').textContent = '🏢 ปริมาณครุภัณฑ์ที่ไม่เคยถูกยืม (Dormant Assets) จำแนกตามสังกัด & ภาควิชา';
-      document.getElementById('chartDescFull').textContent = 'แสดงหน่วยงานและประเภทอุปกรณ์ที่มีสต็อกนอนนิ่งสูงที่สุด เพื่อประกอบการวางแผนจัดสรรใหม่';
 
       document.getElementById('chartTitleC').textContent = '⏱️ ระยะเวลายืมเฉลี่ยจำแนกตามหมวดหมู่ (วัน/ครั้ง)';
-      document.getElementById('chartDescC').textContent = 'ประเภทครุภัณฑ์ใดถูกยืมถือครองเฉลี่ยยาวนานที่สุด';
 
       document.getElementById('chartTitleD').textContent = '👤 ระยะเวลายืมเฉลี่ยจำแนกตามสถานภาพผู้ยืม (Role Average)';
-      document.getElementById('chartDescD').textContent = 'เปรียบเทียบระยะเวลาใช้งานเฉลี่ยระหว่างอาจารย์ นิสิต และเจ้าหน้าที่';
 
       renderChartsTopicUtilization();
       renderTableTopicUtilization();
@@ -2574,7 +2481,6 @@
           <th style="text-align: right;">จำนวนครั้งที่ยืม</th>
           <th style="text-align: right;">วันยืมรวม</th>
           <th>สถานะการหมุนเวียน</th>
-          <th>คำแนะนำการจัดสรร</th>
           <th style="text-align: center;">เจาะลึก</th>
         </tr>
       `;
@@ -2607,23 +2513,15 @@
 
       renderGenericTable(filtered, (item, rank) => {
         let turnoverBadge = '';
-        let reco = '';
         const count = item.borrow_count || 0;
         const stock = item.ready_qty || item.total_qty || 1;
 
         if (count === 0) {
-          turnoverBadge = '<span class="badge-status status-dormant" style="font-size:11px;">💤 ไม่เคยถูกยืม</span>';
-          if (stock >= 5) {
-            reco = '<span style="color:var(--cpe-warning); font-size:11.5px;">⚠️ สต็อกสูงแต่ไม่ถูกใช้ พิจารณาหมุนเวียนข้ามภาควิชา</span>';
-          } else {
-            reco = '<span style="color:var(--cpe-text-dim); font-size:11.5px;">อุปกรณ์เฉพาะทาง / สำรองตามเกณฑ์หลักสูตร</span>';
-          }
+          turnoverBadge = stock >= 5 ? '<span class="badge-status status-dormant" style="font-size:11px;">💤 ไม่เคยถูกยืม (สต็อกสูง)</span>' : '<span class="badge-status status-dormant" style="font-size:11px;">💤 ไม่เคยถูกยืม</span>';
         } else if (count <= 2) {
-          turnoverBadge = '<span class="badge-status status-warning" style="font-size:11px;">⏳ ใช้น้อยมาก</span>';
-          reco = '<span style="color:var(--cpe-info); font-size:11.5px;">ควรประชาสัมพันธ์ให้นิสิต/อาจารย์ทราบ</span>';
+          turnoverBadge = '<span class="badge-status status-warning" style="font-size:11px;">⏳ ใช้น้อย</span>';
         } else {
           turnoverBadge = '<span class="badge-status status-ready" style="font-size:11px;">⚡ หมุนเวียนสูง</span>';
-          reco = '<span style="color:var(--cpe-success); font-size:11.5px;">จัดสรรทรัพยากรคุ้มค่า ตรวจสอบบำรุงรักษา</span>';
         }
 
         return `
@@ -2637,7 +2535,6 @@
             <td style="text-align:right;"><strong style="color:${count===0?'var(--cpe-text-dim)':(count<=2?'var(--cpe-warning)':'var(--cpe-brand-blue)')};">${count}</strong> ครั้ง</td>
             <td style="text-align:right;">${item.total_days || 0} วัน</td>
             <td>${turnoverBadge}</td>
-            <td>${reco}</td>
             <td style="text-align:center;">
               <button class="btn-inspect" onclick="openAssetModal('${encodeURIComponent(item.name)}')">เจาะลึก 🔍</button>
             </td>
@@ -2692,17 +2589,12 @@
 
       // Chart Titles
       document.getElementById('chartTitleA').textContent = '📊 สัดส่วนการส่งคืนตรงเวลา vs ส่งคืนล่าช้า';
-      document.getElementById('chartDescA').textContent = 'ตอบโจทย์: สัดส่วนคำขอที่ปฏิบัติตามกฎการคืนครุภัณฑ์';
       document.getElementById('chartTitleB').textContent = '⏰ ปริมาณการคืนล่าช้าจำแนกตามหมวดหมู่ครุภัณฑ์';
-      document.getElementById('chartDescB').textContent = 'คำถาม: ครุภัณฑ์ประเภทใดมีปัญหาคืนล่าช้าบ่อยที่สุด?';
       document.getElementById('btnSort1').textContent = 'จำนวนครั้งล่าช้า';
       document.getElementById('btnSort2').textContent = 'อัตราส่วน %';
       document.getElementById('chartTitleFull').textContent = '📅 แนวโน้มจำนวนครั้งที่ส่งคืนล่าช้าข้ามเวลา (Overdue Trend)';
-      document.getElementById('chartDescFull').textContent = 'วิเคราะห์ช่วงเดือนที่มีปัญหาการคืนล่าช้ากระจุกตัวสูง';
       document.getElementById('chartTitleC').textContent = '⏳ การกระจายตัวของจำนวนวันที่เกินกำหนด (Overdue Days)';
-      document.getElementById('chartDescC').textContent = 'ผู้ยืมส่วนใหญ่คืนล่าช้าเกินไปกี่วัน (1-3 วัน, 4-7 วัน, >7 วัน)';
       document.getElementById('chartTitleD').textContent = '🏢 ภาควิชา/สังกัดที่มีรายการคืนล่าช้าสะสมสูงสุด';
-      document.getElementById('chartDescD').textContent = 'ภาควิชาที่ควรประสานงานกำชับเรื่องกำหนดเวลาส่งคืน';
 
       renderChartsTopicPunctuality(ontimeList.length, overdueList.length, overdueCats);
       renderTableTopicPunctuality(overdueList);
@@ -2912,17 +2804,12 @@
 
       // Chart Titles
       document.getElementById('chartTitleA').textContent = '📊 ปริมาณการยืมจำแนกตามภาควิชา (Department Volume)';
-      document.getElementById('chartDescA').textContent = 'เปรียบเทียบจำนวนชิ้นครุภัณฑ์ที่แต่ละภาควิชาเบิกยืมไปใช้งาน';
       document.getElementById('chartTitleB').textContent = '📦 หมวดหมู่ครุภัณฑ์ที่แต่ละภาควิชาต้องการ (Dept x Category)';
-      document.getElementById('chartDescB').textContent = 'ภาควิชาใดต้องการครุภัณฑ์ประเภทไหนมากเป็นพิเศษ?';
       document.getElementById('btnSort1').textContent = 'เรียงตามปริมาณ';
       document.getElementById('btnSort2').textContent = 'เรียงตามจำนวนคำขอ';
       document.getElementById('chartTitleFull').textContent = '📅 ปริมาณการยืมของ 5 ภาควิชาหลักเปรียบเทียบตามช่วงเวลา';
-      document.getElementById('chartDescFull').textContent = 'ดูความต่อเนื่องและฤดูกาลความต้องการของแต่ละภาควิชา';
       document.getElementById('chartTitleC').textContent = '👤 สัดส่วนบทบาทผู้ยืมใน 5 ภาควิชาหลัก (Role Distribution)';
-      document.getElementById('chartDescC').textContent = 'สัดส่วนนิสิต อาจารย์ และเจ้าหน้าที่ในแต่ละภาควิชา';
       document.getElementById('chartTitleD').textContent = '📋 สัดส่วนจำนวนชิ้นเฉลี่ยต่อคำขอของแต่ละภาควิชา';
-      document.getElementById('chartDescD').textContent = 'พฤติกรรมการขอยืม (ยืมทีละชิ้น หรือเบิกพร้อมกันหลายชิ้น)';
 
       renderChartsTopicDepartments(sortedDepts);
       renderTableTopicDepartments(sortedDepts);
@@ -3110,17 +2997,12 @@
 
       // Chart Titles
       document.getElementById('chartTitleA').textContent = '📊 สัดส่วนสัญญาณเตือนและปัจจัยเสี่ยง (Risk Distribution)';
-      document.getElementById('chartDescA').textContent = 'ภาพรวมรายการชำรุด เปลี่ยนเครื่อง ล่าช้า และผูกขาดอุปกรณ์';
       document.getElementById('chartTitleB').textContent = '⚠️ ประเภทครุภัณฑ์ที่มีรายงานชำรุดสูงสุด (Damaged by Category)';
-      document.getElementById('chartDescB').textContent = 'คำถาม: ครุภัณฑ์ประเภทใดมีอัตราความเสียหายสูงกว่าปกติ?';
       document.getElementById('btnSort1').textContent = 'จำนวนชำรุด';
       document.getElementById('btnSort2').textContent = 'สัดส่วน %';
       document.getElementById('chartTitleFull').textContent = '📅 แนวโน้มการเกิดความเสียหายและเปลี่ยนเครื่องทดแทนตามช่วงเวลา';
-      document.getElementById('chartDescFull').textContent = 'ตรวจจับช่วงเวลาที่มีอุปกรณ์ชำรุดเพิ่มสูงเพื่อวางแผนงบซ่อมบำรุง';
       document.getElementById('chartTitleC').textContent = '🔄 ภาควิชาที่มีรายการเปลี่ยนเครื่องทดแทนสูงสุด';
-      document.getElementById('chartDescC').textContent = 'ภาควิชาที่ประสบปัญหาเครื่องเดิมขัดข้องระหว่างใช้งาน';
       document.getElementById('chartTitleD').textContent = '⏱️ วันที่เกินกำหนดเฉลี่ยในกลุ่มที่มีรายงานชำรุด';
-      document.getElementById('chartDescD').textContent = 'วิเคราะห์ความเชื่อมโยงระหว่างการคืนล่าช้ากับความเสียหายของอุปกรณ์';
 
       renderChartsTopicRisk(damagedList, replacedList, overdueList, repeatCount);
       renderTableTopicRisk(damagedList.concat(replacedList));
@@ -3326,11 +3208,10 @@
           tbody.innerHTML = `
             <tr>
               <td colspan="6" style="text-align: center; padding: 32px 16px; color: var(--cpe-text-dim);">
-                <div style="font-size: 28px; margin-bottom: 8px;">💤</div>
-                <strong style="color: var(--cpe-text); font-size: 14px;">ไม่พบประวัติการยืมใช้งานในระบบ (Zero-Borrow / Dormant Item)</strong><br>
-                <span style="font-size: 12.5px; line-height: 1.6; display: inline-block; margin-top: 6px;">
-                  ครุภัณฑ์นี้มีสถานะพร้อมใช้งานในคลังของ <strong>${found.department || 'คณะ'}</strong> จำนวน ${found.ready_qty || found.total_qty || 1} ชิ้น (ปีที่จัดซื้อ: ${found.year_purchase || '-'})<br>
-                  สามารถพิจารณาจัดสรร หมุนเวียนข้ามภาควิชา หรือประชาสัมพันธ์ให้นิสิตและอาจารย์ทราบเพื่อเพิ่มอัตราการใช้ประโยชน์
+                <div style="font-size: 24px; margin-bottom: 6px;">💤</div>
+                <strong style="color: var(--cpe-text); font-size: 13.5px;">ยังไม่มีประวัติการเบิกยืมในระบบ (Zero-Borrow)</strong><br>
+                <span style="font-size: 12px; display: inline-block; margin-top: 4px; color: var(--cpe-text-dim);">
+                  สังกัด: ${found.department || 'คณะ'} | สภาพพร้อมใช้งานในคลัง: ${found.ready_qty || found.total_qty || 1} ชิ้น (ปีจัดซื้อ: ${found.year_purchase || '-'})
                 </span>
               </td>
             </tr>
