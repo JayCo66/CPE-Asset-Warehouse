@@ -857,6 +857,32 @@
     .modal-stat-card .label { font-size: 11px; color: var(--cpe-text-dim); }
     .modal-stat-card .val { font-size: 18px; font-weight: 700; color: var(--cpe-text); margin-top: 3px; }
 
+    .modal-window.modal-wide {
+      max-width: 1040px;
+    }
+
+    .cat-filter-btn {
+      background: var(--cpe-surface-subtle);
+      border: 1px solid var(--cpe-border);
+      color: var(--cpe-text-dim);
+      padding: 5px 12px;
+      border-radius: var(--radius-pill);
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .cat-filter-btn.active, .cat-filter-btn:hover {
+      background: var(--cpe-brand-blue);
+      color: #FFFFFF;
+      border-color: var(--cpe-brand-blue);
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
     @media (max-width: 768px) {
       .app-header { padding: 12px 16px; }
       .charts-grid-2col { grid-template-columns: 1fr; }
@@ -1031,6 +1057,9 @@
         <div class="chart-header">
           <div class="chart-title-block">
             <h3 id="chartTitleA">📊 สัดส่วนความต้องการตามประเภทครุภัณฑ์ (Category Share)</h3>
+            <span style="font-size: 11px; color: var(--cpe-brand-blue); display: inline-flex; align-items: center; gap: 4px; margin-top: 3px;">
+              <span>💡 คลิกที่ชิ้นส่วนกราฟเพื่อเปิดดูรายการครุภัณฑ์จริงในหมวดนี้จากทะเบียนสินทรัพย์ (Asset Inventory)</span>
+            </span>
           </div>
         </div>
         <div class="chart-container">
@@ -1177,6 +1206,99 @@
               <!-- Populated via JS -->
             </tbody>
           </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Category Asset Inventory Modal (Drill-Down to fact_asset_inventory) -->
+  <div class="modal-overlay" id="categoryInventoryModal">
+    <div class="modal-window modal-wide">
+      <div class="modal-header">
+        <div class="modal-title">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 24px;">📦</span>
+            <div>
+              <h4 id="catModalTitle" style="margin: 0; font-size: 16px;">ข้อมูลครุภัณฑ์หมวด: -</h4>
+              <div style="font-size: 12px; color: var(--cpe-text-dim); margin-top: 2px;">
+                ดึงข้อมูลทะเบียนจาก <code>fact_asset_inventory</code> (Asset Inventory Data Warehouse)
+              </div>
+            </div>
+          </div>
+        </div>
+        <button class="modal-close-btn" id="btnCloseCatModal" title="ปิดหน้าต่าง">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Stat Grid -->
+        <div class="modal-stat-grid" id="catModalStatGrid">
+          <div class="modal-stat-card">
+            <div class="label">จำนวนในคลังสินทรัพย์ทั้งหมด (Inventory Total)</div>
+            <div class="val" id="catStatTotal" style="color: var(--cpe-brand-blue);">-</div>
+          </div>
+          <div class="modal-stat-card">
+            <div class="label">สภาพพร้อมใช้งาน (Ready / Available)</div>
+            <div class="val" id="catStatReady" style="color: var(--cpe-success);">-</div>
+          </div>
+          <div class="modal-stat-card">
+            <div class="label">ชำรุด / ส่งซ่อม (Damaged / In Repair)</div>
+            <div class="val" id="catStatDamaged" style="color: var(--cpe-danger);">-</div>
+          </div>
+          <div class="modal-stat-card">
+            <div class="label">ประวัติการถูกยืมในระบบ (Total Demands)</div>
+            <div class="val" id="catStatBorrows" style="color: var(--cpe-warning);">-</div>
+          </div>
+        </div>
+
+        <!-- Action & Search Toolbar -->
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px;">
+          <div style="display: flex; gap: 8px; align-items: center; flex: 1; min-width: 260px;">
+            <input type="text" id="catModalSearchInput" placeholder="🔍 ค้นหารหัส, ชื่อครุภัณฑ์, สังกัด หรือห้องในหมวดนี้..." style="width: 100%; padding: 8px 14px; font-size: 13px; border-radius: var(--radius-md); background: var(--cpe-surface-subtle); border: 1px solid var(--cpe-border); color: var(--cpe-text);" />
+          </div>
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <button class="cat-filter-btn active" data-status="all">ทั้งหมด</button>
+            <button class="cat-filter-btn" data-status="ready">พร้อมใช้งาน</button>
+            <button class="cat-filter-btn" data-status="damaged">ชำรุด/ส่งซ่อม</button>
+            <button class="cat-filter-btn" data-status="borrowed">ถูกยืม</button>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <button id="btnFilterDashboardByCat" class="btn-inspect" style="padding: 7px 14px; font-size: 12px; font-weight: 600; background: var(--cpe-surface-subtle); border: 1px solid var(--cpe-brand-blue); color: var(--cpe-brand-blue);">
+              🔍 กรองแดชบอร์ดตามหมวดนี้
+            </button>
+            <a id="btnLinkToAssetInv" href="../asset-inv/index.html" target="_blank" class="btn-inspect" style="padding: 7px 14px; font-size: 12px; font-weight: 600; text-decoration: none; background: var(--cpe-brand-blue); color: #fff; border-color: var(--cpe-brand-blue);">
+              เปิดในระบบ Asset Inventory ↗
+            </a>
+          </div>
+        </div>
+
+        <!-- Table Container with Loading and Empty states -->
+        <div id="catModalLoading" style="text-align: center; padding: 40px 16px; display: none;">
+          <div style="font-size: 26px; animation: spin 1s linear infinite; display: inline-block;">🔄</div>
+          <div style="margin-top: 10px; color: var(--cpe-text-dim); font-size: 13px;">กำลังดึงข้อมูลทะเบียนสินทรัพย์จาก fact_asset_inventory...</div>
+        </div>
+
+        <div class="table-responsive" id="catModalTableWrapper" style="max-height: 380px; overflow-y: auto; border: 1px solid var(--cpe-border); border-radius: var(--radius-md);">
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 40px; text-align: center;">#</th>
+                <th style="min-width: 170px;">รหัสครุภัณฑ์ (Asset Code)</th>
+                <th style="min-width: 240px;">ชื่อครุภัณฑ์ (Equipment Name)</th>
+                <th style="min-width: 160px;">สังกัด / ภาควิชา</th>
+                <th style="min-width: 140px;">สถานที่จัดเก็บ</th>
+                <th style="min-width: 90px; text-align: center;">สถานะ</th>
+                <th style="min-width: 80px; text-align: center;">ปีจัดซื้อ</th>
+                <th style="min-width: 90px; text-align: center;">ประวัติยืม</th>
+              </tr>
+            </thead>
+            <tbody id="catModalTableBody">
+              <!-- Populated via JS -->
+            </tbody>
+          </table>
+        </div>
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 12px; color: var(--cpe-text-dim); flex-wrap: wrap; gap: 8px;">
+          <span id="catModalCountLabel">แสดง 0 จาก 0 รายการ</span>
+          <span style="font-style: italic;">💡 สามารถคลิกปุ่ม "ประวัติยืม 🔍" เพื่อดูประวัติการเบิกยืมของครุภัณฑ์แต่ละชิ้น</span>
         </div>
       </div>
     </div>
@@ -1669,7 +1791,24 @@
         },
         options: {
           responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { position: 'right', labels: { color: textColor, boxWidth: 12, padding: 8 } } }
+          plugins: {
+            legend: { position: 'right', labels: { color: textColor, boxWidth: 12, padding: 8 } },
+            tooltip: {
+              callbacks: {
+                footer: () => '👆 คลิกเพื่อดูรายการครุภัณฑ์ในหมวดนี้จากทะเบียนสินทรัพย์ (Asset Inventory)'
+              }
+            }
+          },
+          onHover: (event, chartElement) => {
+            event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
+          },
+          onClick: (event, elements, chart) => {
+            if (elements && elements.length > 0) {
+              const index = elements[0].index;
+              const catName = sortedCats[index][0];
+              openCategoryInventoryModal(catName);
+            }
+          }
         }
       });
 
@@ -1853,7 +1992,11 @@
           <td style="text-align:center;"><span class="rank-badge ${rank<=3?'rank-top'+rank:''}">${rank}</span></td>
           <td style="font-family: monospace; font-size:12px; color:var(--cpe-text-dim);">${item.code}</td>
           <td><strong>${item.name}</strong></td>
-          <td><span class="tag-category">${item.category}</span></td>
+          <td>
+            <span class="tag-category" onclick="openCategoryInventoryModal('${encodeURIComponent(item.category)}')" style="cursor: pointer;" title="คลิกเพื่อดูครุภัณฑ์ในหมวดนี้จาก Asset Inventory">
+              ${item.category} ↗
+            </span>
+          </td>
           <td style="text-align:right;"><strong style="color:var(--cpe-brand-blue);">${item.count}</strong> ครั้ง</td>
           <td style="text-align:right;"><strong style="color:var(--cpe-purple);">${item.users}</strong> คน</td>
           <td style="text-align:right; color:var(--cpe-text-muted);">${item.ratio}</td>
@@ -3225,6 +3368,252 @@
     });
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') modal.classList.remove('active');
+    });
+
+    // -------------------------------------------------------------------------
+    // 10.1 Category Inventory Drill-Through Modal (Linked with fact_asset_inventory)
+    // -------------------------------------------------------------------------
+    const catModal = document.getElementById('categoryInventoryModal');
+    const btnCloseCatModal = document.getElementById('btnCloseCatModal');
+    let currentCatItems = [];
+    let currentCatFilterStatus = 'all';
+    let currentActiveCategory = '';
+
+    window.openCategoryInventoryModal = async function(rawCatName) {
+      const catName = typeof rawCatName === 'string' ? decodeURIComponent(rawCatName) : rawCatName;
+      if (!catName || catName === '-' || catName === 'ALL') return;
+      currentActiveCategory = catName;
+      currentCatFilterStatus = 'all';
+
+      // Reset filter button states
+      document.querySelectorAll('.cat-filter-btn').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-status') === 'all');
+      });
+
+      // Update titles
+      document.getElementById('catModalTitle').textContent = `ข้อมูลครุภัณฑ์หมวด: ${catName}`;
+      document.getElementById('catModalSearchInput').value = '';
+
+      // Direct link to asset-inv
+      const linkBtn = document.getElementById('btnLinkToAssetInv');
+      if (linkBtn) {
+        linkBtn.href = `../asset-inv/index.html`;
+      }
+
+      // Reset stats to loading state
+      document.getElementById('catStatTotal').textContent = '...';
+      document.getElementById('catStatReady').textContent = '...';
+      document.getElementById('catStatDamaged').textContent = '...';
+
+      // Total borrow demands in this category from borrow dataset
+      const categoryBorrows = allRecords.filter(r => r.assetCategory === catName).length;
+      document.getElementById('catStatBorrows').textContent = `${categoryBorrows.toLocaleString()} ครั้ง`;
+
+      // Show loading
+      document.getElementById('catModalLoading').style.display = 'block';
+      document.getElementById('catModalTableWrapper').style.display = 'none';
+      catModal.classList.add('active');
+
+      let items = [];
+      let apiSuccess = false;
+
+      // 1. Fetch live data from fact_asset_inventory.php
+      try {
+        const res = await fetch(`../../assets_api/fact_asset_inventory.php?q=${encodeURIComponent(catName)}&limit=250`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+            items = json.data;
+            apiSuccess = true;
+            const totalCount = json.matchedTotal || items.length;
+            const readyCount = items.filter(i => (i.asset_status === 'พร้อมใช้งาน' || i.is_available_flag === 1)).length;
+            const damagedCount = items.filter(i => (i.asset_status === 'ชำรุด' || i.asset_status === 'ส่งซ่อม' || i.is_damaged_flag === 1)).length;
+
+            document.getElementById('catStatTotal').textContent = `${totalCount.toLocaleString()} ชิ้น`;
+            document.getElementById('catStatReady').textContent = `${readyCount.toLocaleString()} ชิ้น`;
+            document.getElementById('catStatDamaged').textContent = `${damagedCount.toLocaleString()} ชิ้น`;
+          }
+        }
+      } catch (e) {
+        console.warn('Live asset inventory API error:', e.message);
+      }
+
+      // 2. Fallback to ASSET_INVENTORY_DATA or borrow allRecords if offline / empty
+      if (!apiSuccess || items.length === 0) {
+        const inv = window.ASSET_INVENTORY_DATA || {};
+        const allInv = (inv.zero_borrow_list || []).concat(inv.low_borrow_list || []).concat(inv.high_borrow_list || []);
+        const matchedInv = allInv.filter(m => m.category && (m.category.includes(catName) || catName.includes(m.category)));
+
+        if (matchedInv.length > 0) {
+          items = matchedInv.map(m => ({
+            asset_code: m.sample_code || m.code || '-',
+            asset_name: m.name,
+            department_name: m.department || 'คณะวิศวกรรมศาสตร์',
+            building: '-',
+            room: '-',
+            floor: '-',
+            asset_status: (m.damaged_qty > 0) ? 'ชำรุด' : 'พร้อมใช้งาน',
+            year_purchase: m.year_purchase || '-',
+            is_available_flag: (m.damaged_qty > 0) ? 0 : 1
+          }));
+        } else {
+          // Fallback to distinct assets from borrow allRecords
+          const uniqueNames = [...new Set(allRecords.filter(r => r.assetCategory === catName).map(r => r.assetName))];
+          items = uniqueNames.map(name => {
+            const sample = allRecords.find(r => r.assetName === name);
+            return {
+              asset_code: sample?.assetCode || '-',
+              asset_name: name,
+              department_name: sample?.deptName || 'ภาควิชาวิศวกรรมคอมพิวเตอร์',
+              building: 'อาคาร 9',
+              room: '-',
+              floor: '-',
+              asset_status: 'พร้อมใช้งาน',
+              year_purchase: '-',
+              is_available_flag: 1
+            };
+          });
+        }
+
+        const readyCount = items.filter(i => i.asset_status === 'พร้อมใช้งาน' || i.is_available_flag === 1).length;
+        const damagedCount = items.filter(i => i.asset_status === 'ชำรุด' || i.asset_status === 'ส่งซ่อม').length;
+        document.getElementById('catStatTotal').textContent = `${items.length.toLocaleString()} ชิ้น (ข้อมูลสำรอง)`;
+        document.getElementById('catStatReady').textContent = `${readyCount.toLocaleString()} ชิ้น`;
+        document.getElementById('catStatDamaged').textContent = `${damagedCount.toLocaleString()} ชิ้น`;
+      }
+
+      currentCatItems = items;
+      document.getElementById('catModalLoading').style.display = 'none';
+      document.getElementById('catModalTableWrapper').style.display = 'block';
+      renderCatModalTable();
+    };
+
+    function renderCatModalTable() {
+      const searchTerm = (document.getElementById('catModalSearchInput').value || '').trim().toLowerCase();
+      const tbody = document.getElementById('catModalTableBody');
+
+      let filtered = currentCatItems.filter(item => {
+        // Status filter
+        if (currentCatFilterStatus === 'ready' && item.asset_status !== 'พร้อมใช้งาน' && item.is_available_flag !== 1) return false;
+        if (currentCatFilterStatus === 'damaged' && item.asset_status !== 'ชำรุด' && item.asset_status !== 'ส่งซ่อม' && item.is_damaged_flag !== 1) return false;
+        if (currentCatFilterStatus === 'borrowed' && item.asset_status !== 'ถูกยืม') return false;
+
+        // Search term
+        if (searchTerm) {
+          const code = (item.asset_code || '').toLowerCase();
+          const name = (item.asset_name || '').toLowerCase();
+          const dept = (item.department_name || '').toLowerCase();
+          const bld = (item.building || '').toLowerCase();
+          const rm = (item.room || '').toLowerCase();
+          return code.includes(searchTerm) || name.includes(searchTerm) || dept.includes(searchTerm) || bld.includes(searchTerm) || rm.includes(searchTerm);
+        }
+        return true;
+      });
+
+      document.getElementById('catModalCountLabel').textContent = `แสดง ${filtered.length.toLocaleString()} จาก ${currentCatItems.length.toLocaleString()} รายการ`;
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" style="text-align: center; padding: 36px 16px; color: var(--cpe-text-dim);">
+              <div style="font-size: 26px; margin-bottom: 6px;">🔍</div>
+              <strong style="color: var(--cpe-text);">ไม่พบครุภัณฑ์ที่ตรงกับเงื่อนไขการค้นหา</strong><br>
+              <span style="font-size: 12px; margin-top: 4px; display: inline-block;">ลองปรับคำค้นหา หรือเลือกตัวกรองสถานะเป็น 'ทั้งหมด'</span>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      // Render rows (limit to first 120 items for high performance)
+      const displayList = filtered.slice(0, 120);
+      tbody.innerHTML = displayList.map((item, idx) => {
+        const status = item.asset_status || 'พร้อมใช้งาน';
+        let statusBadge = 'status-ready';
+        if (status === 'ชำรุด' || status === 'ส่งซ่อม') statusBadge = 'status-danger';
+        else if (status === 'ถูกยืม') statusBadge = 'status-info';
+        else if (status.includes('รอ') || status.includes('จำหน่าย')) statusBadge = 'status-warning';
+
+        const locationStr = [item.building, item.floor ? `ชั้น ${item.floor}` : '', item.room ? `ห้อง ${item.room}` : '', item.area_name].filter(Boolean).join(' ') || '-';
+        const safeName = (item.asset_name || '-').replace(/"/g, '&quot;');
+        const brandModel = [item.brand, item.model].filter(Boolean).join(' / ');
+
+        return `
+          <tr>
+            <td style="text-align: center; font-size: 11px; color: var(--cpe-text-dim);">${idx + 1}</td>
+            <td style="font-family: monospace; font-size: 12px; color: var(--cpe-brand-blue); white-space: nowrap;">
+              ${item.asset_code || '-'}
+            </td>
+            <td>
+              <strong style="color: var(--cpe-text);">${safeName}</strong>
+              ${brandModel ? `<div style="font-size: 11px; color: var(--cpe-text-dim); margin-top: 2px;">🏷️ ${brandModel}</div>` : ''}
+            </td>
+            <td style="font-size: 12px; color: var(--cpe-text-muted);">${item.department_name || '-'}</td>
+            <td style="font-size: 12px; color: var(--cpe-text-muted);">${locationStr}</td>
+            <td style="text-align: center;">
+              <span class="badge-status ${statusBadge}" style="font-size: 11px; padding: 2px 8px;">${status}</span>
+            </td>
+            <td style="text-align: center; font-size: 12px; color: var(--cpe-text-dim); font-family: monospace;">
+              ${item.year_purchase || item.year_fiscal || '-'}
+            </td>
+            <td style="text-align: center;">
+              <button class="btn-inspect" style="padding: 3px 8px; font-size: 11px;" onclick="openAssetModal('${encodeURIComponent(item.asset_name)}')">
+                ประวัติยืม 🔍
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Modal Toolbar Event Listeners
+    document.getElementById('catModalSearchInput').addEventListener('input', () => {
+      renderCatModalTable();
+    });
+
+    document.querySelectorAll('.cat-filter-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.cat-filter-btn').forEach(b => b.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+        currentCatFilterStatus = e.currentTarget.getAttribute('data-status');
+        renderCatModalTable();
+      });
+    });
+
+    document.getElementById('btnFilterDashboardByCat').addEventListener('click', () => {
+      if (currentActiveCategory) {
+        filters.category = currentActiveCategory;
+        const catSelect = document.getElementById('categoryFilter');
+        if (catSelect) {
+          let found = false;
+          for (let i = 0; i < catSelect.options.length; i++) {
+            if (catSelect.options[i].value === currentActiveCategory) {
+              catSelect.selectedIndex = i;
+              found = true;
+              break;
+            }
+          }
+          if (!found) {
+            const opt = document.createElement('option');
+            opt.value = currentActiveCategory;
+            opt.textContent = currentActiveCategory;
+            catSelect.appendChild(opt);
+            catSelect.value = currentActiveCategory;
+          }
+        }
+        applyFilters();
+        catModal.classList.remove('active');
+      }
+    });
+
+    btnCloseCatModal.addEventListener('click', () => catModal.classList.remove('active'));
+    catModal.addEventListener('click', (e) => {
+      if (e.target === catModal) catModal.classList.remove('active');
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && catModal.classList.contains('active')) {
+        catModal.classList.remove('active');
+      }
     });
 
     // -------------------------------------------------------------------------
