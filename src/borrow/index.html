@@ -208,6 +208,7 @@
       align-items: flex-start;
       gap: 12px;
       margin-top: 14px;
+      margin-bottom: 16px;
     }
     .caution-banner .caution-icon {
       font-size: 20px;
@@ -446,92 +447,6 @@
     .select-semester:focus {
       border-color: var(--cpe-brand-blue);
       box-shadow: 0 0 0 2px var(--cpe-brand-blue-soft);
-    }
-
-    /* ==========================================================================
-       DISCOVERY INSIGHT BANNER (Dynamic & Automated per Topic)
-       ========================================================================== */
-    .insight-card {
-      background: linear-gradient(135deg, rgba(4, 102, 200, 0.12), rgba(70, 15, 165, 0.08));
-      border: 1px solid rgba(4, 102, 200, 0.35);
-      border-radius: var(--radius-lg);
-      padding: 18px 22px;
-      margin-bottom: 20px;
-      display: flex;
-      gap: 16px;
-      align-items: flex-start;
-      box-shadow: var(--shadow-sm);
-    }
-
-    .insight-icon-box {
-      width: 44px;
-      height: 44px;
-      flex-shrink: 0;
-      background: var(--cpe-brand-blue);
-      color: #FFFFFF;
-      border-radius: var(--radius-md);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 22px;
-      box-shadow: 0 3px 8px rgba(4, 102, 200, 0.4);
-    }
-
-    .insight-content {
-      flex: 1;
-    }
-
-    .insight-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin-bottom: 6px;
-    }
-
-    .insight-header-title {
-      font-size: 15px;
-      font-weight: 700;
-      color: var(--cpe-text);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .insight-tag {
-      font-size: 11px;
-      font-weight: 600;
-      padding: 2px 10px;
-      border-radius: var(--radius-pill);
-      background: var(--cpe-brand-blue);
-      color: #FFFFFF;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .insight-bullets {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 10px;
-      margin-top: 8px;
-    }
-
-    .insight-bullet-item {
-      font-size: 13px;
-      color: var(--cpe-text-muted);
-      line-height: 1.5;
-      background: var(--cpe-surface);
-      padding: 10px 14px;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--cpe-border);
-    }
-    .insight-bullet-item strong {
-      color: var(--cpe-text);
-    }
-    .insight-bullet-item .highlight-val {
-      color: var(--cpe-brand-blue);
-      font-weight: 700;
     }
 
     /* ==========================================================================
@@ -1003,7 +918,6 @@
       .app-header { padding: 12px 16px; }
       .charts-grid-2col { grid-template-columns: 1fr; }
       .context-header { flex-direction: column; align-items: flex-start; }
-      .insight-card { flex-direction: column; }
     }
   </style>
 </head>
@@ -1085,22 +999,6 @@
           <option value="SEM1_2567">ภาคต้น 2567 (มิ.ย. - ต.ค. 67)</option>
           <option value="SUMMER">ภาคฤดูร้อน (เม.ย. - พ.ค.)</option>
         </select>
-      </div>
-    </div>
-
-    <!-- Data-Driven Automated Insight Discovery Box (Dynamic per Topic) -->
-    <div class="insight-card">
-      <div class="insight-icon-box" id="insightIcon">💡</div>
-      <div class="insight-content">
-        <div class="insight-header">
-          <div class="insight-header-title">
-            <span id="insightHeaderLabel">Insight ที่ค้นพบจากข้อมูล (Data-Driven Insight Discovery)</span>
-          </div>
-          <span class="insight-tag" id="insightTopicTag">Insight 1</span>
-        </div>
-        <div class="insight-bullets" id="insightBulletsContainer">
-          <!-- Populated dynamically via JS -->
-        </div>
       </div>
     </div>
 
@@ -1713,8 +1611,6 @@
       document.getElementById('activeTopicTitle').textContent = meta.title;
       document.getElementById('activeTopicQuestion').innerHTML = `<span>${meta.question}</span>`;
       document.getElementById('activeTopicDesc').textContent = meta.desc;
-      document.getElementById('insightTopicTag').textContent = meta.tag;
-      document.getElementById('insightIcon').textContent = meta.icon;
 
       // Show/Hide Caution Banner
       const cautionEl = document.getElementById('topicCautionBanner');
@@ -1849,24 +1745,6 @@
       // Peak Period
       document.getElementById('kpiVal5').textContent = 'ภาคต้น (ส.ค. - ต.ค.)';
       document.getElementById('kpiSub5').textContent = 'ความต้องการยืมเฉลี่ย ~21 ชิ้น/เดือน';
-
-      // Insight Banner
-      let summerCount = filteredRecords.filter(r => r.semester.semType === 'SUMMER').length;
-      let summerPct = total > 0 ? ((summerCount / total) * 100).toFixed(1) : 0;
-      let studentCount = filteredRecords.filter(r => r.userRole === 'นิสิต').length;
-      let studentPct = total > 0 ? ((studentCount / total) * 100).toFixed(0) : 0;
-
-      document.getElementById('insightBulletsContainer').innerHTML = `
-        <div class="insight-bullet-item">
-          <strong>🏆 ประเภทที่เป็นที่ต้องการสูงสุด:</strong> <span class="highlight-val">${topCat[0]}</span> คิดเป็นสัดส่วนสูงถึง <span class="highlight-val">${catPct}%</span> ของคำขอยืมทั้งหมดในระบบ
-        </div>
-        <div class="insight-bullet-item">
-          <strong>📅 แนวโน้มสัมพันธ์กับภาคเรียน (Seasonality):</strong> ยอดการยืม <span class="highlight-val">พุ่งสูงอย่างชัดเจนในช่วงเปิดภาคเรียนปกติ</span> (ภาคต้น & ภาคปลาย) เพื่อการเรียนการสอน/แล็บ และลดฮวบเหลือเพียง <span class="highlight-val">${summerPct}%</span> ในช่วงปิดภาคฤดูร้อน
-        </div>
-        <div class="insight-bullet-item">
-          <strong>👥 พฤติกรรมผู้ยืมหลัก:</strong> กลุ่มที่มีความต้องการสูงสุดคือ <span class="highlight-val">นิสิต (${studentPct}%)</span> โดยมีจำนวนผู้ยืมที่ไม่ซ้ำกันรวม <span class="highlight-val">${uniqueUsers} คน</span> จาก 12 ภาควิชา
-        </div>
-      `;
 
       // Chart Titles
       document.getElementById('chartTitleA').textContent = '📊 สัดส่วนความต้องการตามประเภทครุภัณฑ์ (Category Share)';
@@ -2127,19 +2005,6 @@
       document.getElementById('kpiIcon5').textContent = '🚀';
       document.getElementById('kpiVal5').textContent = 'ส.ค. - พ.ย. (เปิดเทอม)';
       document.getElementById('kpiSub5').textContent = 'ตรงกับช่วงเริ่มเรียนปฏิบัติการ';
-
-      // Insight Banner
-      document.getElementById('insightBulletsContainer').innerHTML = `
-        <div class="insight-bullet-item">
-          <strong>🔥 ข้อค้นพบเรื่องวันในสัปดาห์:</strong> <span class="highlight-val">วันจันทร์มีการยืมสูงกว่าวันอื่นอย่างต่อเนื่องถึง ${topDOW[1]} ครั้ง (${dowPct}%)</span> จึงควรเตรียมเจ้าหน้าที่และตรวจเช็กสภาพครุภัณฑ์ให้พร้อมก่อนเริ่มสัปดาห์
-        </div>
-        <div class="insight-bullet-item">
-          <strong>⏳ รูปแบบระยะเวลาการยืม (Duration Pattern):</strong> นิสิตและอาจารย์มักยืมใช้งานในรูปแบบ <span class="highlight-val">ระยะสั้นไม่เกิน 7 วัน (${shortBorrows} รายการ)</span> เพื่อใช้ในชั่วโมงแล็บหรือส่งงานประจำสัปดาห์
-        </div>
-        <div class="insight-bullet-item">
-          <strong>🎓 ความสัมพันธ์กับช่วงสอบ/ทำโครงงาน:</strong> ปริมาณการยืมจะไต่ระดับขึ้นสูงใน <span class="highlight-val">ช่วงกลางภาคเรียนและช่วงส่งโครงงานปลายภาค</span> ในขณะที่สัปดาห์สอบปลายภาคยอดจะเริ่มชะลอตัวลง
-        </div>
-      `;
 
       // Chart Titles
       document.getElementById('chartTitleA').textContent = '📊 ปริมาณการยืมจำแนกตามวันในสัปดาห์ (Day of Week Distribution)';
@@ -2415,19 +2280,6 @@
       document.getElementById('kpiIcon5').textContent = '⏱️';
       document.getElementById('kpiVal5').textContent = `10.9 วัน`;
       document.getElementById('kpiSub5').textContent = `สะสม 2,897 วันยืม`;
-
-      // Insight Bullets
-      document.getElementById('insightBulletsContainer').innerHTML = `
-        <div class="insight-bullet-item">
-          <strong>💤 ครุภัณฑ์ที่ไม่เคยถูกยืมเลย (Zero-Borrow Assets):</strong> ตรวจพบครุภัณฑ์ในคลังถึง <span class="highlight-val">${summary.total_zero_borrow_items.toLocaleString()} ชิ้น (${summary.zero_borrow_models_count.toLocaleString()} โมเดล) ที่ไม่เคยมีประวัติการเบิกยืม</span> โดยกลุ่มใหญ่ที่สุดคือครุภัณฑ์สำนักงานต่ำกว่าเกณฑ์ และครุภัณฑ์เฉพาะทางภาควิชาชลประทานและคอมพิวเตอร์
-        </div>
-        <div class="insight-bullet-item">
-          <strong>⏳ ครุภัณฑ์ที่ถูกยืมน้อยมาก (Low Utilization):</strong> มีครุภัณฑ์ถึง <span class="highlight-val">${summary.low_borrow_models_count} รายการที่ถูกยืมเพียง 1-2 ครั้ง</span> ตลอดรอบปี สะท้อนว่าอาจขาดการประชาสัมพันธ์ หรือเป็นอุปกรณ์เฉพาะกิจที่ควรสำรวจความจำเป็น
-        </div>
-        <div class="insight-bullet-item">
-          <strong>⚖️ โอกาสในการจัดสรรใหม่ (Reallocation Matrix):</strong> ในแผนภาพ Scatter Plot พบกลุ่มครุภัณฑ์ที่มีสต็อกคงเหลือสูง (≥5 ชิ้น) แต่มีประวัติการยืมต่ำมาก ควรพิจารณาหมุนเวียนเพื่อลดภาระการจัดซื้อใหม่ในภาควิชาอื่น
-        </div>
-      `;
 
       // Chart Titles
       document.getElementById('chartTitleA').textContent = '📊 ความถี่การยืม vs จำนวนคงเหลือในคลัง (Borrow Frequency vs Stock Matrix)';
@@ -2838,19 +2690,6 @@
       document.getElementById('kpiVal5').textContent = 'เสี่ยงกระทบ 14.2%';
       document.getElementById('kpiSub5').textContent = 'โดยเฉพาะกลุ่มแล็ปท็อปและเครื่องวัด';
 
-      // Insight Banner
-      document.getElementById('insightBulletsContainer').innerHTML = `
-        <div class="insight-bullet-item">
-          <strong>⏱️ สรุปภาพรวมความตรงต่อเวลา:</strong> อัตราการคืนตรงเวลาของคณะอยู่ที่ <span class="highlight-val">${ontimePct}%</span> โดยมีรายการเกินกำหนด <span class="highlight-val">${overdueList.length} ครั้ง (${overduePct}%)</span>
-        </div>
-        <div class="insight-bullet-item">
-          <strong>⚠️ หมวดหมู่ที่มีปัญหาล่าช้าบ่อย:</strong> <span class="highlight-val">${topOverdueCat[0]} (${topOverdueCat[1]} ครั้ง)</span> มักถูกถือครองต่อหลังครบกำหนดเนื่องจากการทดลองหรือโครงงานยังไม่แล้วเสร็จ
-        </div>
-        <div class="insight-bullet-item">
-          <strong>⏳ มาตรการเชิงป้องกัน:</strong> การคืนล่าช้าเฉลี่ย <span class="highlight-val">${avgOverdueDays} วัน</span> ส่งผลกระทบโดยตรงต่อผู้ยืมในคิวถัดไป จึงควรมีระบบแจ้งเตือนอัตโนมัติล่วงหน้า 1 วันก่อนครบกำหนด
-        </div>
-      `;
-
       // Chart Titles
       document.getElementById('chartTitleA').textContent = '📊 สัดส่วนการส่งคืนตรงเวลา vs ส่งคืนล่าช้า';
       document.getElementById('chartDescA').textContent = 'ตอบโจทย์: สัดส่วนคำขอที่ปฏิบัติตามกฎการคืนครุภัณฑ์';
@@ -3071,19 +2910,6 @@
       document.getElementById('kpiVal5').textContent = `${avgReq} ชิ้น/ภาควิชา`;
       document.getElementById('kpiSub5').textContent = 'มีการกระจายตัวตามภาระวิชาการ';
 
-      // Insight Banner
-      document.getElementById('insightBulletsContainer').innerHTML = `
-        <div class="insight-bullet-item">
-          <strong>🏢 ภาควิชาที่มีความต้องการยืมสูงสุด:</strong> <span class="highlight-val">${topDept[0]} (${topDept[1].count} ชิ้น)</span> และ <span class="highlight-val">${secondDept[0]} (${secondDept[1].count} ชิ้น)</span> รวมกันครองความต้องการใช้งานเกือบครึ่งหนึ่งของทั้งคณะ (48.5%)
-        </div>
-        <div class="insight-bullet-item">
-          <strong>🔬 ความต้องการเฉพาะทางของห้องปฏิบัติการ:</strong> ห้องแล็บของ วศ.ชลประทาน และ วศ.อาหาร ยืมเครื่องวัดและอุปกรณ์ฟรีซดรายซ้ำหลายครั้ง <span class="highlight-val">สะท้อนว่าควรพิจารณาจัดซื้ออุปกรณ์ประจำแล็บเพิ่ม</span> แทนการเบิกส่วนกลาง
-        </div>
-        <div class="insight-bullet-item">
-          <strong>👥 ความต่างของบทบาทผู้ใช้:</strong> ใน วศ.ชลประทาน กว่า 82% ของการยืมมาจาก <span class="highlight-val">นิสิตระดับปริญญาตรีเพื่อทำโครงงาน</span> ขณะที่ภาควิชาอื่นมีสัดส่วนอาจารย์ยืมเพื่อการวิจัยสูงกว่า
-        </div>
-      `;
-
       // Chart Titles
       document.getElementById('chartTitleA').textContent = '📊 ปริมาณการยืมจำแนกตามภาควิชา (Department Volume)';
       document.getElementById('chartDescA').textContent = 'เปรียบเทียบจำนวนชิ้นครุภัณฑ์ที่แต่ละภาควิชาเบิกยืมไปใช้งาน';
@@ -3281,19 +3107,6 @@
       document.getElementById('kpiIcon5').textContent = '🛡️';
       document.getElementById('kpiVal5').textContent = 'ปานกลาง (Medium)';
       document.getElementById('kpiSub5').textContent = 'มีครุภัณฑ์ที่ต้องตรวจสอบเป็นพิเศษ';
-
-      // Insight Banner
-      document.getElementById('insightBulletsContainer').innerHTML = `
-        <div class="insight-bullet-item">
-          <strong>⚠️ ข้อค้นพบความเสี่ยงชำรุดเสียหาย:</strong> พบอุปกรณ์ถูกตรวจพบสภาพชำรุด <span class="highlight-val">${damagedList.length} ครั้ง</span> และมีการเปลี่ยนเครื่องทดแทน <span class="highlight-val">${replacedList.length} ครั้ง</span>
-        </div>
-        <div class="insight-bullet-item">
-          <strong>🔬 ครุภัณฑ์ที่ควรตรวจสภาพเป็นพิเศษ:</strong> กลุ่ม <span class="highlight-val">ครุภัณฑ์วิทยาศาสตร์และคอมพิวเตอร์พกพา</span> มีอัตราการชำรุดสูงกว่ากลุ่มอื่น จึงควรพิจารณากำหนดรอบการตรวจสภาพและบำรุงรักษาเชิงป้องกัน (Preventive Maintenance)
-        </div>
-        <div class="insight-bullet-item">
-          <strong>🔄 สัญญาณเตือนผูกขาดอุปกรณ์:</strong> ตรวจพบผู้ยืมเดิมยืมครุภัณฑ์รหัสเดิมซ้ำเกิน 3 ครั้ง <span class="highlight-val">${repeatCount} กรณี</span> อาจต้องตรวจเช็กว่าเป็นการใช้งานตามโครงงานหรือควรจัดซื้อเป็นของประจำภาค
-        </div>
-      `;
 
       // Chart Titles
       document.getElementById('chartTitleA').textContent = '📊 สัดส่วนสัญญาณเตือนและปัจจัยเสี่ยง (Risk Distribution)';
