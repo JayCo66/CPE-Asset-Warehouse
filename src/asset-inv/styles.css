@@ -2796,6 +2796,65 @@ tbody tr:hover td {
   white-space: nowrap;
 }
 
+.overview-issues-panel .heatmap-sort-button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 4px 6px;
+  color: var(--cpe-text);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  white-space: inherit;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-control);
+  cursor: pointer;
+}
+
+.overview-issues-panel .heatmap-sort-button:hover {
+  background: var(--cpe-surface-soft);
+}
+
+.overview-issues-panel .heatmap-sort-button:focus-visible {
+  outline: 2px solid var(--cpe-focus);
+  outline-offset: 2px;
+}
+
+.overview-issues-panel .heatmap-sort-indicator {
+  color: var(--cpe-text-muted);
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.overview-issues-panel .heatmap-control-bar {
+  display: flex;
+  align-items: stretch;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--cpe-border);
+}
+
+.overview-issues-panel .heatmap-row-count {
+  margin: 0;
+  color: var(--cpe-text-muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.overview-issues-panel .heatmap-expand-button {
+  display: flex;
+  width: 100%;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
 .treemap-stage {
   position: relative;
   height: 300px;
@@ -3105,8 +3164,29 @@ tbody tr:hover td {
   }
 }
 
+.overview-issues-panel .heatmap-details {
+  margin-top: 8px;
+  color: var(--cpe-text-subtle);
+  font-size: 0.78rem;
+}
+
+.overview-issues-panel .heatmap-details > summary {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  color: var(--cpe-link);
+  cursor: pointer;
+  font-weight: 700;
+  text-underline-offset: 3px;
+}
+
+.overview-issues-panel .heatmap-details > summary:focus-visible {
+  outline: 2px solid var(--cpe-focus);
+  outline-offset: 2px;
+}
+
 .overview-issues-panel .heatmap-note {
-  margin: 10px 0 0;
+  margin: 0 0 8px;
 }
 
 .location-completeness-panel {

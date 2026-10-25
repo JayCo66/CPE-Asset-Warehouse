@@ -52,12 +52,16 @@ const AGE_LABELS = Object.freeze({
 });
 const NUMBER_FORMAT = new Intl.NumberFormat("en-US");
 const DATE_FORMAT = new Intl.DateTimeFormat("th-TH", { dateStyle: "medium", timeZone: "Asia/Bangkok" });
+const ISSUE_HEATMAP_LIMIT = 5;
+const ISSUE_HEATMAP_SORT_KEYS = new Set(["missingLocationRate", "oldAssetRate", "damageRate"]);
 
 let filters = { ...FILTER_DEFAULTS };
 let latestPayload = null;
 let requestId = 0;
 let onFiltersChange = () => {};
 let departmentSort = { key: "totalAssets", direction: "desc" };
+let issueHeatmapSort = { key: "missingLocationRate", direction: "desc" };
+let issueHeatmapExpanded = false;
 let ageTreemapObserver = null;
 const ageTreemapTooltipTargets = new WeakSet();
 
@@ -258,6 +262,7 @@ function renderRankedBars(id, rows, {
 function renderRateHeatmap(id, caption, rows, columns, {
   labelKey = "label",
   filterValueKey = "filterValue",
+  overviewControls = false,
 } = {}) {
   const target = document.getElementById(id);
   if (!target) return;
@@ -267,10 +272,39 @@ function renderRateHeatmap(id, caption, rows, columns, {
     return;
   }
 
-  const headers = columns.map((column) =>
-    `<th scope="col" title="${escapeHtml(column.description || column.label)}">${escapeHtml(column.label)}</th>`,
-  ).join("");
-  const body = sourceRows.map((row) => {
+  const headers = columns.map((column) => {
+    if (!overviewControls || !column.sortKey) {
+      return `<th scope="col" title="${escapeHtml(column.description || column.label)}">${escapeHtml(column.label)}</th>`;
+    }
+    const isSorted = issueHeatmapSort.key === column.sortKey;
+    const direction = isSorted ? issueHeatmapSort.direction : "desc";
+    const directionLabel = direction === "asc" ? "น้อยไปมาก" : "มากไปน้อย";
+    const indicator = isSorted ? (direction === "asc" ? "↑" : "↓") : "↕";
+    return `<th scope="col"${isSorted ? ` aria-sort="${direction === "asc" ? "ascending" : "descending"}"` : ""} title="${escapeHtml(column.description || column.label)}">
+      <button class="heatmap-sort-button" type="button" data-issue-heatmap-sort="${escapeHtml(column.sortKey)}" aria-label="${escapeHtml(`เรียง ${column.label} จาก${directionLabel}`)}">
+        <span>${escapeHtml(column.label)}</span><span class="heatmap-sort-indicator" aria-hidden="true">${indicator}</span>
+      </button>
+    </th>`;
+  }).join("");
+  const sortedRows = overviewControls
+    ? [...sourceRows].sort((left, right) => {
+      const sortKey = issueHeatmapSort.key;
+      const leftValue = Number(left?.[sortKey]);
+      const rightValue = Number(right?.[sortKey]);
+      const leftUnavailable = left?.[sortKey] === null || left?.[sortKey] === undefined || left?.[sortKey] === "" || !Number.isFinite(leftValue);
+      const rightUnavailable = right?.[sortKey] === null || right?.[sortKey] === undefined || right?.[sortKey] === "" || !Number.isFinite(rightValue);
+      if (leftUnavailable !== rightUnavailable) return leftUnavailable ? 1 : -1;
+      if (!leftUnavailable && leftValue !== rightValue) {
+        return (issueHeatmapSort.direction === "asc" ? 1 : -1) * (leftValue - rightValue);
+      }
+      const assetDifference = (Number(right?.totalAssets) || 0) - (Number(left?.totalAssets) || 0);
+      return assetDifference || displayValue(left?.[labelKey]).localeCompare(displayValue(right?.[labelKey]), "th");
+    })
+    : sourceRows;
+  const visibleRows = overviewControls && !issueHeatmapExpanded
+    ? sortedRows.slice(0, ISSUE_HEATMAP_LIMIT)
+    : sortedRows;
+  const body = visibleRows.map((row) => {
     const label = displayValue(row[labelKey]);
     const metricCells = columns.map((column) => {
       const rawRate = column.getRate(row);
@@ -295,12 +329,17 @@ function renderRateHeatmap(id, caption, rows, columns, {
   }).join("");
 
   target.innerHTML = `<div class="rate-heatmap-scroll" role="region" tabindex="0" aria-label="${escapeHtml(caption)}">
-    <table class="dashboard-data-table rate-heatmap-table">
+    <table class="dashboard-data-table rate-heatmap-table" id="${escapeHtml(id)}-table">
       <caption class="sr-only">${escapeHtml(caption)}</caption>
       <thead><tr><th scope="col">หน่วยงาน</th>${headers}</tr></thead>
       <tbody>${body}</tbody>
     </table>
-  </div>`;
+  </div>${overviewControls && sourceRows.length > ISSUE_HEATMAP_LIMIT ? `<div class="heatmap-control-bar">
+    <button class="button button-secondary heatmap-expand-button" type="button" data-issue-heatmap-toggle aria-controls="${escapeHtml(id)}-table" aria-expanded="${issueHeatmapExpanded}">
+      ${issueHeatmapExpanded ? `แสดง ${ISSUE_HEATMAP_LIMIT} หน่วยงาน` : `แสดงทุกหน่วยงาน (${formatCount(sourceRows.length)})`}
+    </button>
+    <span class="heatmap-row-count" aria-live="polite">แสดง ${formatCount(visibleRows.length)} จาก ${formatCount(sourceRows.length)} หน่วยงาน</span>
+  </div>` : ""}`;
 }
 
 function layoutTreemap(items) {
@@ -611,13 +650,11 @@ function renderComboTable(id, caption, rows, firstFilter, secondFilter, firstLab
   ], mapped, { limit });
 }
 
-function renderOverview(data, payload) {
-  renderMetrics(data);
-  renderUnavailableBreakdown(data);
-  renderAgeTreemap("overview-age-distribution", payload?.aging?.ageDistribution, data?.totalAssets);
-  renderRateHeatmap("overview-issue-heatmap", "อัตราประเด็นสินทรัพย์ตามหน่วยงาน", payload.departments?.rows, [
+function renderOverviewIssueHeatmap(payload) {
+  const columns = [
     {
       label: "ไม่มีตำแหน่ง",
+      sortKey: "missingLocationRate",
       getRate: (row) => row.missingLocationRate,
       getCount: (row) => row.missingLocationAssets,
       getDenominator: (row) => row.totalAssets,
@@ -625,21 +662,37 @@ function renderOverview(data, payload) {
     {
       label: `อายุเกิน ${filters.ageThreshold} ปี`,
       description: `อัตราอายุเกิน ${filters.ageThreshold} ปีคิดจากรายการที่ทราบอายุ`,
+      sortKey: "oldAssetRate",
       getRate: (row) => row.oldAssetRate,
       getCount: (row) => row.assetsOlderThanThreshold,
       getDenominator: (row) => row.assetsWithKnownAge,
     },
     {
       label: "ชำรุด",
+      sortKey: "damageRate",
       getRate: (row) => row.damageRate,
       getCount: (row) => row.damagedAssets,
       getDenominator: (row) => row.totalAssets,
     },
-  ]);
+  ];
+  renderRateHeatmap(
+    "overview-issue-heatmap",
+    "อัตราประเด็นสินทรัพย์ตามหน่วยงาน",
+    payload?.departments?.rows,
+    columns,
+    { overviewControls: true },
+  );
   const issueNote = document.getElementById("overview-issue-note");
   if (issueNote) {
-    issueNote.textContent = `ตัวเลขใต้เปอร์เซ็นต์คือจำนวน / ฐาน · อายุเกิน ${filters.ageThreshold} ปีใช้เฉพาะรายการที่ทราบอายุเป็นฐาน ส่วนประเด็นอื่นใช้จำนวนสินทรัพย์ทั้งหมดของหน่วยงาน`;
+    issueNote.textContent = `เริ่มจาก 5 หน่วยงานที่มีอัตราไม่มีตำแหน่งสูงที่สุด · กดหัวคอลัมน์เพื่อเรียงอัตราจากน้อยไปมากหรือมากไปน้อย · ตัวเลขใต้เปอร์เซ็นต์คือจำนวน / ฐาน · อายุเกิน ${filters.ageThreshold} ปีใช้เฉพาะรายการที่ทราบอายุ ส่วนประเด็นอื่นใช้จำนวนสินทรัพย์ทั้งหมดของหน่วยงาน`;
   }
+}
+
+function renderOverview(data, payload) {
+  renderMetrics(data);
+  renderUnavailableBreakdown(data);
+  renderAgeTreemap("overview-age-distribution", payload?.aging?.ageDistribution, data?.totalAssets);
+  renderOverviewIssueHeatmap(payload);
   const history = payload.history;
   const historyTarget = document.getElementById("overview-history-content");
   if (!historyTarget) return;
@@ -1173,6 +1226,23 @@ export function initExecutiveDashboard({ onFilterChange = () => {} } = {}) {
     if (select) applyFilterAndRefresh(select.dataset.dashboardFilter, select.value);
   });
   dashboardSections?.addEventListener("click", (event) => {
+    const issueSortButton = event.target.closest("[data-issue-heatmap-sort]");
+    if (issueSortButton) {
+      const key = issueSortButton.dataset.issueHeatmapSort;
+      if (!ISSUE_HEATMAP_SORT_KEYS.has(key)) return;
+      issueHeatmapSort = {
+        key,
+        direction: issueHeatmapSort.key === key && issueHeatmapSort.direction === "desc" ? "asc" : "desc",
+      };
+      if (latestPayload) renderOverviewIssueHeatmap(latestPayload);
+      return;
+    }
+    const issueToggleButton = event.target.closest("[data-issue-heatmap-toggle]");
+    if (issueToggleButton) {
+      issueHeatmapExpanded = !issueHeatmapExpanded;
+      if (latestPayload) renderOverviewIssueHeatmap(latestPayload);
+      return;
+    }
     const importButton = event.target.closest("[data-university-snapshot-import]");
     if (importButton) {
       importUniversitySnapshot(importButton);
