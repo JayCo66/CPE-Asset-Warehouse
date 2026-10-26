@@ -5,20 +5,16 @@
       <p class="page-intro">ดูประเภทและหมวดหมู่ที่หน่วยงานถือครอง พร้อมใช้จำนวนและสัดส่วนประกอบการเปรียบเทียบ</p>
     </div>
   </header>
-  <section class="dashboard-panel-grid portfolio-top-grid" aria-label="หมวดหมู่และประเภทสินทรัพย์">
-    <article class="panel">
-      <div class="panel-heading"><h2>สัดส่วนพอร์ตตามหมวดหมู่</h2></div>
-      <p class="panel-description">พื้นที่แทนผลรวม asset_count · หมวดหมู่ที่เหลือรวมไว้ด้วย และเปิดรายการเพื่อดูค่าครบ</p>
-      <div id="portfolio-categories" class="dashboard-chart treemap-chart"></div>
-    </article>
-    <article class="panel"><div class="panel-heading"><h2>ประเภทที่มีจำนวนมาก</h2></div><div id="portfolio-types" class="dashboard-chart"></div></article>
-  </section>
-  <section class="dashboard-panel-grid portfolio-matrix-grid" aria-label="องค์ประกอบสินทรัพย์รายหน่วยงาน">
-    <article class="panel"><div class="panel-heading"><h2>หน่วยงาน × หมวดหมู่</h2></div><div id="portfolio-department-category" class="dashboard-table-wrap"></div></article>
-    <article class="panel"><div class="panel-heading"><h2>หน่วยงาน × ประเภท</h2></div><div id="portfolio-department-type" class="dashboard-table-wrap"></div></article>
-  </section>
-  <article class="panel">
-    <div class="panel-heading"><h2>ความหลากหลายของพอร์ตแต่ละหน่วยงาน</h2></div>
-    <div id="portfolio-diversity" class="dashboard-table-wrap"></div>
+  <article class="panel portfolio-treemap-panel" aria-labelledby="portfolio-treemap-title">
+    <div class="panel-heading"><div><h2 id="portfolio-treemap-title">สัดส่วนพอร์ตตามหมวดหมู่</h2><p class="panel-description">ขนาดพื้นที่แทนจำนวนสินทรัพย์ในหมวดหมู่ที่ตรงกับตัวกรอง เลือกหมวดหมู่เพื่อเน้นข้อมูลในตารางและรายละเอียดหน่วยงาน</p></div></div>
+    <div id="portfolio-categories" class="dashboard-chart portfolio-treemap-chart"></div>
+  </article>
+  <article class="panel portfolio-matrix-panel" aria-labelledby="portfolio-matrix-title">
+    <div class="panel-heading"><div><h2 id="portfolio-matrix-title">เมทริกซ์องค์ประกอบรายหน่วยงาน</h2><p class="panel-description" id="portfolio-matrix-guide">ตัวเลขคือจำนวนสินทรัพย์ · สีเข้มขึ้นหมายถึงสัดส่วนหมวดหมู่นั้นภายในหน่วยงานสูงขึ้น · สีเป็นการเปรียบเทียบองค์ประกอบ ไม่ใช่ระดับความเสี่ยง</p></div></div>
+    <div id="portfolio-matrix" class="dashboard-chart portfolio-matrix"></div>
+  </article>
+  <article class="panel portfolio-focus-panel" aria-labelledby="portfolio-focus-title">
+    <div class="panel-heading"><div><h2 id="portfolio-focus-title">เจาะดูองค์ประกอบหน่วยงาน</h2><p class="panel-description">เลือกแถวในเมทริกซ์เพื่อดูสัดส่วน หมวดหมู่หลัก และรายละเอียดภายในหน่วยงาน</p></div></div>
+    <div id="portfolio-focus" class="dashboard-chart portfolio-focus"></div>
   </article>
 </section>

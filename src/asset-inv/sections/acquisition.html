@@ -1,31 +1,65 @@
-<section class="dashboard-page" data-dashboard-page="acquisition" aria-labelledby="acquisition-title" hidden>
+<section class="dashboard-page acquisition-page" data-dashboard-page="acquisition" aria-labelledby="acquisition-title" hidden>
   <header class="page-heading executive-page-heading">
     <div>
       <h1 id="acquisition-title">การจัดหาและแหล่งเงิน</h1>
-      <p class="page-intro">แสดงปีจัดหาจากวันที่จัดหาในมิติวันที่ และแยกจากยอดคงเหลือย้อนหลังของคลัง</p>
+      <p class="page-intro">สำรวจสินทรัพย์ตามรุ่นปีจัดหา แหล่งเงิน และกลุ่มผู้ถือครอง โดยไม่ตีความจำนวนสินทรัพย์เป็นมูลค่าทุน</p>
     </div>
   </header>
-  <section class="dashboard-panel-grid acquisition-primary-grid" aria-label="สินทรัพย์ตามปีจัดหา">
-    <article class="panel"><div class="panel-heading"><h2>ปีจัดหา (ค.ศ.)</h2></div><div id="acquisition-years" class="dashboard-chart"></div></article>
-    <article class="panel"><div class="panel-heading"><h2>ปีงบประมาณจัดหา</h2></div><div id="acquisition-fiscal-years" class="dashboard-chart"></div></article>
+
+  <section class="panel acquisition-overview-panel" aria-labelledby="acquisition-overview-title">
+    <div class="panel-heading"><h2 id="acquisition-overview-title">ภาพรวมการจัดหา</h2></div>
+    <div id="acquisition-overview" class="acquisition-overview" aria-live="polite"></div>
   </section>
-  <article class="panel"><div class="panel-heading"><h2>รุ่นสินทรัพย์ตามปีจัดหา</h2><span class="panel-aside">จำนวน อายุเฉลี่ย และอัตราอายุเกินเกณฑ์</span></div><div id="acquisition-cohorts" class="dashboard-table-wrap"></div></article>
-  <section class="dashboard-panel-grid acquisition-source-grid" aria-label="แหล่งเงินของสินทรัพย์">
-    <article class="panel">
-      <div class="panel-heading"><h2>สัดส่วนสินทรัพย์ตามแหล่งเงิน</h2></div>
-      <p class="panel-description">พื้นที่แทนจำนวนสินทรัพย์ใน snapshot ที่เลือก · source ไม่ใช่มูลค่าทุน</p>
-      <div id="acquisition-sources" class="dashboard-chart treemap-chart"></div>
+
+  <section class="panel acquisition-heatmap-panel" aria-labelledby="acquisition-heatmap-title">
+    <div class="panel-heading acquisition-panel-heading">
+      <div>
+        <h2 id="acquisition-heatmap-title">แผนผังรุ่นสินทรัพย์ตามแหล่งเงิน</h2>
+        <p class="panel-description">ความเข้มแสดงจำนวนสินทรัพย์ใน snapshot ที่เลือก ไม่ใช่มูลค่าทุนหรืองบประมาณ</p>
+      </div>
+      <div class="aging-dimension-selector acquisition-year-dimension-selector" role="group" aria-label="เลือกมิติปีจัดหา">
+        <button type="button" data-acquisition-year-dimension="year" aria-pressed="true">ปีจัดหา (ค.ศ.)</button>
+        <button type="button" data-acquisition-year-dimension="fiscalYear" aria-pressed="false">ปีงบประมาณจัดหา (พ.ศ.)</button>
+      </div>
+    </div>
+    <p class="acquisition-heatmap-guide" id="acquisition-heatmap-guide">เลือกชื่อปีเพื่อดูทั้งรุ่น หรือเลือกช่องเพื่อดูรุ่นย่อยตามแหล่งเงิน · ช่องว่างที่ยืนยันแล้วแสดง 0</p>
+    <div id="acquisition-heatmap" class="acquisition-heatmap"></div>
+  </section>
+
+  <section class="dashboard-panel-grid acquisition-focus-grid" aria-label="รายละเอียดรุ่นสินทรัพย์ที่เลือก">
+    <article class="panel acquisition-focus-panel">
+      <div class="panel-heading"><h2>รายละเอียดรุ่นสินทรัพย์</h2></div>
+      <div id="acquisition-cohort-focus" aria-live="polite"></div>
     </article>
-    <article class="panel"><div class="panel-heading"><h2>ตัวชี้วัดตามแหล่งเงิน</h2></div><div id="acquisition-source-metrics" class="dashboard-table-wrap"></div></article>
+    <article class="panel acquisition-breakdown-panel">
+      <div class="panel-heading acquisition-panel-heading">
+        <div>
+          <h2>องค์ประกอบในรุ่นที่เลือก</h2>
+          <p class="panel-description">สัดส่วนในตารางคำนวณจากจำนวนของรุ่นที่เลือก</p>
+        </div>
+        <div class="aging-dimension-selector acquisition-breakdown-selector" role="group" aria-label="เลือกมิติการแจกแจงรุ่น">
+          <button type="button" data-acquisition-breakdown-dimension="department" aria-pressed="true">หน่วยงาน</button>
+          <button type="button" data-acquisition-breakdown-dimension="category" aria-pressed="false">หมวดหมู่</button>
+          <button type="button" data-acquisition-breakdown-dimension="type" aria-pressed="false">ประเภท</button>
+        </div>
+      </div>
+      <div id="acquisition-cohort-breakdown" aria-live="polite"></div>
+    </article>
   </section>
-  <section class="dashboard-panel-grid acquisition-matrix-grid" aria-label="ปีจัดหาแยกตามหน่วยงาน หมวดหมู่ และประเภท">
-    <article class="panel"><div class="panel-heading"><h2>ปีจัดหา × หน่วยงาน</h2></div><div id="acquisition-year-department" class="dashboard-table-wrap"></div></article>
-    <article class="panel"><div class="panel-heading"><h2>ปีจัดหา × หมวดหมู่</h2></div><div id="acquisition-year-category" class="dashboard-table-wrap"></div></article>
-    <article class="panel"><div class="panel-heading"><h2>ปีจัดหา × ประเภท</h2></div><div id="acquisition-year-type" class="dashboard-table-wrap"></div></article>
-    <article class="panel"><div class="panel-heading"><h2>ปีงบประมาณ × หมวดหมู่</h2></div><div id="acquisition-fiscal-category" class="dashboard-table-wrap"></div></article>
-  </section>
-  <section class="dashboard-panel-grid acquisition-matrix-grid" aria-label="แหล่งเงินแยกตามหน่วยงานและหมวดหมู่">
-    <article class="panel"><div class="panel-heading"><h2>แหล่งเงิน × หน่วยงาน</h2></div><div id="acquisition-source-department" class="dashboard-table-wrap"></div></article>
-    <article class="panel"><div class="panel-heading"><h2>แหล่งเงิน × หมวดหมู่</h2></div><div id="acquisition-source-category" class="dashboard-table-wrap"></div></article>
-  </section>
+
+  <details class="acquisition-detail-disclosure">
+    <summary>รายละเอียดการจัดหาและแหล่งเงิน</summary>
+    <div class="acquisition-detail-content">
+      <p class="panel-description">เลือกความสัมพันธ์เพื่อสำรวจข้อมูลที่เกี่ยวข้อง โดยจำนวนสินทรัพย์ไม่ใช่มูลค่าการใช้จ่าย</p>
+      <div class="acquisition-relation-selector" role="group" aria-label="เลือกความสัมพันธ์ของข้อมูลจัดหา">
+        <button type="button" data-acquisition-cross-relation="yearDepartment" aria-pressed="true">ปีจัดหา × หน่วยงาน</button>
+        <button type="button" data-acquisition-cross-relation="yearCategory" aria-pressed="false">ปีจัดหา × หมวดหมู่</button>
+        <button type="button" data-acquisition-cross-relation="yearType" aria-pressed="false">ปีจัดหา × ประเภท</button>
+        <button type="button" data-acquisition-cross-relation="fiscalCategory" aria-pressed="false">ปีงบประมาณ × หมวดหมู่</button>
+        <button type="button" data-acquisition-cross-relation="sourceDepartment" aria-pressed="false">แหล่งเงิน × หน่วยงาน</button>
+        <button type="button" data-acquisition-cross-relation="sourceCategory" aria-pressed="false">แหล่งเงิน × หมวดหมู่</button>
+      </div>
+      <div id="acquisition-cross-dimension-details" aria-live="polite"></div>
+    </div>
+  </details>
 </section>

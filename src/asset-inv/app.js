@@ -25,7 +25,7 @@ import {
   initExecutiveDashboard,
   refreshExecutiveDashboard,
   setInventoryDashboardPage,
-} from "./executive-dashboard.mjs?v=20261026.2";
+} from "./executive-dashboard.mjs?v=20261026.6";
 
 const dashboardData = {
   moduleNav: [

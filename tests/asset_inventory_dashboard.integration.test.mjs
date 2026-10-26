@@ -63,6 +63,9 @@ test(
     assert.ok(Array.isArray(payload.data.aging.byDepartment));
     assert.ok(Array.isArray(payload.data.acquisition.years));
     assert.ok(Array.isArray(payload.data.governance.exceptions));
+    assert.ok(Number.isInteger(payload.data.governance.assetsWithMissingInformation));
+    assert.ok(payload.data.governance.assetsWithMissingInformation <= payload.data.overview.totalAssets);
+    assert.ok(payload.data.governance.exceptionsTotal <= payload.data.overview.totalAssets);
     assert.ok(Array.isArray(payload.data.filterOptions.rooms));
     assert.ok(Array.isArray(payload.data.filterOptions.floors));
     assert.ok(Array.isArray(payload.data.filterOptions.areas));
@@ -271,6 +274,49 @@ test(
     assert.equal(emptyPayload.data.overview.averageAssetAge, null);
     assert.deepEqual(emptyPayload.data.history.series, []);
     assert.equal(emptyPayload.data.history.comparison, null);
+  },
+);
+
+test(
+  "governance exception visual pages validate parameters and return filtered records in stable pages",
+  { skip: !endpoint },
+  async () => {
+    const visualUrl = new URL(endpoint);
+    visualUrl.searchParams.set("visualPage", "governanceExceptions");
+    visualUrl.searchParams.set("page", "1");
+    visualUrl.searchParams.set("pageSize", "5");
+    visualUrl.searchParams.set("ageThreshold", "10");
+
+    const firstResponse = await fetch(visualUrl);
+    const firstPayload = await firstResponse.json();
+    assert.equal(firstResponse.status, 200);
+    assert.equal(firstPayload.success, true);
+    assert.equal(firstPayload.data.visualPage, "governanceExceptions");
+    assert.equal(firstPayload.data.page, 1);
+    assert.equal(firstPayload.data.pageSize, 5);
+    assert.equal(firstPayload.data.rows.length <= 5, true);
+    assert.equal(firstPayload.data.totalPages, Math.ceil(firstPayload.data.totalRows / 5));
+    assert.equal(firstPayload.data.selectedFilters.ageThreshold, 10);
+
+    if (firstPayload.data.totalRows > 5) {
+      visualUrl.searchParams.set("page", "2");
+      const secondResponse = await fetch(visualUrl);
+      const secondPayload = await secondResponse.json();
+      assert.equal(secondResponse.status, 200);
+      assert.equal(secondPayload.data.page, 2);
+      assert.equal(secondPayload.data.totalRows, firstPayload.data.totalRows);
+      const firstIds = new Set(firstPayload.data.rows.map((row) => row.assetId));
+      assert.ok(secondPayload.data.rows.every((row) => !firstIds.has(row.assetId)));
+    }
+
+    const unsupportedPage = new URL(endpoint);
+    unsupportedPage.searchParams.set("visualPage", "unapprovedVisual");
+    assert.equal((await fetch(unsupportedPage)).status, 400);
+
+    const unsupportedPageSize = new URL(endpoint);
+    unsupportedPageSize.searchParams.set("visualPage", "governanceExceptions");
+    unsupportedPageSize.searchParams.set("pageSize", "50");
+    assert.equal((await fetch(unsupportedPageSize)).status, 400);
   },
 );
 

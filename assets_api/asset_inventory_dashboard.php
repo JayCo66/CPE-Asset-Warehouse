@@ -7,6 +7,7 @@ header('X-Content-Type-Options: nosniff');
 
 require_once __DIR__ . '/inventory_query.php';
 require_once __DIR__ . '/inventory_analytics.php';
+require_once __DIR__ . '/inventory_visual_pagination.php';
 require_once __DIR__ . '/inventory_disposal.php';
 
 function warehouseDashboardRespond(bool $success, string $message, array $data = [], int $status = 200): never
@@ -68,7 +69,7 @@ function warehouseDashboardFilterOptions(PDO $pdo, string $snapshotId): array
     return $options;
 }
 
-function warehouseDashboardFetchAnalytics(PDO $pdo, array $filters, string $snapshotId): array
+function warehouseDashboardFetchAnalytics(PDO $pdo, array $filters, string $snapshotId, ?array $visualPageRequest = null): array
 {
     $where = warehouseInventoryBuildWhere($filters, null, $snapshotId);
     $statement = $pdo->prepare(
@@ -113,7 +114,7 @@ function warehouseDashboardFetchAnalytics(PDO $pdo, array $filters, string $snap
     while ($row = $statement->fetch(PDO::FETCH_ASSOC)) {
         warehouseInventoryAnalyticsConsume($analytics, $row);
     }
-    return warehouseInventoryAnalyticsFinalize($analytics);
+    return warehouseInventoryAnalyticsFinalize($analytics, $visualPageRequest);
 }
 
 function warehouseDashboardHistory(PDO $pdo, array $filters, array $snapshotOptions, string $selectedSnapshotId): array
@@ -250,6 +251,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') {
 }
 
 try {
+    $visualPageRequest = warehouseDashboardParseVisualPageRequest($_GET);
     $filters = warehouseInventoryParseFilters($_GET);
 } catch (InvalidArgumentException $error) {
     warehouseDashboardRespond(false, 'ตัวกรองหรือพารามิเตอร์ไม่ถูกต้อง', [], 400);
@@ -261,6 +263,20 @@ try {
 
     $snapshotOptions = warehouseDashboardSnapshotOptions($warehousePdo);
     if ($snapshotOptions === []) {
+        if ($visualPageRequest !== null) {
+            warehouseDashboardRespond(true, 'ไม่มีรายการสินทรัพย์ที่ควรตรวจสอบ', [
+                'visualPage' => $visualPageRequest['visualPage'],
+                'rows' => [],
+                'totalRows' => 0,
+                'totalPages' => 0,
+                'page' => 1,
+                'pageSize' => $visualPageRequest['pageSize'],
+                'start' => 0,
+                'end' => 0,
+                'snapshotId' => null,
+                'selectedFilters' => $filters,
+            ]);
+        }
         $emptyAnalytics = warehouseInventoryAnalyticsFinalize(warehouseInventoryAnalyticsCreate($filters['ageThreshold']));
         $emptyAnalytics['overview']['disposalEstimate'] = warehouseDashboardUnavailableDisposalEstimate();
         warehouseDashboardRespond(true, 'ยังไม่มีข้อมูล snapshot ในคลังสินทรัพย์', [
@@ -280,7 +296,23 @@ try {
 
     $selectedSnapshotId = $snapshot['snapshotId'];
     $filters['snapshot'] = $snapshot['key'];
-    $analytics = warehouseDashboardFetchAnalytics($warehousePdo, $filters, $selectedSnapshotId);
+    $analytics = warehouseDashboardFetchAnalytics($warehousePdo, $filters, $selectedSnapshotId, $visualPageRequest);
+    if ($visualPageRequest !== null) {
+        $governance = $analytics['governance'];
+        $page = $governance['exceptionsPage'];
+        warehouseDashboardRespond(true, 'โหลดรายการสินทรัพย์ที่ควรตรวจสอบสำเร็จ', [
+            'visualPage' => $visualPageRequest['visualPage'],
+            'rows' => $governance['exceptions'],
+            'totalRows' => $governance['exceptionsTotal'],
+            'totalPages' => $page['totalPages'],
+            'page' => $page['page'],
+            'pageSize' => $page['pageSize'],
+            'start' => $page['start'],
+            'end' => $page['end'],
+            'snapshotId' => $selectedSnapshotId,
+            'selectedFilters' => $filters,
+        ]);
+    }
     $analytics['overview']['disposalEstimate'] = warehouseDashboardDisposalEstimate(
         $warehousePdo,
         $filters,

@@ -2,26 +2,68 @@
   <header class="page-heading executive-page-heading">
     <div>
       <h1 id="locations-title">การกระจายตามสถานที่</h1>
-      <p class="page-intro">แยกการมีรหัสตำแหน่งออกจากความครบถ้วนของอาคาร ชั้น ห้อง และพื้นที่</p>
+      <p class="page-intro">สำรวจความครบถ้วนของข้อมูลตำแหน่ง ไล่ดูพื้นที่ที่ระบุไว้ และเปรียบเทียบคุณภาพข้อมูลระหว่างหน่วยงาน</p>
     </div>
   </header>
+
   <article class="panel location-completeness-panel" aria-labelledby="location-completeness-title">
     <div class="panel-heading">
       <div>
         <h2 id="location-completeness-title">ความครบถ้วนของข้อมูลตำแหน่ง</h2>
-        <p class="panel-description">แยกตำแหน่งครบ ระบุแล้วแต่รายละเอียดไม่ครบ ไม่มีตำแหน่ง และไม่ทราบธงตำแหน่ง</p>
+        <p class="panel-description">จำแนกจากธงตำแหน่งในคลังและข้อมูลอาคาร ชั้น ห้อง และพื้นที่</p>
       </div>
     </div>
-    <div id="location-completeness" class="dashboard-chart"></div>
+    <div id="location-completeness" class="location-completeness-content" aria-live="polite"></div>
   </article>
-  <section class="dashboard-panel-grid location-rank-grid" aria-label="สินทรัพย์ตามลำดับสถานที่">
-    <article class="panel"><div class="panel-heading"><h2>ตามอาคาร</h2></div><div id="location-buildings" class="dashboard-chart"></div></article>
-    <article class="panel"><div class="panel-heading"><h2>ตามชั้น</h2></div><div id="location-floors" class="dashboard-chart"></div></article>
-    <article class="panel"><div class="panel-heading"><h2>ตามห้องและพื้นที่</h2></div><div id="location-rooms" class="dashboard-chart"></div></article>
-  </section>
-  <section class="dashboard-panel-grid location-matrix-grid" aria-label="สถานที่ตามหน่วยงานและหมวดหมู่">
-    <article class="panel"><div class="panel-heading"><h2>หน่วยงาน × อาคาร</h2></div><div id="location-department-building" class="dashboard-table-wrap"></div></article>
-    <article class="panel"><div class="panel-heading"><h2>หมวดหมู่ × อาคาร</h2></div><div id="location-category-building" class="dashboard-table-wrap"></div></article>
-  </section>
-  <article class="panel"><div class="panel-heading"><h2>ตำแหน่งที่ขาดหรือมีรายละเอียดไม่ครบ แยกตามหน่วยงาน</h2></div><div id="location-missing-departments" class="dashboard-table-wrap"></div></article>
+
+  <article class="panel location-explorer-panel" aria-labelledby="location-explorer-title">
+    <div class="panel-heading">
+      <div>
+        <h2 id="location-explorer-title">สำรวจตำแหน่ง</h2>
+        <p class="panel-description">เลือกอาคาร แล้วไล่ดูชั้นและห้องหรือพื้นที่ที่สัมพันธ์กัน ข้อมูลที่ไม่มีการระบุตำแหน่งแสดงแยกจากลำดับสถานที่</p>
+      </div>
+    </div>
+    <div id="location-explorer-unassigned" class="location-unassigned-summary" aria-live="polite"></div>
+    <div class="location-explorer-grid" aria-label="ลำดับอาคาร ชั้น และห้องหรือพื้นที่">
+      <section class="location-explorer-level" aria-labelledby="location-explorer-buildings-title">
+        <div class="location-explorer-level-heading"><h3 id="location-explorer-buildings-title">อาคาร</h3><span>ขั้นที่ 1</span></div>
+        <div id="location-explorer-buildings" class="location-explorer-list" aria-live="polite"></div>
+      </section>
+      <section class="location-explorer-level" aria-labelledby="location-explorer-floors-title">
+        <div class="location-explorer-level-heading"><h3 id="location-explorer-floors-title">ชั้น</h3><span>ขั้นที่ 2</span></div>
+        <div id="location-explorer-floors" class="location-explorer-list" aria-live="polite"></div>
+      </section>
+      <section class="location-explorer-level" aria-labelledby="location-explorer-rooms-title">
+        <div class="location-explorer-level-heading"><h3 id="location-explorer-rooms-title">ห้อง / พื้นที่</h3><span>ขั้นที่ 3</span></div>
+        <div id="location-explorer-rooms" class="location-explorer-list" aria-live="polite"></div>
+      </section>
+    </div>
+    <div id="location-explorer-selection" class="location-explorer-selection" aria-live="polite"></div>
+  </article>
+
+  <article class="panel location-matrix-panel" aria-labelledby="location-department-matrix-title">
+    <div class="panel-heading">
+      <div>
+        <h2 id="location-department-matrix-title">คุณภาพข้อมูลตำแหน่งตามหน่วยงาน</h2>
+        <p class="panel-description" id="location-matrix-guide">แสดงจำนวนและสัดส่วนเทียบกับสินทรัพย์ทั้งหมดของแต่ละหน่วยงาน สีเข้มขึ้นหมายถึงสัดส่วนในสถานะนั้นสูงขึ้น ไม่ใช่เกณฑ์ความเสี่ยงอย่างเป็นทางการ</p>
+      </div>
+    </div>
+    <div id="location-department-matrix" class="location-matrix-scroll" aria-live="polite"></div>
+  </article>
+
+  <article class="panel location-department-focus-panel" aria-labelledby="location-department-focus-title">
+    <div class="panel-heading">
+      <div>
+        <h2 id="location-department-focus-title">รายละเอียดหน่วยงานที่เลือก</h2>
+        <p class="panel-description">สรุปความครบถ้วนและตำแหน่งที่มีข้อมูลจริงในหน่วยงาน</p>
+      </div>
+    </div>
+    <div id="location-department-focus" aria-live="polite"></div>
+  </article>
+
+  <details class="location-secondary-details">
+    <summary>ดูข้อมูลหมวดหมู่ตามอาคาร</summary>
+    <p class="panel-description">แสดงคู่หมวดหมู่และอาคารจากรายการที่มีธงระบุตำแหน่ง ใช้จำนวนสินทรัพย์ในตัวกรองปัจจุบัน</p>
+    <div id="location-category-building-details" class="location-category-building-table"></div>
+  </details>
 </section>

@@ -10,19 +10,65 @@
     </label>
   </header>
   <p class="threshold-guidance">ค่าเริ่มต้นมากกว่า 10 ปีปรับได้สำหรับการวิเคราะห์ ไม่ใช่มาตรฐานบัญชีหรือข้อกำหนดการเปลี่ยนทดแทน</p>
-  <section class="dashboard-panel-grid aging-primary-grid" aria-label="การกระจายอายุและสถานะ">
-    <article class="panel"><div class="panel-heading"><h2>การกระจายตามช่วงอายุ</h2></div><div id="aging-distribution" class="dashboard-chart"></div></article>
-    <article class="panel"><div class="panel-heading"><h2>อายุ × ความพร้อมใช้งาน</h2></div><div id="aging-availability" class="dashboard-table-wrap"></div></article>
-    <article class="panel"><div class="panel-heading"><h2>อายุ × สภาพชำรุด</h2></div><div id="aging-damage" class="dashboard-table-wrap"></div></article>
-  </section>
-  <section class="dashboard-panel-grid aging-ranking-grid" aria-label="แรงกดดันในการทบทวนสินทรัพย์">
-    <article class="panel"><div class="panel-heading"><h2>หน่วยงาน</h2></div><div id="aging-departments" class="dashboard-chart"></div></article>
-    <article class="panel"><div class="panel-heading"><h2>หมวดหมู่</h2></div><div id="aging-categories" class="dashboard-chart"></div></article>
-    <article class="panel"><div class="panel-heading"><h2>ประเภท</h2></div><div id="aging-types" class="dashboard-chart"></div></article>
-  </section>
-  <article class="panel"><div class="panel-heading"><h2>จำนวนตามหน่วยงาน × ช่วงอายุ</h2></div><div id="aging-by-department" class="dashboard-table-wrap"></div></article>
-  <section class="dashboard-panel-grid portfolio-matrix-grid aging-dimension-tables" aria-label="อายุสินทรัพย์ตามหมวดหมู่และประเภท">
-    <article class="panel"><div class="panel-heading"><h2>หมวดหมู่ × ช่วงอายุ</h2></div><div id="aging-by-category" class="dashboard-table-wrap"></div></article>
-    <article class="panel"><div class="panel-heading"><h2>ประเภท × ช่วงอายุ</h2></div><div id="aging-by-type" class="dashboard-table-wrap"></div></article>
-  </section>
+
+  <article class="panel aging-lens-panel" aria-labelledby="aging-lens-title">
+    <div class="panel-heading">
+      <div>
+        <h2 id="aging-lens-title">ภาพรวมอายุเทียบเกณฑ์</h2>
+      </div>
+    </div>
+    <div id="aging-replacement-lens" aria-live="polite"></div>
+  </article>
+
+  <article class="panel aging-exposure-panel" aria-labelledby="aging-exposure-title">
+    <div class="aging-exposure-heading">
+      <div>
+        <h2 id="aging-exposure-title">กลุ่มสินทรัพย์อายุเกินเกณฑ์</h2>
+        <p class="panel-description">เรียงตามอัตราจากรายการที่ทราบอายุ · เป็นมุมมองเพื่อวิเคราะห์ ไม่ใช่ข้อเสนอให้เปลี่ยนทดแทน</p>
+      </div>
+      <div class="aging-dimension-selector" role="group" aria-label="มิติของกลุ่มสินทรัพย์อายุเกินเกณฑ์">
+        <button type="button" data-aging-exposure-dimension="department" aria-pressed="true">หน่วยงาน</button>
+        <button type="button" data-aging-exposure-dimension="category" aria-pressed="false">หมวดหมู่</button>
+        <button type="button" data-aging-exposure-dimension="type" aria-pressed="false">ประเภท</button>
+      </div>
+    </div>
+    <div id="aging-replacement-exposure" class="aging-table-region" aria-live="polite"></div>
+  </article>
+
+  <div class="aging-context-grid">
+    <article class="panel aging-condition-panel" aria-labelledby="aging-condition-title">
+      <div class="aging-context-heading">
+        <div>
+          <h2 id="aging-condition-title">สถานะของสินทรัพย์อายุเกินเกณฑ์</h2>
+        </div>
+        <div class="aging-condition-selector" role="group" aria-label="เลือกมุมมองสถานะ">
+          <button type="button" data-aging-condition-mode="availability" aria-pressed="true">ความพร้อมใช้งาน</button>
+          <button type="button" data-aging-condition-mode="damage" aria-pressed="false">สถานะชำรุด</button>
+        </div>
+      </div>
+      <div id="aging-condition" aria-live="polite"></div>
+    </article>
+
+    <article class="panel aging-department-focus-panel" aria-labelledby="aging-department-focus-title">
+      <div class="panel-heading">
+        <div>
+          <h2 id="aging-department-focus-title">รายละเอียดหน่วยงาน</h2>
+        </div>
+      </div>
+      <div id="aging-department-focus" aria-live="polite"></div>
+    </article>
+  </div>
+
+  <details class="panel aging-detail-disclosure" id="aging-detail-disclosure">
+    <summary>รายละเอียดการกระจายตามช่วงอายุ</summary>
+    <div class="aging-detail-content">
+      <p class="panel-description">สีแสดงสัดส่วนของแต่ละช่วงอายุภายในกลุ่มเดียวกัน ตัวเลขแสดงจำนวนจริง</p>
+      <div class="aging-dimension-selector" role="group" aria-label="มิติของตารางช่วงอายุ">
+        <button type="button" data-aging-detail-dimension="department" aria-pressed="true">หน่วยงาน</button>
+        <button type="button" data-aging-detail-dimension="category" aria-pressed="false">หมวดหมู่</button>
+        <button type="button" data-aging-detail-dimension="type" aria-pressed="false">ประเภท</button>
+      </div>
+      <div id="aging-detail-matrix" class="aging-table-region" aria-live="polite"></div>
+    </div>
+  </details>
 </section>
