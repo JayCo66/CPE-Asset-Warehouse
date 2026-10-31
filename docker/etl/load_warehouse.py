@@ -1,22 +1,58 @@
-"""รัน output/warehouse_load.sql ที่ ETL สร้าง เข้า warehouse (MySQL) ทีเดียวทั้งไฟล์"""
+"""Run the generated warehouse SQL and invalidate dashboard cache after commit."""
+
 import os
 import sys
+from collections.abc import Callable
+from pathlib import Path
+from typing import Any
 
 import pymysql
 from pymysql.constants import CLIENT
 
-path = sys.argv[1] if len(sys.argv) > 1 else "output/warehouse_load.sql"
-with open(path, encoding="utf-8") as f:
-    sql = f.read()
+from cache_invalidation import invalidate_dashboard_cache
 
-conn = pymysql.connect(host=os.getenv("WH_HOST", "warehouse-db"), port=int(os.getenv("WH_PORT", "3306")),
-                       user=os.getenv("WH_USER", "root"), password=os.getenv("WH_PASS", "root"),
-                       database=os.getenv("WH_NAME", "cpe_warehouse"), charset="utf8mb4",
-                       client_flag=CLIENT.MULTI_STATEMENTS, autocommit=True)
-with conn.cursor() as cur:
-    cur.execute(sql)
-    while cur.nextset():          # อ่านผลของทุก statement ให้ครบ (ถ้ามี statement ไหน error จะ raise ตรงนี้)
-        pass
-    cur.execute("SELECT COUNT(*) FROM fact_asset_inventory")
-    print(f"[load] โหลด {path} เข้า warehouse แล้ว (fact_asset_inventory {cur.fetchone()[0]} แถว)")
-conn.close()
+
+def load_warehouse(
+    path: str | Path,
+    connect: Callable[..., Any] | None = None,
+    cache_invalidator: Callable[[], bool | None] | None = None,
+) -> int:
+    with open(path, encoding="utf-8") as sql_file:
+        sql = sql_file.read()
+
+    connect = connect or pymysql.connect
+    conn = connect(
+        host=os.getenv("WH_HOST", "warehouse-db"),
+        port=int(os.getenv("WH_PORT", "3306")),
+        user=os.getenv("WH_USER", "root"),
+        password=os.getenv("WH_PASS", "root"),
+        database=os.getenv("WH_NAME", "cpe_warehouse"),
+        charset="utf8mb4",
+        client_flag=CLIENT.MULTI_STATEMENTS,
+        autocommit=True,
+    )
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql)
+            while cursor.nextset():
+                pass
+            cursor.execute("SELECT COUNT(*) FROM fact_asset_inventory")
+            count = int(cursor.fetchone()[0])
+        conn.commit()
+    finally:
+        conn.close()
+
+    invalidate = cache_invalidator or invalidate_dashboard_cache
+    if invalidate() is False:
+        print("[cache] Redis invalidation failed; cached data will refresh after its TTL", file=sys.stderr)
+    print(f"[load] loaded {path} into warehouse (fact_asset_inventory {count} rows)")
+    return count
+
+
+def main() -> None:
+    path = sys.argv[1] if len(sys.argv) > 1 else "output/warehouse_load.sql"
+    load_warehouse(path)
+
+
+if __name__ == "__main__":
+    main()
