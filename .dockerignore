@@ -1,0 +1,9 @@
+**
+!composer.json
+!composer.lock
+!requirements.txt
+!docker/
+!docker/php/
+!docker/php/Dockerfile
+!docker/etl/
+!docker/etl/Dockerfile

@@ -187,7 +187,10 @@ function repair_vs_price(): array
     $dispose = (float)setting('repair_cost_ratio_dispose', 0.5);
     $watch = (float)setting('repair_cost_ratio_watch', 0.3);
     $lifeShare = (float)setting('replace_min_life_share', 0.5);
-    $snap = row("SELECT MAX(snapshot_date_key) AS k FROM fact_asset_inventory")['k'];
+    $snapshot = row("SELECT snapshot_id FROM dim_inventory_snapshot
+                     ORDER BY (source_system = 'university_api') DESC,
+                              snapshot_date_key DESC, imported_at DESC, snapshot_id DESC LIMIT 1");
+    $snap = $snapshot['snapshot_id'] ?? null;
     $rows = rows("SELECT a.asset_code, a.asset_name, COALESCE(c.category_name, 'ไม่ระบุหมวด') AS category_name, a.asset_status,
                          COUNT(*) AS repairs, COALESCE(SUM(f.total_repair_cost), 0) AS repair_cost,
                          MAX(d.full_date) AS last_repair, MAX(inv.asset_age_years) AS age_years,
@@ -196,7 +199,7 @@ function repair_vs_price(): array
                   JOIN dim_asset a ON a.asset_key = f.asset_key
                   LEFT JOIN dim_asset_category c ON c.category_key = a.category_key
                   JOIN dim_date d ON d.date_key = f.repair_date_key
-                  LEFT JOIN fact_asset_inventory inv ON inv.asset_key = f.asset_key AND inv.snapshot_date_key = ?
+                  LEFT JOIN fact_asset_inventory inv ON inv.asset_key = f.asset_key AND inv.snapshot_id = ?
                   GROUP BY a.asset_key, a.asset_code, a.asset_name, c.category_name, a.asset_status", [$snap]);
     foreach ($rows as &$r) {
         $r['price'] = mock_purchase_price($r['asset_code'], $r['category_name'], (bool)$r['below_threshold']);
@@ -226,6 +229,49 @@ function run(callable $fn): void
 {
     try {
         respond($fn());
+    } catch (PDOException $e) {
+        fail('อ่านข้อมูลจาก warehouse ไม่สำเร็จ: ' . $e->getMessage());
+    }
+}
+
+function report_dashboard_cache(): ?RedisCache
+{
+    static $cache = false;
+    if ($cache !== false) {
+        return $cache;
+    }
+
+    $library = getenv('REDIS_CACHE_LIBRARY') ?: dirname(__DIR__) . '/lib/RedisCache.php';
+    if (is_readable($library)) {
+        require_once $library;
+    }
+    if (!class_exists(RedisCache::class)) {
+        $cache = null;
+        return null;
+    }
+
+    $cache = RedisCache::fromEnvironment();
+    return $cache;
+}
+
+function report_cache_ttl(string $category, int $fallback): int
+{
+    report_dashboard_cache();
+    return class_exists(RedisCache::class) ? RedisCache::ttl($category, $fallback) : $fallback;
+}
+
+function run_cached(callable $fn, int $ttl, bool $cacheable = true, array $cacheContext = []): void
+{
+    try {
+        $cache = report_dashboard_cache();
+        $data = $cacheable && $cache !== null
+            ? $cache->remember(basename($_SERVER['SCRIPT_NAME'] ?? 'report'), [
+                'request' => $_GET,
+                'context' => $cacheContext,
+            ], $ttl, $fn)
+            : $fn();
+        header('X-Cache: ' . ($cacheable && $cache !== null ? $cache->lastStatus() : 'BYPASS'));
+        respond($data);
     } catch (PDOException $e) {
         fail('อ่านข้อมูลจาก warehouse ไม่สำเร็จ: ' . $e->getMessage());
     }

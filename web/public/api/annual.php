@@ -3,12 +3,13 @@
 //   ?fy=2569   ปีงบที่ต้องการ (ค่าเริ่มต้น = ปีงบที่จบแล้วล่าสุด)
 require __DIR__ . '/db.php';
 
-run(function () {
+$snapshot = latest_inventory_snapshot();
+run_cached(function () use ($snapshot) {
     $cur = current_fiscal_year();
     $slaF = (int)setting('sla_facility_workdays', 3);
     $slaR = (int)setting('sla_repair_workdays', 15);
     $approved = "f.item_status = 'อนุมัติ'";
-    $snap = row("SELECT MAX(snapshot_date_key) AS k FROM fact_asset_inventory")['k'];
+    $snap = $snapshot['snapshot_id'] ?? null;
 
     // ---------- ตัวเลขรายปีงบของทุกโมดูล ----------
     $hist = [];
@@ -39,7 +40,7 @@ run(function () {
     if ($snap) {
         $put(rows("SELECT d.fiscal_year, COUNT(*) AS acquired, SUM(f.is_below_threshold_flag) AS below_threshold
                    FROM fact_asset_inventory f JOIN dim_date d ON d.date_key = f.acquisition_date_key
-                   WHERE f.snapshot_date_key = ? GROUP BY d.fiscal_year", [$snap]), 'inventory');
+                   WHERE f.snapshot_id = ? GROUP BY d.fiscal_year", [$snap]), 'inventory');
     }
 
     // ระยะเวลาปิดงาน (วันทำการ) ต้องคำนวณใน PHP เพราะไม่นับวันหยุด
@@ -140,7 +141,7 @@ run(function () {
                                                FROM fact_asset_inventory f
                                                JOIN dim_date d ON d.date_key = f.acquisition_date_key
                                                LEFT JOIN dim_asset_category c ON c.category_key = f.category_key
-                                               WHERE f.snapshot_date_key = ? AND d.fiscal_year = ?
+                                               WHERE f.snapshot_id = ? AND d.fiscal_year = ?
                                                GROUP BY c.category_key, c.category_name ORDER BY n DESC", [$snap, $fy]) : [],
     ];
-});
+}, cache_ttl('overview', 300), true, ['snapshot_id' => $snapshot['snapshot_id'] ?? null]);

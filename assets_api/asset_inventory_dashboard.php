@@ -10,8 +10,44 @@ require_once __DIR__ . '/inventory_analytics.php';
 require_once __DIR__ . '/inventory_visual_pagination.php';
 require_once __DIR__ . '/inventory_disposal.php';
 
+function warehouseDashboardCached(string $route, array $query, callable $loader): array
+{
+    static $cache = false;
+    if ($cache === false) {
+        $library = getenv('REDIS_CACHE_LIBRARY') ?: dirname(__DIR__) . '/lib/RedisCache.php';
+        if (is_readable($library)) {
+            require_once $library;
+        }
+        $cache = class_exists(RedisCache::class) ? RedisCache::fromEnvironment() : null;
+    }
+
+    if ($cache === null) {
+        return $loader();
+    }
+    $category = match ($route) {
+        'asset-inventory:snapshot-options' => 'snapshot_list',
+        'asset-inventory:history' => 'snapshot_history',
+        default => 'asset_summary',
+    };
+    $fallback = match ($category) {
+        'snapshot_list' => 300,
+        'snapshot_history' => 3600,
+        default => 900,
+    };
+    $result = $cache->remember($route, $query, RedisCache::ttl($category, $fallback), $loader);
+    $GLOBALS['warehouse_dashboard_cache_statuses'][] = $cache->lastStatus();
+    return $result;
+}
+
 function warehouseDashboardRespond(bool $success, string $message, array $data = [], int $status = 200): never
 {
+    if (!headers_sent()) {
+        $statuses = $GLOBALS['warehouse_dashboard_cache_statuses'] ?? [];
+        $cacheStatus = in_array('BYPASS', $statuses, true)
+            ? 'BYPASS'
+            : (in_array('MISS', $statuses, true) ? 'MISS' : ($statuses !== [] ? 'HIT' : 'BYPASS'));
+        header('X-Cache: ' . $cacheStatus);
+    }
     http_response_code($status);
     echo json_encode(
         ['success' => $success, 'message' => $message, 'data' => $data],
@@ -261,7 +297,11 @@ try {
     define('WAREHOUSE_INVENTORY_API_REQUEST', true);
     require __DIR__ . '/warehouse_db.php';
 
-    $snapshotOptions = warehouseDashboardSnapshotOptions($warehousePdo);
+    $snapshotOptions = warehouseDashboardCached(
+        'asset-inventory:snapshot-options',
+        [],
+        fn(): array => warehouseDashboardSnapshotOptions($warehousePdo),
+    );
     if ($snapshotOptions === []) {
         if ($visualPageRequest !== null) {
             warehouseDashboardRespond(true, 'ไม่มีรายการสินทรัพย์ที่ควรตรวจสอบ', [
@@ -296,7 +336,11 @@ try {
 
     $selectedSnapshotId = $snapshot['snapshotId'];
     $filters['snapshot'] = $snapshot['key'];
-    $analytics = warehouseDashboardFetchAnalytics($warehousePdo, $filters, $selectedSnapshotId, $visualPageRequest);
+    $analytics = warehouseDashboardCached(
+        'asset-inventory:analytics',
+        ['filters' => $filters, 'snapshot_id' => $selectedSnapshotId, 'visual_page' => $visualPageRequest],
+        fn(): array => warehouseDashboardFetchAnalytics($warehousePdo, $filters, $selectedSnapshotId, $visualPageRequest),
+    );
     if ($visualPageRequest !== null) {
         $governance = $analytics['governance'];
         $page = $governance['exceptionsPage'];
@@ -313,17 +357,25 @@ try {
             'selectedFilters' => $filters,
         ]);
     }
-    $analytics['overview']['disposalEstimate'] = warehouseDashboardDisposalEstimate(
-        $warehousePdo,
-        $filters,
-        $selectedSnapshotId,
+    $analytics['overview']['disposalEstimate'] = warehouseDashboardCached(
+        'asset-inventory:disposal-estimate',
+        ['filters' => $filters, 'snapshot_id' => $selectedSnapshotId],
+        fn(): array => warehouseDashboardDisposalEstimate($warehousePdo, $filters, $selectedSnapshotId),
     );
 
-    $history = warehouseDashboardHistory($warehousePdo, $filters, $snapshotOptions, $selectedSnapshotId);
+    $history = warehouseDashboardCached(
+        'asset-inventory:history',
+        ['filters' => $filters, 'snapshot_options' => $snapshotOptions, 'selected_snapshot_id' => $selectedSnapshotId],
+        fn(): array => warehouseDashboardHistory($warehousePdo, $filters, $snapshotOptions, $selectedSnapshotId),
+    );
     warehouseDashboardRespond(true, 'โหลดข้อมูลวิเคราะห์สินทรัพย์สำเร็จ', [
         'snapshot' => $snapshot,
         'snapshotOptions' => $snapshotOptions,
-        'filterOptions' => warehouseDashboardFilterOptions($warehousePdo, $selectedSnapshotId),
+        'filterOptions' => warehouseDashboardCached(
+            'asset-inventory:filter-options',
+            ['snapshot_id' => $selectedSnapshotId],
+            fn(): array => warehouseDashboardFilterOptions($warehousePdo, $selectedSnapshotId),
+        ),
         'selectedFilters' => $filters,
         ...$analytics,
         'history' => $history,

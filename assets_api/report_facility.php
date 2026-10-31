@@ -43,7 +43,7 @@ function facility_jobs(): array
     return ['sla_workdays' => $sla, 'rows' => array_reverse($rows)];
 }
 
-run(function () {
+run_cached(function () {
     $view = $_GET['view'] ?? 'overview';
     if ($view === 'jobs') {
         return facility_jobs();
@@ -120,4 +120,4 @@ run(function () {
 
     return ['fiscal_years' => ['prev' => $y0, 'curr' => $y1, 'season_from' => $full, 'buildings' => $years],
             'kpi' => $kpi, 'monthly' => $monthly, 'season' => $season, 'buildings' => $buildings, 'types' => $types];
-});
+}, report_cache_ttl('maintenance', 120), ($_GET['view'] ?? 'overview') !== 'jobs');

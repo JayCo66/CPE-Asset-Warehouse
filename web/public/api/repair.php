@@ -42,7 +42,7 @@ function repair_jobs(): array
     return ['sla_workdays' => $sla, 'thresholds' => $worth['thresholds'], 'rows' => $rows];
 }
 
-run(function () {
+run_cached(function () {
     $cur = current_fiscal_year();
     $y1 = $cur - 1;
     $y0 = $cur - 2;
@@ -122,4 +122,4 @@ run(function () {
             'worth' => ['thresholds' => $worth['thresholds'],
                         'dispose' => count(array_filter($worth['assets'], fn($a) => $a['verdict'] === 'dispose')),
                         'watch' => count(array_filter($worth['assets'], fn($a) => $a['verdict'] === 'watch'))]];
-});
+}, cache_ttl('maintenance', 120), ($_GET['view'] ?? 'overview') !== 'jobs');

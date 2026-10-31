@@ -12,7 +12,9 @@ x-mysql-command: &mysql-command
   - --max-connections=30
 
 x-php-image: &php-image
-  build: ./docker/php        # build 2 ครั้งจาก Dockerfile เดียวกัน (ครั้งที่ 2 ใช้ cache)
+  build:
+    context: .
+    dockerfile: docker/php/Dockerfile
 
 services:
   # ---------------- ระบบต้นทาง (ระบบครุภัณฑ์ CPEAssets จำลอง) ----------------
@@ -83,6 +85,14 @@ services:
       WH_NAME: cpe_warehouse
       WH_USER: root
       WH_PASS: ${DB_ROOT_PASSWORD:-root}
+      APP_ENV: ${APP_ENV:-local}
+      REDIS_ENABLED: ${REDIS_ENABLED:-true}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: ${REDIS_DB:-0}
+      REDIS_KEY_PREFIX: ${REDIS_KEY_PREFIX:-cpe:local:}
+      REDIS_CONNECT_TIMEOUT: ${REDIS_CONNECT_TIMEOUT:-0.2}
+      REDIS_READ_TIMEOUT: ${REDIS_READ_TIMEOUT:-0.2}
     volumes:
       - ./:/app:ro
       - ./output:/app/output          # ผลลัพธ์ + history ของ snapshot ครุภัณฑ์ (ห้ามลบ)
@@ -123,9 +133,24 @@ services:
       DB_NAME: cpe_warehouse
       DB_USER: ${DB_USER:-dashboard}
       DB_PASS: ${DB_PASSWORD:-dashboard}
+      APP_ENV: ${APP_ENV:-local}
+      REDIS_ENABLED: ${REDIS_ENABLED:-true}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: ${REDIS_DB:-0}
+      REDIS_KEY_PREFIX: ${REDIS_KEY_PREFIX:-cpe:local:}
+      REDIS_DEFAULT_TTL: ${REDIS_DEFAULT_TTL:-300}
+      REDIS_TTL_OVERVIEW: ${REDIS_TTL_OVERVIEW:-300}
+      REDIS_TTL_BORROWING: ${REDIS_TTL_BORROWING:-120}
+      REDIS_TTL_MAINTENANCE: ${REDIS_TTL_MAINTENANCE:-120}
+      REDIS_TTL_ASSET_SUMMARY: ${REDIS_TTL_ASSET_SUMMARY:-300}
+      REDIS_CONNECT_TIMEOUT: ${REDIS_CONNECT_TIMEOUT:-0.2}
+      REDIS_READ_TIMEOUT: ${REDIS_READ_TIMEOUT:-0.2}
+      REDIS_CACHE_LIBRARY: /var/www/lib/RedisCache.php
     volumes:
       - ./web/public/api:/var/www/html/api:ro
       - ./web/config:/var/www/config:ro
+      - ./lib:/var/www/lib:ro
     depends_on:
       warehouse-db:
         condition: service_healthy
@@ -145,10 +170,25 @@ services:
       DB_PASS: ${SOURCE_DB_ROOT_PASSWORD:-root}
       CPE_UNIVERSITY_TYPE_API_URL: http://127.0.0.1/assets_api/asset_types.php
       CPE_UNIVERSITY_CATEGORY_API_URL: http://127.0.0.1/assets_api/asset_categories.php
+      APP_ENV: ${APP_ENV:-local}
+      REDIS_ENABLED: ${REDIS_ENABLED:-true}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: ${REDIS_DB:-0}
+      REDIS_KEY_PREFIX: ${REDIS_KEY_PREFIX:-cpe:local:}
+      REDIS_DEFAULT_TTL: ${REDIS_DEFAULT_TTL:-300}
+      REDIS_TTL_OVERVIEW: ${REDIS_TTL_OVERVIEW:-300}
+      REDIS_TTL_BORROWING: ${REDIS_TTL_BORROWING:-120}
+      REDIS_TTL_MAINTENANCE: ${REDIS_TTL_MAINTENANCE:-120}
+      REDIS_TTL_ASSET_SUMMARY: ${REDIS_TTL_ASSET_SUMMARY:-300}
+      REDIS_CONNECT_TIMEOUT: ${REDIS_CONNECT_TIMEOUT:-0.2}
+      REDIS_READ_TIMEOUT: ${REDIS_READ_TIMEOUT:-0.2}
+      REDIS_CACHE_LIBRARY: /var/www/lib/RedisCache.php
     volumes:
       - ./src/maintenance/index.html:/var/www/html/dashboard_report.html:ro
       - ./src/borrow/index.html:/var/www/html/dashboard_borrow.html:ro
       - ./assets_api:/var/www/html/assets_api:ro
+      - ./lib:/var/www/lib:ro
     ports:
       - "${REPORT_WEB_PORT:-8090}:80"
     depends_on:
@@ -165,6 +205,26 @@ services:
       - "${WEB_PORT:-8088}:80"
     depends_on:
       - warehouse-api
+
+  redis:
+    image: redis:7.4.12-alpine3.21
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --maxmemory
+      - 96mb
+      - --maxmemory-policy
+      - allkeys-lru
+      - --save
+      - ""
+      - --appendonly
+      - "no"
+    mem_limit: 128m
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
 
 volumes:
   source_db_data:

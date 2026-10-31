@@ -1,0 +1,10 @@
+{
+  "name": "cpe/asset-warehouse",
+  "type": "project",
+  "require": {
+    "predis/predis": "^3.7"
+  },
+  "config": {
+    "sort-packages": true
+  }
+}

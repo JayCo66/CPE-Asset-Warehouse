@@ -6,6 +6,9 @@
 //   ?view=jobs       ทุกงานซ่อม + สัญญาณ (ซ่อมซ้ำ, เกินเกณฑ์วันทำการ, ครุภัณฑ์ไม่คุ้มซ่อม, ส่งร้าน) + ข้อมูลความคุ้มของครุภัณฑ์ชิ้นนั้น
 //   ?view=badges     ตัวเลขบนแท็บของโมดูล
 require __DIR__ . '/report_common.php';
+$latestSnapshot = row("SELECT snapshot_id FROM dim_inventory_snapshot
+                       ORDER BY (source_system = 'university_api') DESC,
+                                snapshot_date_key DESC, imported_at DESC, snapshot_id DESC LIMIT 1");
 
 /** งานซ่อมทั้งหมด (ใหม่สุดก่อน) ; ข้อมูลระดับครุภัณฑ์ (ราคา, ค่าซ่อมสะสม, ผลประเมิน) มาจาก repair_vs_price() */
 function repair_jobs(): array
@@ -43,7 +46,7 @@ function repair_jobs(): array
     return ['sla_workdays' => $sla, 'thresholds' => $worth['thresholds'], 'rows' => $rows];
 }
 
-run(function () {
+run_cached(function () {
     $cur = current_fiscal_year();
     $y1 = $cur - 1;
     $y0 = $cur - 2;
@@ -123,4 +126,6 @@ run(function () {
             'worth' => ['thresholds' => $worth['thresholds'],
                         'dispose' => count(array_filter($worth['assets'], fn($a) => $a['verdict'] === 'dispose')),
                         'watch' => count(array_filter($worth['assets'], fn($a) => $a['verdict'] === 'watch'))]];
-});
+}, report_cache_ttl('maintenance', 120), ($_GET['view'] ?? 'overview') !== 'jobs', [
+    'snapshot_id' => $latestSnapshot['snapshot_id'] ?? null,
+]);

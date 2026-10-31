@@ -17,6 +17,7 @@ __pycache__/
 .venv/
 venv/
 env/
+/vendor/
 
 # Local settings and secrets
 .env

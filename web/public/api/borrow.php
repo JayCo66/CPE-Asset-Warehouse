@@ -2,7 +2,7 @@
 // โมดูลยืม-คืน: fact_borrow_transaction (1 แถว = ครุภัณฑ์ 1 ชิ้นในใบยืม)
 require __DIR__ . '/db.php';
 
-run(function () {
+run_cached(function () {
     $cur = current_fiscal_year();
     $y1 = $cur - 1;
     $y0 = $cur - 2;
@@ -39,4 +39,4 @@ run(function () {
                               WHERE d.fiscal_year IN (?, ?) GROUP BY c.category_key, c.category_name
                               ORDER BY curr_items + prev_items DESC", [$y0, $y1, $y0, $y1]),
     ];
-});
+}, cache_ttl('borrowing', 120));

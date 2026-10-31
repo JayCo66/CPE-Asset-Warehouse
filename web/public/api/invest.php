@@ -6,10 +6,11 @@
 //   immediate  ซ่อมไม่คุ้ม + ใช้งานเกินครึ่งอายุ: ทดแทนก่อนรายการอื่น (แยกออกจาก groups)
 require __DIR__ . '/db.php';
 
-run(function () {
+$snapshot = latest_inventory_snapshot();
+run_cached(function () use ($snapshot) {
     $cur = current_fiscal_year();
     $years = (int)setting('replacement_plan_years', 5);
-    $snap = row("SELECT MAX(snapshot_date_key) AS k FROM fact_asset_inventory")['k'];
+    $snap = $snapshot['snapshot_id'] ?? null;
     if (!$snap) {
         return ['empty' => true];
     }
@@ -19,7 +20,7 @@ run(function () {
                   JOIN dim_asset a ON a.asset_key = f.asset_key
                   LEFT JOIN dim_asset_category c ON c.category_key = f.category_key
                   JOIN dim_date d ON d.date_key = f.acquisition_date_key
-                  WHERE f.snapshot_date_key = ? AND c.category_name LIKE 'ครุภัณฑ์%'", [$snap]);
+                  WHERE f.snapshot_id = ? AND c.category_name LIKE 'ครุภัณฑ์%'", [$snap]);
 
     $assets = [];
     foreach ($rows as $r) {
@@ -93,4 +94,4 @@ run(function () {
         'immediate' => array_map(fn($r) => array_intersect_key($r, array_flip(
             ['asset_code', 'asset_name', 'category_name', 'repairs', 'repair_cost', 'price', 'ratio', 'age_years', 'life_years'])), $immediate),
     ];
-});
+}, cache_ttl('asset_summary', 900), true, ['snapshot_id' => $snapshot['snapshot_id'] ?? null]);
