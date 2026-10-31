@@ -2,6 +2,17 @@
 
 `etl_warehouse.py` รวมข้อมูลจาก 2 แหล่งให้เป็นรูปแบบเดียวกัน แล้วสร้างไฟล์ SQL สำหรับโหลดเข้า warehouse ตาม `database/warehouse_schema.sql` ซึ่งมี 8 dimension และ 4 fact
 
+## Redis dashboard cache
+
+Redis is an optional cache for read-only warehouse reports. MySQL remains the source of truth, and the APIs fall back to MySQL if Redis is disabled or unavailable. For Windows/XAMPP setup, Composer dependencies, environment variables, cache invalidation, and EC2 rollout/rollback, see [Redis local setup](docs/redis-local-setup.md), [Redis architecture](docs/redis-architecture.md), and [EC2 deployment](docs/redis-ec2-deployment.md).
+
+The local Redis container binds to loopback only:
+
+    docker compose -f docker-compose.yml -f docker-compose.redis-local.yml up -d --no-deps redis
+    docker compose exec -T redis redis-cli ping
+
+Copy .env.example to .env only when a local .env does not already exist. Keep production environment values out of Git.
+
 | แหล่ง | มาจาก | ไปที่ warehouse |
 |---|---|---|
 | Excel | ใบแจ้งซ่อม Google Form เดิม | `fact_general_maintenance` |
@@ -520,3 +531,8 @@ docker/
 - ครุภัณฑ์ 83% ไม่มี `location_id` ใน API จริง จึงไม่มี `location_key`
 - `dim_location.location_id` มีค่าเฉพาะสถานที่ที่มาจากตาราง `locations`; สถานที่ที่มาจากใบแจ้งซ่อมอย่างเดียวเป็น NULL
 - `fiscal_year` ใน `dim_date` เป็นปีงบประมาณ **พ.ศ.** เริ่ม 1 ต.ค. (เปลี่ยนได้ที่ `FISCAL_YEAR_BE`)
+
+
+## Daily snapshot automation
+
+The shared PHP importer supports a once-per-Bangkok-day CLI worker, a manual fallback, safe import coordination, and post-import cache warming. Local Task Scheduler setup, worker commands, cache policy, production staging boundary, and rollback steps are in [daily snapshot automation](docs/daily-snapshot-automation.md). Measured verification and performance results are in [Phase 2 results](docs/phase2-performance-results.md). The EC2 scheduler example remains disabled pending approval.

@@ -16,6 +16,12 @@ seed  →  cpeasset (ฐานข้อมูลต้นทาง)  →  assets
 
 ## สิ่งที่ต้องมี
 
+Redis is optional. Install and configure it using [Redis local setup](redis-local-setup.md). For subsequent warehouse loads, use:
+
+    python docker/etl/load_warehouse.py output/warehouse_load.sql
+
+Set the local WH_* and REDIS_* environment variables first. This invalidates cached reports only after the load and commit succeed. Importing through phpMyAdmin or mysql.exe does not automatically invalidate Redis.
+
 - **XAMPP**: PHP 8.1 ขึ้นไป พร้อม Apache และ MySQL/MariaDB
 - **Python 3** พร้อม `pip`: ใช้ seed ข้อมูลและรัน ETL
 - **git**
