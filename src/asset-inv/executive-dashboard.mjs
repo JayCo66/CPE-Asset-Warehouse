@@ -2551,6 +2551,19 @@ function updateSnapshotLabel(payload) {
   const date = document.getElementById("dashboard-snapshot-date");
   const state = document.getElementById("dashboard-data-state");
   const detail = document.getElementById("dashboard-data-detail");
+  const latestUniversitySnapshot = payload.snapshotOptions?.find((snapshot) => snapshot.sourceSystem === "university_api");
+  const lastImport = document.querySelector("[data-snapshot-last-import]");
+  if (lastImport) {
+    const importedAt = latestUniversitySnapshot?.importedAt;
+    const sourceTime = String(importedAt || "").replace(" ", "T");
+    const timestamp = sourceTime
+      ? new Date(`${sourceTime}${/[zZ]|[+-]\d{2}:?\d{2}$/.test(sourceTime) ? "" : "Z"}`)
+      : null;
+    const formatted = timestamp && !Number.isNaN(timestamp.valueOf())
+      ? new Intl.DateTimeFormat("th-TH", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Bangkok" }).format(timestamp)
+      : "—";
+    lastImport.textContent = `นำเข้าจาก University Asset API ล่าสุด: ${formatted}`;
+  }
   if (!payload.snapshot) {
     if (date) date.textContent = "—";
     if (state) state.textContent = "ไม่พบข้อมูลสินทรัพย์";
@@ -2577,7 +2590,8 @@ function updateSelect(select, values, selected, allLabel, mapValue = (value) => 
 
 function populateFilterOptions(payload) {
   const options = payload.filterOptions || {};
-  const latestSnapshot = payload.snapshotOptions?.[0];
+  const latestSnapshot = payload.snapshotOptions?.find((snapshot) => snapshot.sourceSystem === "university_api")
+    || payload.snapshotOptions?.[0];
   const snapshotOptions = [
     ["latest", `ชุดข้อมูลล่าสุด${latestSnapshot ? ` · ${latestSnapshot.label} · ${formatDate(latestSnapshot.date)}` : ""}`],
     ...(payload.snapshotOptions || []).map((snapshot) => [String(snapshot.key), `${snapshot.label} · ${formatDate(snapshot.date)}`]),

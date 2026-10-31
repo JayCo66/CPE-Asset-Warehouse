@@ -8,7 +8,17 @@ const WAREHOUSE_UNIVERSITY_PAGE_SIZE = 100;
 const WAREHOUSE_UNIVERSITY_MAX_PAGES = 500;
 const WAREHOUSE_UNIVERSITY_MAX_RECORDS = 50000;
 
-function warehouseUniversityCollectAssets(callable $fetchPage, int $maxPages, int $maxRecords, int $maxDurationSeconds = 300): array
+final class WarehouseUniversityTransientException extends RuntimeException
+{
+}
+
+function warehouseUniversityCollectAssets(
+    callable $fetchPage,
+    int $maxPages,
+    int $maxRecords,
+    int $maxDurationSeconds = 300,
+    ?callable $heartbeat = null,
+): array
 {
     $deadline = microtime(true) + max(1, $maxDurationSeconds);
     $getPage = static function (int $page) use ($fetchPage, $deadline): array {
@@ -18,6 +28,13 @@ function warehouseUniversityCollectAssets(callable $fetchPage, int $maxPages, in
         return $fetchPage($page);
     };
 
+    $beat = static function () use ($heartbeat): void {
+        if ($heartbeat !== null) {
+            $heartbeat();
+        }
+    };
+
+    $beat();
     $firstPage = $getPage(1);
     warehouseUniversityValidateEnvelope($firstPage);
     $reportedTotal = $firstPage['total'];
@@ -34,6 +51,7 @@ function warehouseUniversityCollectAssets(callable $fetchPage, int $maxPages, in
     $seenIds = [];
     $firstPageFingerprint = hash('sha256', json_encode($firstPage['data'], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
     for ($page = 1; $page <= $pageCount; $page++) {
+        $beat();
         $response = $page === 1 ? $firstPage : $getPage($page);
         warehouseUniversityValidateEnvelope($response);
         if ($response['total'] !== $reportedTotal) {
@@ -61,6 +79,7 @@ function warehouseUniversityCollectAssets(callable $fetchPage, int $maxPages, in
     }
 
     // The upstream API exposes no snapshot token. Re-read page one to detect common pagination shifts.
+    $beat();
     $verificationPage = $getPage(1);
     warehouseUniversityValidateEnvelope($verificationPage);
     if ($verificationPage['total'] !== $reportedTotal
@@ -162,8 +181,11 @@ function warehouseUniversityFetchEndpointPage(string $endpointUrl, int $page): a
     $errorNumber = curl_errno($handle);
     curl_close($handle);
 
-    if ($requestResult !== true || $errorNumber !== 0 || $status !== 200) {
-        throw new RuntimeException('The university API could not provide a complete page.');
+    if ($requestResult !== true || $errorNumber !== 0 || $status === 408 || $status === 429 || $status >= 500) {
+        throw new WarehouseUniversityTransientException('The university API could not provide a complete page.');
+    }
+    if ($status !== 200) {
+        throw new RuntimeException('The university API rejected the import request.');
     }
 
     try {
@@ -180,8 +202,17 @@ function warehouseUniversityFetchPage(int $page): array
     return warehouseUniversityFetchEndpointPage(WAREHOUSE_UNIVERSITY_ASSET_URL, $page);
 }
 
-function warehouseUniversityCollectReferenceRows(callable $fetchPage, string $idField, string $codeField, bool $codeRequired): array
+function warehouseUniversityCollectReferenceRows(
+    callable $fetchPage,
+    string $idField,
+    string $codeField,
+    bool $codeRequired,
+    ?callable $heartbeat = null,
+): array
 {
+    if ($heartbeat !== null) {
+        $heartbeat();
+    }
     $firstPage = $fetchPage(1);
     warehouseUniversityValidateEnvelope($firstPage);
     $reportedTotal = $firstPage['total'];
@@ -198,6 +229,9 @@ function warehouseUniversityCollectReferenceRows(callable $fetchPage, string $id
     $seenIds = [];
     $firstPageFingerprint = hash('sha256', json_encode($firstPage['data'], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
     for ($page = 1; $page <= $pageCount; $page++) {
+        if ($heartbeat !== null) {
+            $heartbeat();
+        }
         $response = $page === 1 ? $firstPage : $fetchPage($page);
         warehouseUniversityValidateEnvelope($response);
         if ($response['total'] !== $reportedTotal) {
@@ -240,6 +274,9 @@ function warehouseUniversityCollectReferenceRows(callable $fetchPage, string $id
         throw new RuntimeException('The validated reference-list count did not match its total.');
     }
 
+    if ($heartbeat !== null) {
+        $heartbeat();
+    }
     $verificationPage = $fetchPage(1);
     warehouseUniversityValidateEnvelope($verificationPage);
     if ($verificationPage['total'] !== $reportedTotal
@@ -250,7 +287,7 @@ function warehouseUniversityCollectReferenceRows(callable $fetchPage, string $id
     return $rows;
 }
 
-function warehouseUniversityLoadReferenceRows(string $referenceName): array
+function warehouseUniversityLoadReferenceRows(string $referenceName, ?callable $heartbeat = null): array
 {
     $references = [
         'types' => [
@@ -285,6 +322,7 @@ function warehouseUniversityLoadReferenceRows(string $referenceName): array
             $reference['id_field'],
             $reference['code_field'],
             false,
+            $heartbeat,
         );
     }
 
@@ -317,6 +355,7 @@ function warehouseUniversityLoadReferenceRows(string $referenceName): array
         $reference['id_field'],
         $reference['code_field'],
         false,
+        $heartbeat,
     );
 }
 
@@ -398,6 +437,21 @@ function warehouseUniversityUuidV4(): string
     $hex = bin2hex($bytes);
     return substr($hex, 0, 8) . '-' . substr($hex, 8, 4) . '-' . substr($hex, 12, 4)
         . '-' . substr($hex, 16, 4) . '-' . substr($hex, 20, 12);
+}
+
+function warehouseUniversityScheduledSnapshotLabelPrefix(DateTimeImmutable $date): string
+{
+    return 'CPE API AUTO ' . $date->setTimezone(new DateTimeZone('Asia/Bangkok'))->format('Y-m-d') . ' ';
+}
+
+function warehouseUniversitySnapshotLabel(DateTimeImmutable $date, string $snapshotId, bool $scheduled): string
+{
+    $date = $date->setTimezone(new DateTimeZone('Asia/Bangkok'));
+    $shortId = strtoupper(substr($snapshotId, 0, 8));
+    if ($scheduled) {
+        return warehouseUniversityScheduledSnapshotLabelPrefix($date) . $shortId;
+    }
+    return 'CPE API · ' . $date->format('Y-m-d H:i:s') . ' · ' . $shortId;
 }
 
 function warehouseUniversityNormalizeText(mixed $value): ?string

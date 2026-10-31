@@ -129,7 +129,13 @@ function warehouseUniversityNormalizeSource(?string $source): ?string
     ][$source] ?? $source;
 }
 
-function warehouseUniversityPersistSnapshot(PDO $pdo, array $snapshot, array $typeCodeById, array $resolvedCategoryByAssetId): void
+function warehouseUniversityPersistSnapshot(
+    PDO $pdo,
+    array $snapshot,
+    array $typeCodeById,
+    array $resolvedCategoryByAssetId,
+    ?callable $heartbeat = null,
+): void
 {
     $snapshotDate = new DateTimeImmutable($snapshot['snapshot_date'], new DateTimeZone('Asia/Bangkok'));
     $dateCache = [];
@@ -173,7 +179,10 @@ function warehouseUniversityPersistSnapshot(PDO $pdo, array $snapshot, array $ty
     );
 
     $dimensionCache = [];
-    foreach ($snapshot['data'] as $asset) {
+    foreach ($snapshot['data'] as $assetIndex => $asset) {
+        if ($heartbeat !== null && $assetIndex % 100 === 0) {
+            $heartbeat();
+        }
         $departmentName = warehouseUniversityNormalizeText($asset['department_name']);
         $departmentKey = warehouseUniversityDimensionKey($pdo, 'department', $asset['department_id'], [
             'department_name' => $departmentName,
@@ -276,47 +285,33 @@ function warehouseUniversityPersistSnapshot(PDO $pdo, array $snapshot, array $ty
     }
 }
 
-if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
-    header('Allow: POST');
-    warehouseUniversityImportRespond(false, 'รองรับเฉพาะคำขอแบบ POST', [], 405);
-}
+require_once __DIR__ . '/university_snapshot_job.php';
 
-if (!warehouseUniversitySameOriginRequestAllowed($_SERVER)) {
-    warehouseUniversityImportRespond(false, 'คำขอต้องมาจากแหล่งเดียวกับแดชบอร์ด', [], 403);
-}
-
-set_time_limit(330);
-ignore_user_abort(true);
-
-$configuredArchiveDirectory = getenv('CPE_SNAPSHOT_ARCHIVE_DIR');
-$archiveDirectory = is_string($configuredArchiveDirectory) && trim($configuredArchiveDirectory) !== ''
-    ? trim($configuredArchiveDirectory)
-    : dirname(__DIR__) . DIRECTORY_SEPARATOR . 'output' . DIRECTORY_SEPARATOR . 'history';
-if (!is_dir($archiveDirectory) && !mkdir($archiveDirectory, 0770, true) && !is_dir($archiveDirectory)) {
-    warehouseUniversityImportRespond(false, 'ไม่สามารถเตรียมพื้นที่จัดเก็บ snapshot ได้', [], 500);
-}
-$lockHandle = fopen($archiveDirectory . DIRECTORY_SEPARATOR . '.university-import.lock', 'c');
-if ($lockHandle === false || !flock($lockHandle, LOCK_EX | LOCK_NB)) {
-    if (is_resource($lockHandle)) {
-        fclose($lockHandle);
-    }
-    warehouseUniversityImportRespond(false, 'กำลังนำเข้าข้อมูลอีกชุด โปรดลองอีกครั้งภายหลัง', [], 409);
-}
-
-$archivePath = null;
-try {
+function warehouseUniversityCreateSnapshot(
+    PDO $pdo,
+    string $archiveDirectory,
+    bool $scheduled,
+    DateTimeImmutable $snapshotDate,
+    ?callable $heartbeat = null,
+    bool $dryRun = false,
+): array {
+    $snapshotDate = $snapshotDate->setTimezone(new DateTimeZone('Asia/Bangkok'));
     $assets = warehouseUniversityCollectAssets(
         'warehouseUniversityFetchPage',
         WAREHOUSE_UNIVERSITY_MAX_PAGES,
         WAREHOUSE_UNIVERSITY_MAX_RECORDS,
         300,
+        $heartbeat,
     );
-    $typeRows = warehouseUniversityLoadReferenceRows('types');
-    $categoryRows = warehouseUniversityLoadReferenceRows('categories');
+    $typeRows = warehouseUniversityLoadReferenceRows('types', $heartbeat);
+    $categoryRows = warehouseUniversityLoadReferenceRows('categories', $heartbeat);
     $typeCodeById = warehouseUniversityBuildTypeCodeMap($typeRows);
     [$categoryById, $categoryByCode] = warehouseUniversityBuildCategoryMaps($categoryRows);
     $resolvedCategoryByAssetId = [];
-    foreach ($assets as $asset) {
+    foreach ($assets as $index => $asset) {
+        if ($heartbeat !== null && $index % 100 === 0) {
+            $heartbeat();
+        }
         $resolvedCategoryByAssetId[$asset['asset_id']] = warehouseUniversityResolveCategory(
             $asset,
             $typeCodeById,
@@ -325,57 +320,93 @@ try {
         );
     }
 
-    $snapshotDate = new DateTimeImmutable('now', new DateTimeZone('Asia/Bangkok'));
     $importedAt = new DateTimeImmutable('now', new DateTimeZone('UTC'));
     $snapshotId = warehouseUniversityUuidV4();
     $snapshotDateText = $snapshotDate->format('Y-m-d');
     $archiveKey = 'assets_' . $snapshotDate->format('Ymd') . '__' . $snapshotId . '.json';
-    $snapshotLabel = 'CPE API · ' . $snapshotDate->format('Y-m-d H:i:s') . ' · ' . strtoupper(substr($snapshotId, 0, 8));
     $snapshot = [
         'snapshot_id' => $snapshotId,
         'snapshot_date' => $snapshotDateText,
-        'snapshot_label' => $snapshotLabel,
+        'snapshot_label' => warehouseUniversitySnapshotLabel($snapshotDate, $snapshotId, $scheduled),
         'source_system' => 'university_api',
         'imported_at' => $importedAt->format('Y-m-d H:i:s'),
         'asset_count' => count($assets),
         'archive_key' => $archiveKey,
         'data' => $assets,
     ];
+    $summary = [
+        'key' => 'id:' . $snapshotId,
+        'snapshotId' => $snapshotId,
+        'dateKey' => (int)$snapshotDate->format('Ymd'),
+        'date' => $snapshotDateText,
+        'label' => $snapshot['snapshot_label'],
+        'sourceSystem' => 'university_api',
+        'importedAt' => $snapshot['imported_at'],
+        'assets' => count($assets),
+    ];
 
-    define('WAREHOUSE_INVENTORY_API_REQUEST', true);
-    require __DIR__ . '/warehouse_db.php';
-    $warehousePdo->beginTransaction();
+    if ($dryRun) {
+        return ['importedCount' => count($assets), 'snapshot' => $summary, 'dryRun' => true];
+    }
+
+    $archivePath = null;
+    $temporaryPath = $archiveDirectory . DIRECTORY_SEPARATOR . $archiveKey . '.tmp';
     try {
-        warehouseUniversityPersistSnapshot($warehousePdo, $snapshot, $typeCodeById, $resolvedCategoryByAssetId);
+        if ($heartbeat !== null) {
+            $heartbeat();
+        }
+        $pdo->beginTransaction();
+        warehouseUniversityPersistSnapshot($pdo, $snapshot, $typeCodeById, $resolvedCategoryByAssetId, $heartbeat);
         $archivePath = $archiveDirectory . DIRECTORY_SEPARATOR . warehouseUniversityWriteArchive($archiveDirectory, $snapshot);
-        $warehousePdo->commit();
+        $pdo->commit();
     } catch (Throwable $error) {
-        if ($warehousePdo->inTransaction()) {
-            $warehousePdo->rollBack();
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
         }
         if ($archivePath !== null && is_file($archivePath)) {
             @unlink($archivePath);
         }
+        if (is_file($temporaryPath)) {
+            @unlink($temporaryPath);
+        }
         throw $error;
     }
 
-    warehouseUniversityImportRespond(true, 'นำเข้าข้อมูลและสร้าง snapshot สำเร็จ', [
-        'importedCount' => count($assets),
-        'snapshot' => [
-            'key' => 'id:' . $snapshotId,
-            'snapshotId' => $snapshotId,
-            'dateKey' => (int)$snapshotDate->format('Ymd'),
-            'date' => $snapshotDateText,
-            'label' => $snapshotLabel,
-            'sourceSystem' => 'university_api',
-            'importedAt' => $snapshot['imported_at'],
-            'assets' => count($assets),
-        ],
+    return ['importedCount' => count($assets), 'snapshot' => $summary];
+}
+
+if (defined('WAREHOUSE_UNIVERSITY_IMPORT_LIBRARY_ONLY')) {
+    return;
+}
+
+if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+    header('Allow: POST');
+    warehouseUniversityImportRespond(false, 'Only POST requests are supported.', [], 405);
+}
+
+if (!warehouseUniversitySameOriginRequestAllowed($_SERVER)) {
+    warehouseUniversityImportRespond(false, 'The request must originate from this dashboard.', [], 403);
+}
+
+set_time_limit(660);
+ignore_user_abort(true);
+$archiveDirectory = warehouseUniversitySnapshotArchiveDirectory();
+
+define('WAREHOUSE_INVENTORY_API_REQUEST', true);
+require __DIR__ . '/warehouse_db.php';
+try {
+    $result = warehouseUniversityRunSnapshotJob($warehousePdo, $archiveDirectory, [
+        'scheduled' => false,
+        'attempts' => 1,
+        'warm_cache' => false,
     ]);
+    warehouseUniversityImportRespond(true, 'Snapshot imported successfully.', [
+        'importedCount' => $result['importedCount'],
+        'snapshot' => $result['snapshot'],
+    ]);
+} catch (WarehouseUniversitySnapshotBusyException $error) {
+    warehouseUniversityImportRespond(false, 'A snapshot import is already running. Try again later.', [], 409);
 } catch (Throwable $error) {
     error_log('University asset snapshot import failed: ' . $error->getMessage());
-    warehouseUniversityImportRespond(false, 'นำเข้าข้อมูลไม่สำเร็จ ระบบเดิมยังคงอยู่ กรุณาลองอีกครั้ง', [], 500);
-} finally {
-    flock($lockHandle, LOCK_UN);
-    fclose($lockHandle);
+    warehouseUniversityImportRespond(false, 'Snapshot import failed. The previous snapshot remains available.', [], 500);
 }

@@ -1,0 +1,4 @@
+# Install only after the worker is staged and the user approves production automation.
+# This must be the only production scheduler for the snapshot worker.
+CRON_TZ=Asia/Bangkok
+# 0 2 * * * docker exec cpe-hub-web-1 php /var/www/html/scripts/sync_university_snapshot.php --scheduled >> /home/ubuntu/cpe-hub/snapshot-history/.snapshot-worker.cron.log 2>&1

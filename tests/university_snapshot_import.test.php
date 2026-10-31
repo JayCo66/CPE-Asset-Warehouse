@@ -62,6 +62,24 @@ importRunTest('collects a complete paginated university dataset', static functio
     importExpectSame([1, 101], [reset($assets)['asset_id'], end($assets)['asset_id']], 'Page ordering should be retained.');
 });
 
+importRunTest('renews long-running imports and gives scheduled snapshots a durable date marker', static function (): void {
+    $heartbeatCount = 0;
+    warehouseUniversityCollectAssets(
+        static fn(): array => ['success' => true, 'total' => 1, 'data' => [importFakeAsset(1)]],
+        10,
+        100,
+        30,
+        static function () use (&$heartbeatCount): void { $heartbeatCount++; },
+    );
+    importExpectSame(3, $heartbeatCount, 'The import lease is renewed before each page and final verification fetch.');
+
+    $date = new DateTimeImmutable('2026-10-31 19:00:00', new DateTimeZone('UTC'));
+    importExpectSame('CPE API AUTO 2026-11-01 ', warehouseUniversityScheduledSnapshotLabelPrefix($date), 'Automatic labels use the Bangkok calendar day.');
+    importExpectSame('CPE API AUTO 2026-11-01 41979494', warehouseUniversitySnapshotLabel($date, '41979494-e206-4c30-b103-0bc347fc8d68', true), 'Automatic labels include the date marker and stable snapshot identity.');
+    importExpectSame(true, strlen(warehouseUniversitySnapshotLabel($date, '41979494-e206-4c30-b103-0bc347fc8d68', true)) <= 120, 'Automatic labels fit the existing schema.');
+    importExpectSame(false, str_contains(warehouseUniversitySnapshotLabel($date, '41979494-e206-4c30-b103-0bc347fc8d68', false), 'AUTO'), 'Manual labels retain their existing style.');
+});
+
 importRunTest('rejects inconsistent page totals, duplicate IDs, and incomplete final pages', static function (): void {
     importExpectThrows(static fn() => warehouseUniversityCollectAssets(static function (int $page): array {
         return ['success' => true, 'total' => $page === 1 ? 101 : 102, 'data' => $page === 1 ? array_map('importFakeAsset', range(1, 100)) : [importFakeAsset(101)]];

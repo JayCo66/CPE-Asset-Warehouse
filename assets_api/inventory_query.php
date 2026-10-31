@@ -253,6 +253,9 @@ function warehouseInventoryResolveSnapshot(PDO $pdo, string $selection): ?array
         }
     }
 
+    $order = $selection === 'latest'
+        ? 'ORDER BY (`snapshot`.`source_system` = \'university_api\') DESC, `snapshot`.`snapshot_date_key` DESC, `snapshot`.`imported_at` DESC, `snapshot`.`snapshot_id` DESC'
+        : 'ORDER BY `snapshot`.`snapshot_date_key` DESC, `snapshot`.`imported_at` DESC, `snapshot`.`snapshot_id` DESC';
     $query = 'SELECT
             snapshot.`snapshot_id`,
             snapshot.`snapshot_date_key`,
@@ -269,7 +272,7 @@ function warehouseInventoryResolveSnapshot(PDO $pdo, string $selection): ?array
         ($conditions === [] ? '' : ' WHERE ' . implode(' AND ', $conditions)) . '
         GROUP BY snapshot.`snapshot_id`, snapshot.`snapshot_date_key`, snapshot_date.`full_date`,
             snapshot.`snapshot_label`, snapshot.`source_system`, snapshot.`imported_at`
-        ORDER BY snapshot.`snapshot_date_key` DESC, snapshot.`imported_at` DESC, snapshot.`snapshot_id` DESC
+        ' . $order . '
         LIMIT 1';
     $statement = $pdo->prepare($query);
     foreach ($parameters as $name => $value) {
