@@ -1,0 +1,5 @@
+# Independent daily storage check for the persistent snapshot archive filesystem.
+# Ubuntu host cron runs UTC; 00:00 UTC is 07:00 Asia/Bangkok.
+# This check is safe to enable while snapshot imports remain disabled.
+#
+0 0 * * * root /bin/sh -c '/usr/bin/flock -n -E 75 /run/lock/cpe-snapshot-disk-check.lock /usr/bin/docker exec -u www-data -e CPE_SNAPSHOT_ARCHIVE_DIR=/var/lib/cpe-warehouse/snapshot-history cpe-hub-web-1 php /var/www/html/scripts/check_snapshot_disk.php >> /var/log/cpe-snapshot-disk-check.log 2>&1; rc=$?; if [ "$rc" -eq 2 ] || [ "$rc" -eq 1 ]; then /usr/bin/logger -p user.warning -t cpe-snapshot-disk "Disk warning or check failure; see /var/log/cpe-snapshot-disk-check.log"; elif [ "$rc" -eq 75 ]; then echo "{\"state\":\"busy\",\"reason\":\"host_lock\"}"; fi; exit "$rc"'

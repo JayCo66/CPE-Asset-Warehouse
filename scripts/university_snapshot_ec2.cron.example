@@ -1,4 +1,18 @@
-# Install only after the worker is staged and the user approves production automation.
-# This must be the only production scheduler for the snapshot worker.
-CRON_TZ=Asia/Bangkok
-# 0 2 * * * docker exec cpe-hub-web-1 php /var/www/html/scripts/sync_university_snapshot.php --scheduled >> /home/ubuntu/cpe-hub/snapshot-history/.snapshot-worker.cron.log 2>&1
+# CPE Asset Warehouse daily University snapshot worker (production EC2).
+# STATUS: staged and disabled until recurring off-host backup is verified and
+# the production schedule is explicitly authorized.
+#
+# Ubuntu cron 3.0pl1 does not support CRON_TZ or per-user timezones, and the
+# host runs UTC. 02:00 Asia/Bangkok (UTC+7, no DST) is 19:00 UTC on the
+# previous calendar day, hence "0 19 * * *".
+#
+# In /etc/cron.d the sixth field is the user. The host lock prevents duplicate
+# cron launches; the worker's file, MySQL, and Redis locks remain authoritative.
+# Activate:
+#   sudo install -o root -g root -m 0644 \
+#     /home/ubuntu/cpe-hub/cron/cpe-snapshot-worker.cron \
+#     /etc/cron.d/cpe-snapshot-worker
+# Rollback:
+#   sudo rm -f /etc/cron.d/cpe-snapshot-worker
+#
+# 0 19 * * * root /bin/sh -c '/usr/bin/flock -n -E 75 /run/lock/cpe-snapshot-worker.lock /usr/bin/docker exec -u www-data -e CPE_SNAPSHOT_ENV_FILE=/var/lib/cpe-warehouse/snapshot-history/.snapshot-worker.env -e CPE_SNAPSHOT_ARCHIVE_DIR=/var/lib/cpe-warehouse/snapshot-history cpe-hub-web-1 php /var/www/html/scripts/sync_university_snapshot.php --scheduled; rc=$?; if [ "$rc" -eq 75 ]; then echo "{\"state\":\"busy\",\"reason\":\"host_lock\"}"; fi; exit "$rc"' >> /var/log/cpe-snapshot-worker.log 2>&1

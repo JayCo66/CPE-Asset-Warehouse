@@ -1,0 +1,11 @@
+/var/log/cpe-snapshot-worker.log /var/log/cpe-snapshot-disk-check.log {
+    daily
+    rotate 7
+    size 1M
+    missingok
+    notifempty
+    compress
+    delaycompress
+    su root root
+    create 0640 root adm
+}

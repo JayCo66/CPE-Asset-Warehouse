@@ -5,6 +5,10 @@ final class WarehouseUniversitySnapshotBusyException extends RuntimeException
 {
 }
 
+require_once __DIR__ . '/snapshot_storage_guard.php';
+
+const WAREHOUSE_SNAPSHOT_JOB_LOG_MAX_BYTES = 1048576;
+
 function warehouseUniversitySnapshotArchiveDirectory(): string
 {
     $configured = trim((string)(getenv('CPE_SNAPSHOT_ARCHIVE_DIR') ?: ''));
@@ -114,12 +118,31 @@ function warehouseUniversityHasScheduledSnapshot(PDO $pdo, DateTimeImmutable $da
     return $statement->fetchColumn() !== false;
 }
 
+function warehouseUniversityRotateJobLog(string $logPath): bool
+{
+    clearstatcache(true, $logPath);
+    if (!is_file($logPath)) {
+        return true;
+    }
+
+    $size = @filesize($logPath);
+    if (!is_int($size) || $size < WAREHOUSE_SNAPSHOT_JOB_LOG_MAX_BYTES) {
+        return $size !== false;
+    }
+
+    $rotatedPath = $logPath . '.1';
+    if (is_file($rotatedPath) && !@unlink($rotatedPath)) {
+        return false;
+    }
+    return @rename($logPath, $rotatedPath);
+}
+
 function warehouseUniversityRecordJobState(?RedisCache $cache, array $state, ?string $logPath = null): void
 {
     $cache?->setJsonMetadata('snapshot:daily:status', $state, 2592000);
     if ($logPath !== null) {
         $json = json_encode($state, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
-        if (is_string($json)) {
+        if (is_string($json) && warehouseUniversityRotateJobLog($logPath)) {
             @file_put_contents($logPath, $json . PHP_EOL, FILE_APPEND | LOCK_EX);
         }
     }
@@ -188,13 +211,19 @@ function warehouseUniversityRunSnapshotJob(PDO $pdo, string $archiveDirectory, a
             return $result;
         }
 
-        warehouseUniversityRecordJobState($cache, [
+        $storage = $dryRun ? null : warehouseUniversityRequireSnapshotStorage($archiveDirectory);
+
+        $runningState = [
             'state' => 'running',
             'mode' => $scheduled ? 'scheduled' : 'manual',
             'date' => $date->format('Y-m-d'),
             'startedAt' => $startedAt,
             'attempt' => 1,
-        ], $logPath);
+        ];
+        if ($storage !== null) {
+            $runningState['storage'] = $storage;
+        }
+        warehouseUniversityRecordJobState($cache, $runningState, $logPath);
 
         for ($attempt = 1; $attempt <= $attemptLimit; $attempt++) {
             try {
@@ -204,8 +233,11 @@ function warehouseUniversityRunSnapshotJob(PDO $pdo, string $archiveDirectory, a
                     return $result;
                 }
 
-                $heartbeat = static function () use ($cache, $owner, $ttl): void {
+                $heartbeat = static function () use ($cache, $owner, $ttl, $archiveDirectory, $dryRun): void {
                     warehouseUniversityHeartbeatImportLock($cache, $owner, $ttl);
+                    if (!$dryRun) {
+                        warehouseUniversityRequireSnapshotStorage($archiveDirectory);
+                    }
                 };
                 $result = warehouseUniversityCreateSnapshot($pdo, $archiveDirectory, $scheduled, $date, $heartbeat, $dryRun);
                 if ($dryRun) {
@@ -254,6 +286,17 @@ function warehouseUniversityRunSnapshotJob(PDO $pdo, string $archiveDirectory, a
             'finishedAt' => gmdate('Y-m-d H:i:s'),
         ], $logPath);
         throw $error;
+    } catch (WarehouseUniversityStorageGuardException $error) {
+        $result = [
+            'state' => 'skipped',
+            'mode' => $scheduled ? 'scheduled' : 'manual',
+            'date' => $date->format('Y-m-d'),
+            'reason' => 'insufficient_storage',
+            'finishedAt' => gmdate('Y-m-d H:i:s'),
+            'storage' => $error->capacity,
+        ];
+        warehouseUniversityRecordJobState($cache, $result, $logPath);
+        return $result;
     } catch (Throwable $error) {
         $failure = [
             'state' => 'failed',
