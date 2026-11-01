@@ -1,0 +1,203 @@
+# ชุดติดตั้งบน server: เปิดออกภายนอกเฉพาะพอร์ตเว็บ ; ขั้นตอนอยู่ใน DEPLOY.md
+#   source-db -> source-api -> etl -> warehouse-db -> web (หน้ารวม + API)
+
+name: cpe-hub
+
+x-mysql-command: &mysql-command
+  - --character-set-server=utf8mb4
+  - --collation-server=utf8mb4_0900_ai_ci
+  - --performance-schema=OFF
+  - --innodb-buffer-pool-size=64M
+  - --max-connections=30
+
+x-php-build: &php-build
+  context: .
+  dockerfile: docker/php/Dockerfile
+
+services:
+  source-db:
+    image: mysql:8.0
+    restart: unless-stopped
+    command: *mysql-command
+    mem_limit: 512m
+    environment:
+      MYSQL_ROOT_PASSWORD: ${SOURCE_DB_ROOT_PASSWORD:?ตั้งค่าใน .env}
+      MYSQL_DATABASE: cpeasset
+    volumes:
+      - source_db_data:/var/lib/mysql
+      - ./database/source_schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./docker/source-db/02-extend.sql:/docker-entrypoint-initdb.d/02-extend.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$$MYSQL_ROOT_PASSWORD\" mysqladmin ping -h 127.0.0.1 -uroot --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+
+  # เติมข้อมูลตั้งต้นครั้งแรก ครั้งต่อไปข้าม
+  source-seed:
+    build:
+      context: .
+      dockerfile: docker/etl/Dockerfile
+    image: cpe-hub-etl:local
+    command: ["python", "docker/etl/seed_source.py"]
+    environment:
+      DB_HOST: source-db
+      DB_NAME: cpeasset
+      DB_USER: root
+      DB_PASS: ${SOURCE_DB_ROOT_PASSWORD:?ตั้งค่าใน .env}
+    volumes:
+      - ./:/app:ro
+    depends_on:
+      source-db:
+        condition: service_healthy
+    restart: "no"
+
+  source-api:
+    build: *php-build
+    image: cpe-hub-php:local
+    restart: unless-stopped
+    mem_limit: 256m
+    environment:
+      DB_HOST: source-db
+      DB_NAME: cpeasset
+      DB_USER: root
+      DB_PASS: ${SOURCE_DB_ROOT_PASSWORD:?ตั้งค่าใน .env}
+    volumes:
+      - ./assets_api:/var/www/html:ro
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(strpos((string)@file_get_contents('http://127.0.0.1/maintenance_type.php?limit=1'), '\"success\": true') === false ? 1 : 0);"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    depends_on:
+      source-db:
+        condition: service_healthy
+
+  etl:
+    image: cpe-hub-etl:local
+    command: ["sh", "docker/etl/run.sh"]
+    environment:
+      SOURCE_API: http://source-api/
+      WH_HOST: warehouse-db
+      WH_NAME: cpe_warehouse
+      WH_USER: root
+      WH_PASS: ${DB_ROOT_PASSWORD:?ตั้งค่าใน .env}
+      APP_ENV: production
+      REDIS_ENABLED: "true"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      REDIS_KEY_PREFIX: "cpe:production:"
+    volumes:
+      - ./:/app:ro
+      - ./output:/app/output
+      # ใช้ร่วมกับ web เพื่อให้ ETL รอบใหม่เห็น snapshot ที่นำเข้าจากหน้าเว็บ ห้ามลบ
+      - snapshot_history:/app/output/history
+    depends_on:
+      source-seed:
+        condition: service_completed_successfully
+      source-api:
+        condition: service_healthy
+      warehouse-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: "no"
+
+  warehouse-db:
+    image: mysql:8.0
+    restart: unless-stopped
+    command: *mysql-command
+    mem_limit: 512m
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?ตั้งค่าใน .env}
+      MYSQL_DATABASE: cpe_warehouse
+      MYSQL_USER: dashboard
+      MYSQL_PASSWORD: ${DB_PASSWORD:?ตั้งค่าใน .env}
+    volumes:
+      - warehouse_db_data:/var/lib/mysql
+      - ./database/warehouse_schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$$MYSQL_ROOT_PASSWORD\" mysqladmin ping -h 127.0.0.1 -uroot --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+
+  # หน้ารวมและ API ; data/ ระบุทีละไฟล์เพื่อไม่ให้ Excel ใบแจ้งซ่อมดาวน์โหลดผ่านเว็บได้
+  web:
+    build: *php-build
+    image: cpe-hub-php:local
+    restart: unless-stopped
+    mem_limit: 256m
+    # volume ของ snapshot ถูกสร้างเป็น root จึงต้องให้ Apache เขียนได้ก่อนเริ่มทำงาน
+    command: ["sh", "-c", "chown -R www-data /var/lib/cpe-warehouse/snapshot-history && exec apache2-foreground"]
+    environment:
+      WAREHOUSE_DB_HOST: warehouse-db
+      WAREHOUSE_DB_NAME: cpe_warehouse
+      WAREHOUSE_DB_USER: dashboard
+      WAREHOUSE_DB_PASS: ${DB_PASSWORD:?ตั้งค่าใน .env}
+      DB_HOST: source-db
+      DB_NAME: cpeasset
+      DB_USER: root
+      DB_PASS: ${SOURCE_DB_ROOT_PASSWORD:?ตั้งค่าใน .env}
+      CPE_SNAPSHOT_ARCHIVE_DIR: /var/lib/cpe-warehouse/snapshot-history
+      CPE_UNIVERSITY_TYPE_API_URL: http://127.0.0.1/assets_api/asset_types.php
+      CPE_UNIVERSITY_CATEGORY_API_URL: http://127.0.0.1/assets_api/asset_categories.php
+      APP_ENV: production
+      REDIS_ENABLED: "true"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      REDIS_KEY_PREFIX: "cpe:production:"
+      REDIS_DEFAULT_TTL: 300
+      REDIS_TTL_SNAPSHOT_LIST: 300
+      REDIS_TTL_SNAPSHOT_HISTORY: 86400
+      REDIS_TTL_ASSET_SUMMARY: 86400
+      REDIS_TTL_MAINTENANCE: 300
+      REDIS_CACHE_LIBRARY: /var/www/lib/RedisCache.php
+      COMPOSER_AUTOLOAD: /var/www/vendor/autoload.php
+    volumes:
+      - ./index.html:/var/www/html/index.html:ro
+      - ./hub-theme.css:/var/www/html/hub-theme.css:ro
+      - ./src:/var/www/html/src:ro
+      - ./data/asset_utilization_data.js:/var/www/html/data/asset_utilization_data.js:ro
+      - ./data/asset_inventory_utilization.json:/var/www/html/data/asset_inventory_utilization.json:ro
+      - ./data/dw_borrow_cached.json:/var/www/html/data/dw_borrow_cached.json:ro
+      - ./src/maintenance/index.html:/var/www/html/dashboard_report.html:ro
+      - ./src/borrow/index.html:/var/www/html/dashboard_borrow.html:ro
+      - ./assets_api:/var/www/html/assets_api:ro
+      - ./lib:/var/www/lib:ro
+      - ./docker/php/hub.conf:/etc/apache2/conf-enabled/zz-hub.conf:ro
+      - snapshot_history:/var/lib/cpe-warehouse/snapshot-history
+    ports:
+      - "${WEB_PORT:-80}:80"
+    depends_on:
+      warehouse-db:
+        condition: service_healthy
+      source-db:
+        condition: service_healthy
+
+  redis:
+    image: redis:7.4.12-alpine3.21
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --maxmemory
+      - 96mb
+      - --maxmemory-policy
+      - allkeys-lru
+      - --save
+      - ""
+      - --appendonly
+      - "no"
+    mem_limit: 128m
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+volumes:
+  source_db_data:
+  warehouse_db_data:
+  snapshot_history:
