@@ -49,11 +49,17 @@ The local Apache environment rollback is to restore `C:\xampp\apache\conf\httpd.
 
 ## Production schedule
 
-The audited EC2 stack is the bind-mounted Apache project `/home/ubuntu/cpe-hub`: `web`, `db`, and `redis`, with no ETL service. The PHP source mount is read-only; snapshot archives use `/var/lib/cpe-warehouse/snapshot-history`. The PHP cache-only rollout is active, but the snapshot worker has not been staged in production. Do not use the repository's separate Compose stack as a substitute for this live project.
+The audited EC2 stack is the bind-mounted Apache project `/home/ubuntu/cpe-hub`: `web`, `db`, and `redis`, with no ETL service. The PHP source mount is read-only; snapshot archives use `/var/lib/cpe-warehouse/snapshot-history`. Phase 5 deployed the worker code to `site/assets_api` and `site/scripts`; Phase 5.8 activated the recurring host scheduler. Do not use the repository's separate Compose stack as a substitute for this live project.
 
-`scripts/university_snapshot_ec2.cron.example` contains the host-cron entry with `CRON_TZ=Asia/Bangkok`. It is commented out and must stay disabled until the worker code and dependencies are staged, the CLI dry run is verified, and the user approves the first automated production snapshot. The PHP cache-only rollout did not include the worker. Do not also add a container scheduler. The cron command should run `php /var/www/html/scripts/sync_university_snapshot.php --scheduled` inside `cpe-hub-web-1` after that separate worker deployment; the container has the database and Redis network settings.
+The worker runs as `www-data` inside `cpe-hub-web-1` so archive files keep the existing ownership. The web container's Apache `SetEnv` values in `site/assets_api/.htaccess` do not reach PHP CLI, so the CLI worker loads `/var/lib/cpe-warehouse/snapshot-history/.snapshot-worker.env` (owner `www-data`, mode `640`, no database secrets). That file mirrors the Apache Redis prefix and TTLs; the container already supplies the database environment.
 
-The production rollback is to remove the worker's cron entry. Disable API caching by setting `REDIS_ENABLED=false` in the PHP application environment and applying the approved web-container configuration; PHP then reads MySQL directly. Neither rollback changes MySQL tables, snapshots, archives, or volumes.
+`/etc/cron.d/cpe-snapshot-worker` is active with one `0 19 * * *` entry. Ubuntu cron 3.0pl1 does not support `CRON_TZ`, and the host runs UTC, so this runs at 02:00 Asia/Bangkok (UTC+7, no DST). The entry uses a host `flock`, then runs the worker as `www-data` in `cpe-hub-web-1`. It sets `CPE_SNAPSHOT_ENV_FILE=/var/lib/cpe-warehouse/snapshot-history/.snapshot-worker.env` and the same persistent archive directory. Phase 5.8 verified the disk guard, lock contention, cron syntax, service health, and unchanged snapshot counts before activation. The first scheduled run is 2026-11-02 at 02:00 Bangkok time. Do not run an additional import during the scheduled window or add a container scheduler.
+
+The recurring off-host backup remains deferred. The user explicitly authorized scheduler activation with that backup still deferred; the disk guard skips imports below its free-space thresholds but does not protect against EC2 or EBS loss. The installed host log is `/var/log/cpe-snapshot-worker.log`; `scripts/cpe-snapshot-worker.logrotate` retains bounded logs.
+
+Both `scripts/sync_university_snapshot.php` and `scripts/warm_asset_inventory_cache.php` return HTTP 404 outside PHP CLI, so the read-only source mount does not expose an execution endpoint. The manual Import button keeps using the POST-only, same-origin `assets_api/import_university_snapshot.php` path and shares the same file, MySQL advisory, and Redis locks as the scheduler.
+
+The scheduler rollback is to remove `/etc/cron.d/cpe-snapshot-worker`; this prevents future launches but does not stop an already running worker. Application rollback is separate: restore the two changed `assets_api` files from the Phase 5 backup archive. Disable API caching by setting `REDIS_ENABLED=false` in `site/assets_api/.htaccess`; PHP then reads MySQL directly. These rollbacks change no MySQL tables, snapshots, archives, or volumes.
 
 ## Cache policy and verification
 
@@ -80,3 +86,7 @@ Run local checks:
 ```
 
 Use `X-Cache` plus request timings for cold and repeated GETs. Redis `INFO memory`, `INFO stats`, and `MEMORY USAGE` provide memory and eviction evidence. The worker logs only state, date, and snapshot metadata; secrets and full environment files must not be printed.
+
+## EC2 storage and recovery readiness
+
+The Phase 5.4 disk guard, independent disk check, log rotation, backup prerequisites, and restore procedure are recorded in [Phase 5.4 storage readiness](phase5.4-ec2-storage-readiness.md). The disk check remains active separately from the import scheduler. Off-host backups are still deferred; review that recovery risk before relying on long-term automated history.
