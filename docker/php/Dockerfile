@@ -8,5 +8,4 @@ RUN docker-php-ext-install pdo_mysql
 COPY --from=dependencies /app/vendor /var/www/vendor
 RUN printf "EnableSendfile Off\nEnableMMAP Off\n" > /etc/apache2/conf-enabled/zz-no-sendfile.conf
 # บีบอัด JSON ของ API (ค่าเริ่มต้นของ Apache ไม่รวม JSON)
-RUN printf "AddOutputFilterByType DEFLATE application/json
-" > /etc/apache2/conf-enabled/zz-json-gzip.conf
+RUN printf "AddOutputFilterByType DEFLATE application/json\n" > /etc/apache2/conf-enabled/zz-json-gzip.conf
