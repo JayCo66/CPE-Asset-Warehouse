@@ -1222,7 +1222,11 @@ def main(args):
     os.makedirs(wh_dir, exist_ok=True)
 
     # แหล่งที่ 1: Excel
-    excel = run_excel(args.excel, os.path.join(args.out_dir, "repair_requests_clean"))
+    if args.excel:
+        excel = run_excel(args.excel, os.path.join(args.out_dir, "repair_requests_clean"))
+    else:   # ชุด release ไม่มี Excel เพราะมีชื่อและเบอร์โทรผู้แจ้ง: ใช้ใบแจ้งซ่อมจากระบบอย่างเดียว
+        print("[excel] ไม่พบไฟล์ .xlsx ใน data/ ข้ามใบแจ้งซ่อมเดิม")
+        excel = pd.DataFrame()
 
     # แหล่งที่ 2: API (+ mock สำหรับ endpoint ที่ระบบยังไม่มี)
     api = {}
@@ -1267,7 +1271,7 @@ def main(args):
     fell_back = [ep for ep, s in USED.items() if SOURCES[ep] == "api" and s.startswith("file:")]
     if fell_back:
         notes.insert(0, f"เรียก API ไม่ได้: {', '.join(fell_back)} ใช้ไฟล์ใน repo แทน (snapshot ครุภัณฑ์ลงวันที่ {snap:%Y-%m-%d})")
-    header = [f"แหล่งข้อมูล: Excel {os.path.basename(args.excel)} ({src_count.get('excel', 0)} ใบแจ้งซ่อม)",
+    header = [f"แหล่งข้อมูล: Excel {os.path.basename(args.excel) if args.excel else '-'} ({src_count.get('excel', 0)} ใบแจ้งซ่อม)",
               f"API {API_BASE}: {', '.join(live) or '-'}",
               f"ไฟล์ข้อมูลจริงใน repo: {', '.join(files) or '-'}",
               f"endpoint จาก MOCK (ไม่ใช่ข้อมูลจริง): {', '.join(mocked)}",
@@ -1308,9 +1312,7 @@ if __name__ == "__main__":
     args = ap.parse_args()
     if not args.excel:
         found = sorted(f for f in os.listdir(os.path.join(here, "data")) if f.lower().endswith(".xlsx") and not f.startswith("~$"))
-        if not found:
-            ap.error("ไม่พบไฟล์ .xlsx ในโฟลเดอร์ data/ ระบุ path ของไฟล์ใบแจ้งซ่อมเอง")
-        args.excel = os.path.join(here, "data", found[0])
+        args.excel = os.path.join(here, "data", found[0]) if found else None
     API_BASE = args.api_base.rstrip("/") + "/"
     if args.all_api:
         SOURCES.update({ep: "api" for ep in SOURCES})
