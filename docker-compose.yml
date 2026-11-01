@@ -155,7 +155,7 @@ services:
       warehouse-db:
         condition: service_healthy
 
-  # dashboard_report.html + assets_api/ วางแบบเดียวกับ XAMPP (http://localhost:8090/dashboard_report.html)
+  # หน้ารวม http://localhost:8090/ + dashboard_report.html + assets_api/ วางแบบเดียวกับ XAMPP
   # report_*.php อ่าน warehouse ด้วย WAREHOUSE_DB_* ; endpoint อื่นของ assets_api ยังชี้ฐานข้อมูลต้นทางด้วย DB_*
   report-web:
     <<: *php-image
@@ -180,11 +180,19 @@ services:
       REDIS_TTL_OVERVIEW: ${REDIS_TTL_OVERVIEW:-300}
       REDIS_TTL_BORROWING: ${REDIS_TTL_BORROWING:-120}
       REDIS_TTL_MAINTENANCE: ${REDIS_TTL_MAINTENANCE:-120}
-      REDIS_TTL_ASSET_SUMMARY: ${REDIS_TTL_ASSET_SUMMARY:-300}
+      REDIS_TTL_ASSET_SUMMARY: ${REDIS_TTL_ASSET_SUMMARY:-86400}
+      REDIS_TTL_SNAPSHOT_HISTORY: ${REDIS_TTL_SNAPSHOT_HISTORY:-86400}
       REDIS_CONNECT_TIMEOUT: ${REDIS_CONNECT_TIMEOUT:-0.2}
       REDIS_READ_TIMEOUT: ${REDIS_READ_TIMEOUT:-0.2}
       REDIS_CACHE_LIBRARY: /var/www/lib/RedisCache.php
     volumes:
+      - ./index.html:/var/www/html/index.html:ro
+      - ./hub-theme.css:/var/www/html/hub-theme.css:ro
+      - ./src:/var/www/html/src:ro
+      # ระบุทีละไฟล์ ไม่ mount ทั้ง data/ เพราะ Excel ใบแจ้งซ่อมในนั้นจะดาวน์โหลดผ่านเว็บได้
+      - ./data/asset_utilization_data.js:/var/www/html/data/asset_utilization_data.js:ro
+      - ./data/asset_inventory_utilization.json:/var/www/html/data/asset_inventory_utilization.json:ro
+      - ./data/dw_borrow_cached.json:/var/www/html/data/dw_borrow_cached.json:ro
       - ./src/maintenance/index.html:/var/www/html/dashboard_report.html:ro
       - ./src/borrow/index.html:/var/www/html/dashboard_borrow.html:ro
       - ./assets_api:/var/www/html/assets_api:ro
