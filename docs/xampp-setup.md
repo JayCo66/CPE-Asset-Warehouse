@@ -82,7 +82,7 @@ python etl_warehouse.py
 **ก่อนรัน**: Apache ต้องเปิดอยู่ เพราะ ETL ดึงข้อมูลจาก `http://localhost/assets_api/`
 
 **ETL ทำอะไร**:
-- อ่าน Excel ใบแจ้งซ่อมใน `data/`
+- อ่าน Excel ใบแจ้งซ่อมใน `data/` (ไม่อยู่ใน repo เพราะมีข้อมูลบุคคล ต้องวางไฟล์เอง ถ้าไม่มี ETL จะข้ามส่วนนี้)
 - ดึงข้อมูลจาก API
 - สร้างไฟล์ `output/warehouse_load.sql` (ประมาณ 3 MB)
 
