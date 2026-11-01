@@ -1,7 +1,9 @@
 import {
+  buildAcquisitionDetailUrl,
   buildInventoryDashboardUrl,
   hasComparableSnapshots,
-} from "./inventory-dashboard-data.mjs?v=20261026.1";
+} from "./inventory-dashboard-data.mjs?v=20261101.7";
+import { createDashboardRequestCache } from "./dashboard-request-cache.mjs?v=20261101.7";
 import {
   createDepartmentComparisonState,
   DEPARTMENT_COMPARISON_PAGE_SIZES,
@@ -14,30 +16,6 @@ import {
   setDepartmentSort,
 } from "./department-comparison.mjs?v=20261026.1";
 import { squarifyTreemap } from "./treemap-layout.mjs?v=20261025.1";
-import {
-  buildPortfolioMatrixRows,
-  createPortfolioMatrixState,
-  getPortfolioCategoryKey,
-  getPortfolioCategoryShare,
-  getPortfolioDepartmentKey,
-  paginatePortfolioMatrixRows,
-  PORTFOLIO_MATRIX_PAGE_SIZES,
-  resolvePortfolioDepartment,
-  setPortfolioMatrixPage,
-  setPortfolioMatrixPageSize,
-  setPortfolioMatrixSort,
-} from "./portfolio-composition.mjs?v=20261026.1";
-import {
-  buildLocationCompletenessSegments,
-  buildLocationDepartmentRows,
-  createLocationTableState,
-  LOCATION_PAGE_SIZES,
-  paginateLocationRows,
-  reconcileLocationExplorerSelection,
-  setLocationPage,
-  setLocationPageSize,
-  setLocationSort,
-} from "./location-distribution.mjs?v=20261026.1";
 import {
   AGING_BAND_KEYS,
   AGING_EXPOSURE_SORT_KEYS,
@@ -52,43 +30,69 @@ import {
   setAgingPageSize,
   setAgingSort,
 } from "./aging-replacement.mjs?v=20261026.1";
-import {
-  ACQUISITION_BREAKDOWN_DIMENSIONS,
-  ACQUISITION_DIMENSIONS,
-  ACQUISITION_PAGE_SIZES,
-  ACQUISITION_RELATIONSHIPS,
-  buildAcquisitionBreakdown,
-  buildAcquisitionCohortDrillFilters,
-  buildAcquisitionCrossDimensionDrillFilters,
-  buildAcquisitionCrossDimensionRows,
-  buildAcquisitionFocus,
-  buildAcquisitionHeatmap,
-  buildAcquisitionOverview,
-  createAcquisitionHeatmapState,
-  createAcquisitionTableState,
-  paginateAcquisitionHeatmapRows,
-  paginateAcquisitionRows,
-  setAcquisitionHeatmapPage,
-  setAcquisitionHeatmapPageSize,
-  setAcquisitionPage,
-  setAcquisitionPageSize,
-  setAcquisitionSort,
-} from "./acquisition-cohort.mjs?v=20261026.1";
-import {
-  GOVERNANCE_PAGE_SIZES,
-  buildGovernanceExceptionsUrl,
-  createGovernanceTableState,
-  governanceRequestContext,
-  paginateGovernanceRows,
-  resolveGovernancePage,
-  setGovernancePage,
-  setGovernancePageSize,
-  setGovernanceSort,
-} from "./governance-quality.mjs?v=20261026.2";
+
+let portfolioModule = null;
+let locationModule = null;
+let acquisitionModule = null;
+let governanceModule = null;
+const dashboardViewModulePromises = new Map();
 
 const DASHBOARD_API = new URL("../../assets_api/asset_inventory_dashboard.php", import.meta.url).href;
 const SNAPSHOT_IMPORT_API = new URL("../../assets_api/import_university_snapshot.php", import.meta.url).href;
 const PAGE_IDS = ["overview", "portfolio", "departments", "locations", "aging", "acquisition", "governance", "explorer"];
+const DASHBOARD_VIEW_MODULE_LOADERS = Object.freeze({
+  portfolio: () => import("./portfolio-composition.mjs?v=20261026.1"),
+  locations: () => import("./location-distribution.mjs?v=20261026.1"),
+  acquisition: () => import("./acquisition-cohort.mjs?v=20261026.1"),
+  governance: () => import("./governance-quality.mjs?v=20261101.7"),
+});
+
+function loadDashboardViewModule(view) {
+  const loader = DASHBOARD_VIEW_MODULE_LOADERS[view];
+  if (!loader) return Promise.resolve();
+  if (dashboardViewModulePromises.has(view)) return dashboardViewModulePromises.get(view);
+
+  const request = loader()
+    .then((module) => {
+      if (view === "portfolio") {
+        portfolioModule = module;
+        portfolioMatrixState = module.createPortfolioMatrixState();
+      } else if (view === "locations") {
+        locationModule = module;
+        locationExplorerPages = {
+          building: module.createLocationTableState({ sortKey: "totalAssets", direction: "desc" }),
+          floor: module.createLocationTableState({ sortKey: "totalAssets", direction: "desc" }),
+          room: module.createLocationTableState({ sortKey: "totalAssets", direction: "desc" }),
+        };
+        locationMatrixState = module.createLocationTableState({ sortKey: "missingRate", direction: "desc" });
+        locationCategoryBuildingState = module.createLocationTableState({ sortKey: "totalAssets", direction: "desc" });
+      } else if (view === "acquisition") {
+        acquisitionModule = module;
+        acquisitionHeatmapState = module.createAcquisitionHeatmapState();
+        acquisitionBreakdownStates = Object.fromEntries(module.ACQUISITION_BREAKDOWN_DIMENSIONS.map((dimension) => [
+          dimension,
+          module.createAcquisitionTableState({ sortKey: "totalAssets", direction: "desc" }),
+        ]));
+        acquisitionCrossStates = Object.fromEntries(module.ACQUISITION_RELATIONSHIPS.map((relation) => [
+          relation,
+          module.createAcquisitionTableState({ sortKey: "totalAssets", direction: "desc" }),
+        ]));
+      } else if (view === "governance") {
+        governanceModule = module;
+        governanceFieldState = module.createGovernanceTableState("missingAssets");
+        governanceDepartmentState = module.createGovernanceTableState("missingCriticalRate");
+        governanceExceptionsState = module.createGovernanceTableState("priority");
+      }
+      return module;
+    })
+    .catch((error) => {
+      dashboardViewModulePromises.delete(view);
+      throw error;
+    });
+  dashboardViewModulePromises.set(view, request);
+  return request;
+}
+
 const FILTER_DEFAULTS = Object.freeze({
   snapshot: "latest",
   department: "all",
@@ -182,25 +186,29 @@ const NUMBER_FORMAT = new Intl.NumberFormat("en-US");
 const DATE_FORMAT = new Intl.DateTimeFormat("th-TH", { dateStyle: "medium", timeZone: "Asia/Bangkok" });
 const ISSUE_HEATMAP_LIMIT = 5;
 const ISSUE_HEATMAP_SORT_KEYS = new Set(["missingLocationRate", "oldAssetRate", "damageRate"]);
+const ACQUISITION_DETAIL_PAGE_SIZES = Object.freeze([5, 10, 25, 50, 100]);
 
 let filters = { ...FILTER_DEFAULTS };
 let latestPayload = null;
+let latestPayloadContextKey = null;
 let requestId = 0;
 let onFiltersChange = () => {};
+let activeDashboardPage = "overview";
+let dashboardInitialized = false;
+let activeDashboardRequest = null;
+let overviewMeasurePending = true;
+const dashboardPayloadCache = createDashboardRequestCache(7);
+const acquisitionDetailCache = createDashboardRequestCache(30);
 let departmentSort = { key: "totalAssets", direction: "desc" };
 let departmentComparisonState = createDepartmentComparisonState();
 let selectedDepartmentKey = null;
-let portfolioMatrixState = createPortfolioMatrixState();
+let portfolioMatrixState = null;
 let selectedPortfolioDepartmentKey = null;
 let selectedPortfolioCategoryKey = null;
 let locationExplorerSelection = { buildingKey: null, floorKey: null, roomKey: null };
-let locationExplorerPages = {
-  building: createLocationTableState({ sortKey: "totalAssets", direction: "desc" }),
-  floor: createLocationTableState({ sortKey: "totalAssets", direction: "desc" }),
-  room: createLocationTableState({ sortKey: "totalAssets", direction: "desc" }),
-};
-let locationMatrixState = createLocationTableState({ sortKey: "missingRate", direction: "desc" });
-let locationCategoryBuildingState = createLocationTableState({ sortKey: "totalAssets", direction: "desc" });
+let locationExplorerPages = null;
+let locationMatrixState = null;
+let locationCategoryBuildingState = null;
 let selectedLocationDepartmentKey = null;
 let agingExposureDimension = "department";
 let agingDetailDimension = "department";
@@ -213,20 +221,18 @@ let acquisitionSelectedCohortKey = null;
 let acquisitionSelectedSourceKey = null;
 let acquisitionBreakdownDimension = "department";
 let acquisitionCrossRelation = "yearDepartment";
-let acquisitionHeatmapState = createAcquisitionHeatmapState();
-let acquisitionBreakdownStates = Object.fromEntries(ACQUISITION_BREAKDOWN_DIMENSIONS.map((dimension) => [
-  dimension,
-  createAcquisitionTableState({ sortKey: "totalAssets", direction: "desc" }),
-]));
-let acquisitionCrossStates = Object.fromEntries(ACQUISITION_RELATIONSHIPS.map((relation) => [
-  relation,
-  createAcquisitionTableState({ sortKey: "totalAssets", direction: "desc" }),
-]));
+let acquisitionHeatmapState = null;
+let acquisitionBreakdownStates = null;
+let acquisitionCrossStates = null;
+const acquisitionDetails = {
+  cohort: { key: null, status: "idle", data: null, error: "", request: null, requestId: 0 },
+  cross: { key: null, status: "idle", data: null, error: "", request: null, requestId: 0 },
+};
 let issueHeatmapSort = { key: "missingLocationRate", direction: "desc" };
 let issueHeatmapExpanded = false;
-let governanceFieldState = createGovernanceTableState("missingAssets");
-let governanceDepartmentState = createGovernanceTableState("missingCriticalRate");
-let governanceExceptionsState = createGovernanceTableState("priority");
+let governanceFieldState = null;
+let governanceDepartmentState = null;
+let governanceExceptionsState = null;
 let governanceSelectedFieldKey = null;
 let governanceSelectedDepartmentKey = null;
 let governanceExceptionView = { contextKey: null, requestKey: null, status: "idle", rows: [], page: null, error: "" };
@@ -903,7 +909,7 @@ function portfolioMetric(value) {
 }
 
 function portfolioCategoryPercent(assets, total) {
-  const share = getPortfolioCategoryShare(assets, total);
+  const share = portfolioModule.getPortfolioCategoryShare(assets, total);
   return share === null ? "—" : formatPercent(share);
 }
 
@@ -922,9 +928,9 @@ function renderPortfolioTreemap(rows, totalAssets, selectedCategoryKey) {
 
   const positiveCategories = categories.filter((category) => (portfolioMetric(category.totalAssets) ?? 0) > 0);
   const tiles = positiveCategories.map((category, index) => {
-    const key = getPortfolioCategoryKey(category);
+    const key = portfolioModule.getPortfolioCategoryKey(category);
     const assets = portfolioMetric(category.totalAssets);
-    const share = getPortfolioCategoryShare(assets, total);
+    const share = portfolioModule.getPortfolioCategoryShare(assets, total);
     const label = category.label || "ไม่ระบุหมวดหมู่";
     const selected = key === selectedCategoryKey;
     const accessibleDescription = `${label} · ${formatCount(assets)} รายการ · สัดส่วนพอร์ต ${share === null ? "คำนวณไม่ได้" : formatPercent(share)} · เลือกเพื่อดูองค์ประกอบ`;
@@ -939,7 +945,7 @@ function renderPortfolioTreemap(rows, totalAssets, selectedCategoryKey) {
     .sort((left, right) => (portfolioMetric(right.totalAssets) ?? Number.NEGATIVE_INFINITY) - (portfolioMetric(left.totalAssets) ?? Number.NEGATIVE_INFINITY)
       || String(left.label ?? "").localeCompare(String(right.label ?? ""), "th", { numeric: true }))
     .map((category) => {
-      const key = getPortfolioCategoryKey(category);
+      const key = portfolioModule.getPortfolioCategoryKey(category);
       const assets = portfolioMetric(category.totalAssets);
       const selected = key === selectedCategoryKey;
       return `<tr class="${selected ? "is-selected" : ""}">
@@ -948,7 +954,7 @@ function renderPortfolioTreemap(rows, totalAssets, selectedCategoryKey) {
         <td class="portfolio-number">${portfolioCategoryPercent(assets, total)}</td>
       </tr>`;
     }).join("");
-  const selectedCategory = categories.find((category) => getPortfolioCategoryKey(category) === selectedCategoryKey);
+  const selectedCategory = categories.find((category) => portfolioModule.getPortfolioCategoryKey(category) === selectedCategoryKey);
   const selectedFilterValue = selectedCategory?.filterValue;
   const explorerAction = selectedCategory && selectedFilterValue !== null && selectedFilterValue !== undefined && selectedFilterValue !== ""
     ? `<button class="button button-secondary" type="button" data-portfolio-category-explorer data-drill-filter="category" data-filter-value="${escapeHtml(selectedFilterValue)}">เปิดสินทรัพย์ในหมวดนี้</button>`
@@ -979,7 +985,7 @@ function renderPortfolioTreemap(rows, totalAssets, selectedCategoryKey) {
       assets: portfolioMetric(category.totalAssets) ?? 0,
     })), width, height);
     for (const cell of cells) {
-      const tile = categoryTiles.get(getPortfolioCategoryKey(cell.item));
+      const tile = categoryTiles.get(portfolioModule.getPortfolioCategoryKey(cell.item));
       if (!tile) continue;
       tile.style.left = `${cell.x}px`;
       tile.style.top = `${cell.y}px`;
@@ -1022,7 +1028,7 @@ function renderPortfolioMatrixPagination(page) {
     <div class="department-pagination-controls">
       <label class="department-page-size-label">หน่วยงานต่อหน้า
         <select data-portfolio-matrix-page-size aria-label="จำนวนหน่วยงานต่อหน้า">
-          ${PORTFOLIO_MATRIX_PAGE_SIZES.map((size) => `<option value="${size}"${page.pageSize === size ? " selected" : ""}>${size === "all" ? "ทั้งหมด" : size}</option>`).join("")}
+          ${portfolioModule.PORTFOLIO_MATRIX_PAGE_SIZES.map((size) => `<option value="${size}"${page.pageSize === size ? " selected" : ""}>${size === "all" ? "ทั้งหมด" : size}</option>`).join("")}
         </select>
       </label>
       <div class="department-page-actions">${button("first", "«", "หน้าแรก")}${button("previous", "‹", "หน้าก่อน")}
@@ -1045,23 +1051,23 @@ function renderPortfolioMatrix(rows, categories, complete) {
     return;
   }
 
-  const sortableKeys = new Set(["totalAssets", ...categories.map((category) => `category:${getPortfolioCategoryKey(category)}`)]);
+  const sortableKeys = new Set(["totalAssets", ...categories.map((category) => `category:${portfolioModule.getPortfolioCategoryKey(category)}`)]);
   if (!sortableKeys.has(portfolioMatrixState.sortKey)) {
     portfolioMatrixState = { ...portfolioMatrixState, page: 1, sortKey: "totalAssets", direction: "desc" };
   }
-  const page = paginatePortfolioMatrixRows(rows, portfolioMatrixState);
+  const page = portfolioModule.paginatePortfolioMatrixRows(rows, portfolioMatrixState);
   portfolioMatrixState = { ...portfolioMatrixState, page: page.page };
   const categoryHeaders = categories.map((category) => {
-    const key = getPortfolioCategoryKey(category);
+    const key = portfolioModule.getPortfolioCategoryKey(category);
     return portfolioSortHeader(`category:${key}`, category.label || "ไม่ระบุหมวดหมู่");
   }).join("");
   const rowMarkup = page.rows.map((row) => {
     const selected = row.key === selectedPortfolioDepartmentKey;
     const categoryCells = categories.map((category) => {
-      const key = getPortfolioCategoryKey(category);
+      const key = portfolioModule.getPortfolioCategoryKey(category);
       const rawAssets = row.categoryCounts.get(key);
       const assets = portfolioMetric(rawAssets);
-      const share = getPortfolioCategoryShare(assets, row.totalAssets);
+      const share = portfolioModule.getPortfolioCategoryShare(assets, row.totalAssets);
       const selectedCategory = key === selectedPortfolioCategoryKey;
       const heatMix = share === null ? 0 : Math.max(0, Math.min(36, share * 0.36));
       const classes = [
@@ -1106,16 +1112,16 @@ function renderPortfolioFocus(department, categories, selectedCategoryKey, portf
   }
 
   const departmentTotal = department.totalAssets;
-  const portfolioShare = getPortfolioCategoryShare(departmentTotal, portfolioTotal);
+  const portfolioShare = portfolioModule.getPortfolioCategoryShare(departmentTotal, portfolioTotal);
   const breakdown = categories.map((category) => {
-    const key = getPortfolioCategoryKey(category);
+    const key = portfolioModule.getPortfolioCategoryKey(category);
     const assets = portfolioMetric(department.categoryCounts.get(key));
     return {
       key,
       label: category.label || "ไม่ระบุหมวดหมู่",
       filterValue: category.filterValue,
       assets,
-      share: getPortfolioCategoryShare(assets, departmentTotal),
+      share: portfolioModule.getPortfolioCategoryShare(assets, departmentTotal),
     };
   }).sort((left, right) => (right.assets ?? Number.NEGATIVE_INFINITY) - (left.assets ?? Number.NEGATIVE_INFINITY)
     || left.label.localeCompare(right.label, "th", { numeric: true }));
@@ -1156,11 +1162,11 @@ function renderPortfolioFocus(department, categories, selectedCategoryKey, portf
 function renderPortfolio(data) {
   const categories = Array.isArray(data?.categories) ? data.categories : [];
   const departments = latestPayload?.departments?.rows || [];
-  const matrix = buildPortfolioMatrixRows(departments, categories, data?.departmentCategoryMatrix);
-  const selectedDepartment = resolvePortfolioDepartment(matrix.rows, selectedPortfolioDepartmentKey);
-  selectedPortfolioDepartmentKey = getPortfolioDepartmentKey(selectedDepartment);
-  const selectedCategory = categories.find((category) => getPortfolioCategoryKey(category) === selectedPortfolioCategoryKey) ?? categories[0] ?? null;
-  selectedPortfolioCategoryKey = getPortfolioCategoryKey(selectedCategory);
+  const matrix = portfolioModule.buildPortfolioMatrixRows(departments, categories, data?.departmentCategoryMatrix);
+  const selectedDepartment = portfolioModule.resolvePortfolioDepartment(matrix.rows, selectedPortfolioDepartmentKey);
+  selectedPortfolioDepartmentKey = portfolioModule.getPortfolioDepartmentKey(selectedDepartment);
+  const selectedCategory = categories.find((category) => portfolioModule.getPortfolioCategoryKey(category) === selectedPortfolioCategoryKey) ?? categories[0] ?? null;
+  selectedPortfolioCategoryKey = portfolioModule.getPortfolioCategoryKey(selectedCategory);
   const portfolioTotal = latestPayload?.overview?.totalAssets;
 
   renderPortfolioTreemap(categories, portfolioTotal, selectedPortfolioCategoryKey);
@@ -1331,7 +1337,7 @@ function renderDepartments(data) {
 function renderLocationCompleteness(data) {
   const target = document.getElementById("location-completeness");
   if (!target) return;
-  const { totalAssets: total, segments, available } = buildLocationCompletenessSegments(data);
+  const { totalAssets: total, segments, available } = locationModule.buildLocationCompletenessSegments(data);
   if (total === null || total <= 0) {
     target.innerHTML = emptyMarkup("ไม่มีสินทรัพย์ในชุดข้อมูลที่เลือก");
     return;
@@ -1385,7 +1391,7 @@ function renderLocationPagination(page, scope, label) {
     <p class="location-pagination-range" role="status" aria-live="polite">แสดง ${formatCount(start)}–${formatCount(end)} จาก ${formatCount(page.totalRows)} รายการ</p>
     <div class="location-pagination-controls">
       <label>รายการต่อหน้า <select data-location-page-size="${scope}" aria-label="จำนวน${escapeHtml(label)}ต่อหน้า">
-        ${LOCATION_PAGE_SIZES.map((size) => `<option value="${size}"${page.pageSize === size ? " selected" : ""}>${size === "all" ? "ทั้งหมด" : size}</option>`).join("")}
+        ${locationModule.LOCATION_PAGE_SIZES.map((size) => `<option value="${size}"${page.pageSize === size ? " selected" : ""}>${size === "all" ? "ทั้งหมด" : size}</option>`).join("")}
       </select></label>
       <div class="location-page-actions">${button("first", "«", "หน้าแรก")}${button("previous", "‹", "หน้าก่อน")}
         <span class="location-page-current" aria-current="page">หน้า ${formatCount(page.page)} จาก ${formatCount(maxPage)}</span>
@@ -1410,7 +1416,7 @@ function renderLocationExplorerList(id, items, level, selectedKey, label) {
     target.innerHTML = emptyMarkup(level === "building" ? "ไม่มีตำแหน่งที่ระบุ" : `ไม่มี${label}ในรายการที่เลือก`);
     return;
   }
-  const page = paginateLocationRows(items, locationExplorerPages[level]);
+  const page = locationModule.paginateLocationRows(items, locationExplorerPages[level]);
   locationExplorerPages[level] = { ...locationExplorerPages[level], page: page.page };
   const rows = page.rows.map((item) => `<li class="location-explorer-item">
     <button class="location-explorer-select${item.key === selectedKey ? " is-selected" : ""}" type="button" data-location-explorer-select="${level}" data-location-explorer-key="${escapeHtml(item.key)}" aria-pressed="${item.key === selectedKey}" aria-label="เลือก${escapeHtml(label)} ${escapeHtml(item.label)} จำนวน ${formatCount(item.totalAssets)} รายการ">
@@ -1430,7 +1436,7 @@ function renderLocationExplorer(data) {
     locationExplorerSelection = { buildingKey: null, floorKey: null, roomKey: null };
     return;
   }
-  const selection = reconcileLocationExplorerSelection(explorer, locationExplorerSelection);
+  const selection = locationModule.reconcileLocationExplorerSelection(explorer, locationExplorerSelection);
   locationExplorerSelection = {
     buildingKey: selection.buildingKey,
     floorKey: selection.floorKey,
@@ -1486,7 +1492,7 @@ function locationHeatCell(row, countKey, rateKey, tone, title) {
 function renderLocationDepartmentMatrix(departments) {
   const target = document.getElementById("location-department-matrix");
   if (!target) return null;
-  const rows = buildLocationDepartmentRows(departments);
+  const rows = locationModule.buildLocationDepartmentRows(departments);
   if (rows.length === 0) {
     selectedLocationDepartmentKey = null;
     target.innerHTML = emptyMarkup("ไม่มีหน่วยงานให้เปรียบเทียบ", "ลองเปลี่ยนตัวกรองหรือเลือกชุดข้อมูลอื่น");
@@ -1494,9 +1500,9 @@ function renderLocationDepartmentMatrix(departments) {
   }
   const sortableKeys = ["label", "totalAssets", "completeRate", "incompleteRate", "missingRate", "unknownRate"];
   if (!sortableKeys.includes(locationMatrixState.sortKey)) {
-    locationMatrixState = setLocationSort(locationMatrixState, "missingRate", "desc", sortableKeys);
+    locationMatrixState = locationModule.setLocationSort(locationMatrixState, "missingRate", "desc", sortableKeys);
   }
-  const page = paginateLocationRows(rows, locationMatrixState);
+  const page = locationModule.paginateLocationRows(rows, locationMatrixState);
   locationMatrixState = { ...locationMatrixState, page: page.page };
   const selected = rows.find((row) => row.key === selectedLocationDepartmentKey) ?? page.sortedRows[0];
   selectedLocationDepartmentKey = selected?.key ?? null;
@@ -1567,9 +1573,9 @@ function renderLocationCategoryBuildingTable(rows) {
   }
   const allowedKeys = ["totalAssets", "first", "second"];
   if (!allowedKeys.includes(locationCategoryBuildingState.sortKey)) {
-    locationCategoryBuildingState = setLocationSort(locationCategoryBuildingState, "totalAssets", "desc", allowedKeys);
+    locationCategoryBuildingState = locationModule.setLocationSort(locationCategoryBuildingState, "totalAssets", "desc", allowedKeys);
   }
-  const page = paginateLocationRows(rows, locationCategoryBuildingState);
+  const page = locationModule.paginateLocationRows(rows, locationCategoryBuildingState);
   locationCategoryBuildingState = { ...locationCategoryBuildingState, page: page.page };
   const body = page.rows.map((row) => {
     const filterValues = { category: row.firstFilterValue, building: row.secondFilterValue };
@@ -1602,7 +1608,7 @@ function getLocationVisualRows(scope) {
     const floor = building?.floors?.find((item) => item.key === locationExplorerSelection.floorKey);
     return floor?.rooms || [];
   }
-  if (scope === "department-matrix") return buildLocationDepartmentRows(latestPayload?.departments?.rows);
+  if (scope === "department-matrix") return locationModule.buildLocationDepartmentRows(latestPayload?.departments?.rows);
   if (scope === "category-building") return locations.categoryBuildingAll || [];
   return [];
 }
@@ -1625,6 +1631,7 @@ function setLocationVisualState(scope, state) {
 }
 
 function resetLocationPages() {
+  if (!locationExplorerPages) return;
   locationExplorerPages = Object.fromEntries(Object.entries(locationExplorerPages).map(([key, state]) => [key, { ...state, page: 1 }]));
   locationMatrixState = { ...locationMatrixState, page: 1 };
   locationCategoryBuildingState = { ...locationCategoryBuildingState, page: 1 };
@@ -1636,6 +1643,7 @@ function resetAgingPages() {
 }
 
 function resetAcquisitionPages() {
+  if (!acquisitionBreakdownStates || !acquisitionCrossStates || !acquisitionHeatmapState) return;
   acquisitionHeatmapState = { ...acquisitionHeatmapState, page: 1 };
   acquisitionBreakdownStates = Object.fromEntries(Object.entries(acquisitionBreakdownStates).map(([key, state]) => [key, { ...state, page: 1 }]));
   acquisitionCrossStates = Object.fromEntries(Object.entries(acquisitionCrossStates).map(([key, state]) => [key, { ...state, page: 1 }]));
@@ -1643,7 +1651,7 @@ function resetAcquisitionPages() {
 
 function getAcquisitionFocus() {
   if (!latestPayload?.acquisition) return null;
-  return buildAcquisitionFocus(
+  return acquisitionModule.buildAcquisitionFocus(
     latestPayload.acquisition,
     latestPayload.overview?.totalAssets,
     acquisitionYearDimension,
@@ -1654,13 +1662,13 @@ function getAcquisitionFocus() {
 
 function getAcquisitionVisualRows(scope) {
   if (!latestPayload?.acquisition) return [];
-  if (scope === "heatmap") return buildAcquisitionHeatmap(latestPayload.acquisition, acquisitionYearDimension).rows;
+  if (scope === "heatmap") return acquisitionModule.buildAcquisitionHeatmap(latestPayload.acquisition, acquisitionYearDimension).rows;
   if (scope.startsWith("breakdown:")) {
     const dimension = scope.slice("breakdown:".length);
-    return buildAcquisitionBreakdown(latestPayload.acquisition, dimension, getAcquisitionFocus()).rows;
+    return acquisitionModule.buildAcquisitionBreakdown(latestPayload.acquisition, dimension, getAcquisitionFocus()).rows;
   }
   if (scope.startsWith("cross:")) {
-    return buildAcquisitionCrossDimensionRows(latestPayload.acquisition, scope.slice("cross:".length)).rows;
+    return acquisitionModule.buildAcquisitionCrossDimensionRows(latestPayload.acquisition, scope.slice("cross:".length)).rows;
   }
   return [];
 }
@@ -1670,6 +1678,121 @@ function getAcquisitionVisualState(scope) {
   if (scope.startsWith("breakdown:")) return acquisitionBreakdownStates[scope.slice("breakdown:".length)] ?? null;
   if (scope.startsWith("cross:")) return acquisitionCrossStates[scope.slice("cross:".length)] ?? null;
   return null;
+}
+
+function abortAcquisitionDetailRequests() {
+  for (const detail of Object.values(acquisitionDetails)) {
+    if (detail.key !== null) acquisitionDetailCache.discard(detail.key);
+    detail.request?.controller.abort();
+    detail.request = null;
+    detail.requestId += 1;
+    detail.key = null;
+    detail.status = "idle";
+    detail.data = null;
+    detail.error = "";
+  }
+}
+
+function acquisitionDetailRequest(kind) {
+  if (!latestPayload?.snapshot?.snapshotId) return null;
+  if (kind === "cohort") {
+    const focus = getAcquisitionFocus();
+    const state = acquisitionBreakdownStates?.[acquisitionBreakdownDimension];
+    if (!focus || !state) return null;
+    return {
+      detail: "cohort",
+      cohortDimension: focus.dimension,
+      cohortValue: focus.cohortFilterValue,
+      ...(focus.sourceFilterValue === null ? {} : { source: focus.sourceFilterValue }),
+      dimension: acquisitionBreakdownDimension,
+      page: state.page,
+      limit: state.pageSize,
+      sort: state.sortKey === "shareRate" ? "totalAssets" : state.sortKey,
+      direction: state.direction,
+    };
+  }
+
+  const state = acquisitionCrossStates?.[acquisitionCrossRelation];
+  if (!state) return null;
+  return {
+    detail: "cross",
+    relation: acquisitionCrossRelation,
+    page: state.page,
+    limit: state.pageSize,
+    sort: state.sortKey,
+    direction: state.direction,
+  };
+}
+
+async function loadAcquisitionDetails(kind) {
+  if (kind !== "cohort" && kind !== "cross") return;
+  if (activeDashboardPage !== "acquisition" || !latestPayload?.snapshot?.snapshotId) return;
+  const detail = acquisitionDetails[kind];
+  const requestParameters = acquisitionDetailRequest(kind);
+  if (!requestParameters) return;
+  const url = buildAcquisitionDetailUrl(
+    DASHBOARD_API,
+    filters,
+    latestPayload.snapshot.snapshotId,
+    requestParameters,
+  );
+  if (detail.key === url && detail.status === "loading" && detail.request) return detail.request.promise;
+  if (detail.key === url && detail.status === "ready") return;
+
+  if (detail.key !== null) acquisitionDetailCache.discard(detail.key);
+  detail.request?.controller.abort();
+  const controller = new AbortController();
+  const requestId = ++detail.requestId;
+  detail.key = url;
+  detail.status = "loading";
+  detail.data = null;
+  detail.error = "";
+  const renderDetail = () => {
+    if (!latestPayload || activeDashboardPage !== "acquisition") return;
+    if (kind === "cohort") renderAcquisitionBreakdown(latestPayload.acquisition, getAcquisitionFocus());
+    else renderAcquisitionCrossDetails(latestPayload.acquisition);
+  };
+  renderDetail();
+
+  const promise = acquisitionDetailCache.load(url, async () => {
+    const response = await fetch(url, {
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new Error(`Detail request failed (HTTP ${response.status})`);
+    const result = await response.json();
+    if (!result || result.success !== true || !result.data?.acquisitionDetail) {
+      throw new Error(result?.message || "Unexpected acquisition detail response");
+    }
+    return result.data.acquisitionDetail;
+  });
+  detail.request = { controller, promise };
+
+  try {
+    const data = await promise;
+    if (requestId !== detail.requestId || activeDashboardPage !== "acquisition") return;
+    if (String(data.kind) !== kind || !Array.isArray(data.rows) || !data.pagination) {
+      throw new Error("Acquisition detail response is incomplete");
+    }
+    detail.data = data;
+    detail.status = "ready";
+    if (detail.request?.promise === promise) detail.request = null;
+    renderDetail();
+    if (kind === "cohort") {
+      const performanceApi = globalThis.performance;
+      performanceApi?.mark?.("cpe-asset-inventory-acquisition-usable");
+      performanceApi?.measure?.("cpe-asset-inventory-acquisition-time-to-usable", {
+        start: "cpe-asset-inventory-acquisition-request-start",
+        end: "cpe-asset-inventory-acquisition-usable",
+      });
+    }
+  } catch (error) {
+    if (requestId !== detail.requestId || error?.name === "AbortError") return;
+    detail.status = "error";
+    detail.error = error instanceof Error ? error.message : "Unable to load acquisition details";
+    if (detail.request?.promise === promise) detail.request = null;
+    renderDetail();
+  }
 }
 
 function setAcquisitionVisualState(scope, state) {
@@ -1982,10 +2105,10 @@ function renderAging(data, payload) {
   renderAgingDetailMatrix({ ...payload, aging });
 }
 
-function renderAcquisitionPagination(page, scope, label) {
+function renderAcquisitionPagination(page, scope, label, pageSizes = acquisitionModule.ACQUISITION_PAGE_SIZES) {
   if (page.totalRows === 0 || (page.totalRows <= 5 && page.pageSize === 5)) return "";
-  const start = page.pageSize === "all" ? 1 : ((page.page - 1) * page.pageSize) + 1;
-  const end = page.pageSize === "all" ? page.totalRows : Math.min(page.totalRows, page.page * page.pageSize);
+  const start = page.start ?? (page.pageSize === "all" ? 1 : ((page.page - 1) * page.pageSize) + 1);
+  const end = page.end ?? (page.pageSize === "all" ? page.totalRows : Math.min(page.totalRows, page.page * page.pageSize));
   const disabled = (action) => action === "first" || action === "previous"
     ? page.page <= 1
     : page.page >= page.totalPages;
@@ -1993,7 +2116,7 @@ function renderAcquisitionPagination(page, scope, label) {
   return `<nav class="acquisition-pagination" aria-label="แบ่งหน้ารายการ${escapeHtml(label)}">
     <p class="acquisition-page-range" role="status" aria-live="polite">แสดง ${formatCount(start)}–${formatCount(end)} จาก ${formatCount(page.totalRows)} รายการ</p>
     <label class="acquisition-page-size">รายการต่อหน้า <select data-acquisition-page-size="${escapeHtml(scope)}" aria-label="จำนวน${escapeHtml(label)}ต่อหน้า">
-      ${ACQUISITION_PAGE_SIZES.map((size) => `<option value="${size}"${page.pageSize === size ? " selected" : ""}>${size === "all" ? "ทั้งหมด" : size}</option>`).join("")}
+      ${pageSizes.map((size) => `<option value="${size}"${page.pageSize === size ? " selected" : ""}>${size === "all" ? "ทั้งหมด" : size}</option>`).join("")}
     </select></label>
     <div class="acquisition-page-navigation">
       ${button("first", "«", `หน้าแรกของ${label}`)}
@@ -2014,7 +2137,7 @@ function renderAcquisitionSortHeader(key, label, state, attribute, scope = "") {
 }
 
 function renderAcquisitionOverview(data) {
-  const summary = buildAcquisitionOverview(data, latestPayload?.overview?.totalAssets, latestPayload?.overview);
+  const summary = acquisitionModule.buildAcquisitionOverview(data, latestPayload?.overview?.totalAssets, latestPayload?.overview);
   const coverage = summary.yearCoverage
     ? `${escapeHtml(summary.yearCoverage.earliest)}–${escapeHtml(summary.yearCoverage.latest)}`
     : "—";
@@ -2042,7 +2165,7 @@ function renderAcquisitionHeatmap(heatmap) {
     target.innerHTML = emptyMarkup("ไม่พบข้อมูลรุ่นสินทรัพย์", "ลองปรับตัวกรองหรือเลือก snapshot อื่น");
     return;
   }
-  const page = paginateAcquisitionHeatmapRows(heatmap.rows, acquisitionHeatmapState);
+  const page = acquisitionModule.paginateAcquisitionHeatmapRows(heatmap.rows, acquisitionHeatmapState);
   acquisitionHeatmapState = { ...acquisitionHeatmapState, page: page.page };
   const header = heatmap.sources.map((source) => `<th scope="col">${escapeHtml(source.label)}</th>`).join("");
   const body = page.rows.map((cohort) => {
@@ -2073,7 +2196,7 @@ function renderAcquisitionFocus(focus) {
   const sourceName = focus.sourceLabel ? `แหล่งเงิน: ${focus.sourceLabel}` : "ทุกแหล่งเงิน";
   const selectionLabel = focus.selectionType === "funding" ? "รุ่นย่อยตามแหล่งเงิน" : "รุ่นสินทรัพย์ทั้งหมด";
   const threshold = formatCount(filters.ageThreshold);
-  const drill = drillButton("ดูสินทรัพย์ที่ตรงกับรุ่นนี้", buildAcquisitionCohortDrillFilters(focus));
+  const drill = drillButton("ดูสินทรัพย์ที่ตรงกับรุ่นนี้", acquisitionModule.buildAcquisitionCohortDrillFilters(focus));
   const funding = focus.fundingComposition.length === 0
     ? emptyMarkup("ไม่มีองค์ประกอบแหล่งเงิน", "ไม่พบจำนวนที่ใช้แจกแจง")
     : `<ul class="acquisition-funding-list">${focus.fundingComposition.map((item) => `<li${item.selected ? " class=\"is-selected\"" : ""}><span>${escapeHtml(item.label)}</span><strong>${item.totalAssets === null ? "—" : formatCount(item.totalAssets)}</strong><small>${formatPercent(item.shareWithinCohortRate)}</small></li>`).join("")}</ul>`;
@@ -2092,71 +2215,97 @@ function renderAcquisitionFocus(focus) {
 function renderAcquisitionBreakdown(data, focus) {
   const target = document.getElementById("acquisition-cohort-breakdown");
   if (!target) return;
-  const breakdown = buildAcquisitionBreakdown(data, acquisitionBreakdownDimension, focus);
   document.querySelectorAll("[data-acquisition-breakdown-dimension]").forEach((button) => {
     button.setAttribute("aria-pressed", String(button.dataset.acquisitionBreakdownDimension === acquisitionBreakdownDimension));
   });
   if (!focus) {
-    target.innerHTML = emptyMarkup("ยังไม่มีรุ่นที่เลือก", "เลือกปีหรือช่องแหล่งเงินในแผนผัง");
+    target.innerHTML = emptyMarkup("ยังไม่มีรุ่นที่เลือก", "เลือกปีหรือแหล่งเงินในแผนผังรุ่น");
     return;
   }
-  if (!breakdown.available) {
-    target.innerHTML = emptyMarkup("ข้อมูลแจกแจงยังไม่พร้อม", "ไม่มีข้อมูลครบสำหรับมิตินี้ในรุ่นที่เลือก");
+
+  const detail = acquisitionDetails.cohort;
+  if (detail.status === "loading" || detail.status === "idle") {
+    target.innerHTML = emptyMarkup("กำลังโหลดรายละเอียด", "กำลังจัดกลุ่มรายการตามตัวกรองที่เลือก");
     return;
   }
-  if (breakdown.rows.length === 0) {
+  if (detail.status === "error") {
+    target.innerHTML = emptyMarkup("ไม่สามารถโหลดรายละเอียดได้", detail.error || "กรุณาลองใหม่อีกครั้ง");
+    return;
+  }
+  const rows = Array.isArray(detail.data?.rows) ? detail.data.rows : [];
+  const page = detail.data?.pagination;
+  if (!page || page.totalRows === 0 || rows.length === 0) {
     target.innerHTML = emptyMarkup("ไม่พบกลุ่มในรุ่นที่เลือก", "ลองเลือกปีหรือแหล่งเงินอื่น");
     return;
   }
+
   const state = acquisitionBreakdownStates[acquisitionBreakdownDimension];
-  const page = paginateAcquisitionRows(breakdown.rows, state);
-  acquisitionBreakdownStates = { ...acquisitionBreakdownStates, [acquisitionBreakdownDimension]: { ...state, page: page.page } };
+  acquisitionBreakdownStates = {
+    ...acquisitionBreakdownStates,
+    [acquisitionBreakdownDimension]: { ...state, page: page.page, pageSize: page.pageSize },
+  };
   const headers = [
     ["label", ACQUISITION_BREAKDOWN_LABELS[acquisitionBreakdownDimension]],
     ["totalAssets", "สินทรัพย์"],
     ["shareRate", "สัดส่วนในรุ่น"],
   ];
-  const rows = page.rows.map((row) => {
-    const drillFilters = buildAcquisitionCohortDrillFilters(focus, acquisitionBreakdownDimension, row);
-    return `<tr><th scope="row">${drillButton(row.label, drillFilters)}</th><td class="acquisition-number">${row.totalAssets === null ? "—" : formatCount(row.totalAssets)}</td><td class="acquisition-number">${formatPercent(row.shareRate)}</td></tr>`;
+  const rowsMarkup = rows.map((row) => {
+    const shareRate = focus.totalAssets > 0
+      ? Number(((row.totalAssets / focus.totalAssets) * 100).toFixed(1))
+      : null;
+    const drillFilters = acquisitionModule.buildAcquisitionCohortDrillFilters(focus, acquisitionBreakdownDimension, row);
+    return `<tr><th scope="row">${drillButton(row.label, drillFilters)}</th><td class="acquisition-number">${formatCount(row.totalAssets)}</td><td class="acquisition-number">${formatPercent(shareRate)}</td></tr>`;
   }).join("");
-  target.innerHTML = `<div class="acquisition-table-scroll" role="region" tabindex="0" aria-label="${escapeHtml(ACQUISITION_BREAKDOWN_LABELS[acquisitionBreakdownDimension])}ในรุ่นที่เลือก"><table class="dashboard-data-table acquisition-data-table"><caption class="sr-only">การแจกแจงรุ่นสินทรัพย์ตาม${ACQUISITION_BREAKDOWN_LABELS[acquisitionBreakdownDimension]}</caption><thead><tr>${headers.map(([key, label]) => renderAcquisitionSortHeader(key, label, state, "data-acquisition-breakdown-sort", acquisitionBreakdownDimension)).join("")}</tr></thead><tbody>${rows}</tbody></table></div>${renderAcquisitionPagination(page, `breakdown:${acquisitionBreakdownDimension}`, ACQUISITION_BREAKDOWN_LABELS[acquisitionBreakdownDimension])}`;
+  target.innerHTML = `<div class="acquisition-table-scroll" role="region" tabindex="0" aria-label="${escapeHtml(ACQUISITION_BREAKDOWN_LABELS[acquisitionBreakdownDimension])}ในรุ่นที่เลือก"><table class="dashboard-data-table acquisition-data-table"><caption class="sr-only">การแจกแจงรุ่นสินทรัพย์ตาม${escapeHtml(ACQUISITION_BREAKDOWN_LABELS[acquisitionBreakdownDimension])}</caption><thead><tr>${headers.map(([key, label]) => renderAcquisitionSortHeader(key, label, state, "data-acquisition-breakdown-sort", acquisitionBreakdownDimension)).join("")}</tr></thead><tbody>${rowsMarkup}</tbody></table></div>${renderAcquisitionPagination(page, `breakdown:${acquisitionBreakdownDimension}`, ACQUISITION_BREAKDOWN_LABELS[acquisitionBreakdownDimension], ACQUISITION_DETAIL_PAGE_SIZES)}`;
 }
 
 function renderAcquisitionCrossDetails(data) {
   const target = document.getElementById("acquisition-cross-dimension-details");
   if (!target) return;
-  const result = buildAcquisitionCrossDimensionRows(data, acquisitionCrossRelation);
   document.querySelectorAll("[data-acquisition-cross-relation]").forEach((button) => {
     button.setAttribute("aria-pressed", String(button.dataset.acquisitionCrossRelation === acquisitionCrossRelation));
   });
-  if (!result.available || result.rows.length === 0) {
+
+  const detail = acquisitionDetails.cross;
+  if (detail.status === "loading" || detail.status === "idle") {
+    target.innerHTML = emptyMarkup("เปิดเพื่อโหลดรายละเอียด", "ข้อมูลความสัมพันธ์จะโหลดเมื่อเปิดแผงนี้");
+    return;
+  }
+  if (detail.status === "error") {
+    target.innerHTML = emptyMarkup("ไม่สามารถโหลดรายละเอียดได้", detail.error || "กรุณาลองใหม่อีกครั้ง");
+    return;
+  }
+  const rows = Array.isArray(detail.data?.rows) ? detail.data.rows : [];
+  const page = detail.data?.pagination;
+  if (!page || page.totalRows === 0 || rows.length === 0) {
     target.innerHTML = emptyMarkup("ไม่มีข้อมูลความสัมพันธ์นี้", "ไม่พบข้อมูลที่ตรงกับ snapshot และตัวกรองปัจจุบัน");
     return;
   }
+
   const state = acquisitionCrossStates[acquisitionCrossRelation];
-  const page = paginateAcquisitionRows(result.rows, state);
-  acquisitionCrossStates = { ...acquisitionCrossStates, [acquisitionCrossRelation]: { ...state, page: page.page } };
+  acquisitionCrossStates = {
+    ...acquisitionCrossStates,
+    [acquisitionCrossRelation]: { ...state, page: page.page, pageSize: page.pageSize },
+  };
   const [firstLabel, secondLabel] = ACQUISITION_RELATION_LABELS[acquisitionCrossRelation];
-  const rows = page.rows.map((row) => {
-    const filtersForDrill = buildAcquisitionCrossDimensionDrillFilters(acquisitionCrossRelation, row);
-    return `<tr><td>${escapeHtml(row.first)}</td><th scope="row">${drillButton(row.second, filtersForDrill)}</th><td class="acquisition-number">${row.totalAssets === null ? "—" : formatCount(row.totalAssets)}</td><td class="acquisition-number">${row.averageAssetAge === null ? "—" : `${Number(row.averageAssetAge).toFixed(1)} ปี`}</td><td class="acquisition-number">${formatPercent(row.oldAssetRate)}</td></tr>`;
+  const rowsMarkup = rows.map((row) => {
+    const filtersForDrill = acquisitionModule.buildAcquisitionCrossDimensionDrillFilters(acquisitionCrossRelation, row);
+    return `<tr><td>${escapeHtml(row.first)}</td><th scope="row">${drillButton(row.second, filtersForDrill)}</th><td class="acquisition-number">${formatCount(row.totalAssets)}</td><td class="acquisition-number">${row.averageAssetAge === null ? "—" : `${Number(row.averageAssetAge).toFixed(1)} ปี`}</td><td class="acquisition-number">${formatPercent(row.oldAssetRate)}</td></tr>`;
   }).join("");
   const headers = [
     ["first", firstLabel], ["second", secondLabel], ["totalAssets", "สินทรัพย์"],
     ["averageAssetAge", "อายุเฉลี่ย"], ["oldAssetRate", `อายุเกิน ${formatCount(filters.ageThreshold)} ปี`],
   ];
-  target.innerHTML = `<div class="acquisition-table-scroll" role="region" tabindex="0" aria-label="ตาราง${firstLabel}และ${secondLabel}"><table class="dashboard-data-table acquisition-cross-table"><caption class="sr-only">${firstLabel}แยกตาม${secondLabel}</caption><thead><tr>${headers.map(([key, label]) => renderAcquisitionSortHeader(key, label, state, "data-acquisition-cross-sort", acquisitionCrossRelation)).join("")}</tr></thead><tbody>${rows}</tbody></table></div>${renderAcquisitionPagination(page, `cross:${acquisitionCrossRelation}`, `${firstLabel}และ${secondLabel}`)}`;
+  target.innerHTML = `<div class="acquisition-table-scroll" role="region" tabindex="0" aria-label="ตาราง${escapeHtml(firstLabel)}และ${escapeHtml(secondLabel)}"><table class="dashboard-data-table acquisition-cross-table"><caption class="sr-only">${escapeHtml(firstLabel)}แยกตาม${escapeHtml(secondLabel)}</caption><thead><tr>${headers.map(([key, label]) => renderAcquisitionSortHeader(key, label, state, "data-acquisition-cross-sort", acquisitionCrossRelation)).join("")}</tr></thead><tbody>${rowsMarkup}</tbody></table></div>${renderAcquisitionPagination(page, `cross:${acquisitionCrossRelation}`, `${firstLabel}และ${secondLabel}`, ACQUISITION_DETAIL_PAGE_SIZES)}`;
 }
-
 function renderAcquisition(data) {
   const acquisition = data || {};
-  if (!ACQUISITION_DIMENSIONS.includes(acquisitionYearDimension)) acquisitionYearDimension = "year";
+  if (!acquisitionModule.ACQUISITION_DIMENSIONS.includes(acquisitionYearDimension)) acquisitionYearDimension = "year";
   renderAcquisitionOverview(acquisition);
   document.querySelectorAll("[data-acquisition-year-dimension]").forEach((button) => {
     button.setAttribute("aria-pressed", String(button.dataset.acquisitionYearDimension === acquisitionYearDimension));
   });
-  const heatmap = buildAcquisitionHeatmap(acquisition, acquisitionYearDimension);
+  const heatmap = acquisitionModule.buildAcquisitionHeatmap(acquisition, acquisitionYearDimension);
   const requestedCohort = heatmap.rows.find((row) => row.key === acquisitionSelectedCohortKey) ?? null;
   const selectedCohort = requestedCohort ?? heatmap.rows[0] ?? null;
   if (requestedCohort === null) acquisitionSelectedSourceKey = null;
@@ -2165,7 +2314,7 @@ function renderAcquisition(data) {
     acquisitionSelectedSourceKey = null;
   }
   const focus = selectedCohort
-    ? buildAcquisitionFocus(
+    ? acquisitionModule.buildAcquisitionFocus(
       acquisition,
       latestPayload?.overview?.totalAssets,
       acquisitionYearDimension,
@@ -2187,7 +2336,7 @@ function renderGovernanceSortHeader(scope, key, label, state) {
 }
 
 function renderGovernancePagination(scope, state, totalRows, label) {
-  const page = resolveGovernancePage(totalRows, state);
+  const page = governanceModule.resolveGovernancePage(totalRows, state);
   if (page.totalRows === 0 || (page.totalRows <= 5 && state.pageSize === 5)) return "";
   const isDisabled = (action) => action === "first" || action === "previous"
     ? page.page <= 1
@@ -2196,7 +2345,7 @@ function renderGovernancePagination(scope, state, totalRows, label) {
   return `<nav class="governance-pagination" aria-label="แบ่งหน้ารายการ${escapeHtml(label)}">
     <span class="governance-page-range" role="status" aria-live="polite">แสดง ${formatCount(page.start)}–${formatCount(page.end)} จาก ${formatCount(page.totalRows)} รายการ</span>
     <label class="governance-page-size">รายการต่อหน้า <select data-governance-page-size="${scope}" aria-label="จำนวน${escapeHtml(label)}ต่อหน้า">
-      ${GOVERNANCE_PAGE_SIZES.map((size) => `<option value="${size}"${state.pageSize === size ? " selected" : ""}>${size === "all" ? "ทั้งหมด" : size}</option>`).join("")}
+      ${governanceModule.GOVERNANCE_PAGE_SIZES.map((size) => `<option value="${size}"${state.pageSize === size ? " selected" : ""}>${size === "all" ? "ทั้งหมด" : size}</option>`).join("")}
     </select></label>
     <div class="governance-page-navigation">${button("first", "«", "หน้าแรก")}${button("previous", "‹", "หน้าก่อนหน้า")}<span aria-current="page">หน้า ${formatCount(page.page)} จาก ${formatCount(page.totalPages)}</span>${button("next", "›", "หน้าถัดไป")}${button("last", "»", "หน้าสุดท้าย")}</div>
   </nav>`;
@@ -2261,12 +2410,12 @@ function renderGovernanceFields(data) {
   const target = document.getElementById("governance-quality-fields");
   if (!target) return;
   const rows = Object.entries(data?.qualityFields || {}).map(([key, field]) => ({ ...field, key }));
-  const page = paginateGovernanceRows(rows, governanceFieldState, {
+  const page = governanceModule.paginateGovernanceRows(rows, governanceFieldState, {
     getSortValue: (row, key) => key === "completeRate"
       ? (row.missingRate === null || row.missingRate === undefined ? null : 100 - Number(row.missingRate))
       : row[key],
   });
-  governanceFieldState = setGovernancePage(governanceFieldState, page.page, page.totalRows);
+  governanceFieldState = governanceModule.setGovernancePage(governanceFieldState, page.page, page.totalRows);
   const selected = rows.find((row) => row.key === governanceSelectedFieldKey) || page.rows[0] || null;
   governanceSelectedFieldKey = selected?.key ?? null;
   if (rows.length === 0) {
@@ -2329,10 +2478,10 @@ function renderGovernanceDepartments(data) {
   const target = document.getElementById("governance-quality-departments");
   if (!target) return;
   const rows = Array.isArray(data?.qualityByDepartment) ? data.qualityByDepartment : [];
-  const page = paginateGovernanceRows(rows, governanceDepartmentState, {
+  const page = governanceModule.paginateGovernanceRows(rows, governanceDepartmentState, {
     getSortValue: governanceDepartmentSortValue,
   });
-  governanceDepartmentState = setGovernancePage(governanceDepartmentState, page.page, page.totalRows);
+  governanceDepartmentState = governanceModule.setGovernancePage(governanceDepartmentState, page.page, page.totalRows);
   const selected = rows.find((row) => getGovernanceDepartmentKey(row) === governanceSelectedDepartmentKey) || page.rows[0] || null;
   governanceSelectedDepartmentKey = selected ? getGovernanceDepartmentKey(selected) : null;
   if (rows.length === 0) {
@@ -2418,14 +2567,14 @@ function renderGovernanceExceptions(data) {
       ? "ไม่สามารถยืนยันจำนวนรายการที่เข้าเกณฑ์ได้"
       : `${formatCount(count)} สินทรัพย์เข้าเกณฑ์ตรวจสอบเดิม · เรียงตามลำดับความสำคัญที่มีอยู่`;
   }
-  const page = resolveGovernancePage(data?.exceptionsTotal ?? 0, governanceExceptionsState);
-  governanceExceptionsState = setGovernancePage(governanceExceptionsState, page.page, page.totalRows);
+  const page = governanceModule.resolveGovernancePage(data?.exceptionsTotal ?? 0, governanceExceptionsState);
+  governanceExceptionsState = governanceModule.setGovernancePage(governanceExceptionsState, page.page, page.totalRows);
   if (page.totalRows === 0) {
     renderGovernanceExceptionTable([], page);
     restoreGovernanceExceptionFocus();
     return;
   }
-  const contextKey = governanceRequestContext(filters, latestPayload?.snapshot?.snapshotId ?? null);
+  const contextKey = governanceModule.governanceRequestContext(filters, latestPayload?.snapshot?.snapshotId ?? null);
   const requestKey = governanceExceptionRequestKey(contextKey, page);
   const useInitialPage = page.page === 1 && page.pageSize === 5;
   if (useInitialPage) {
@@ -2461,7 +2610,7 @@ async function loadGovernanceExceptionsPage(governance, contextKey, page, reques
   governanceExceptionView = { contextKey, requestKey, status: "loading", rows: [], page: null, error: "" };
   renderGovernanceExceptions(governance);
   try {
-    const url = buildGovernanceExceptionsUrl(DASHBOARD_API, filters, page);
+    const url = governanceModule.buildGovernanceExceptionsUrl(DASHBOARD_API, filters, page);
     const response = await fetch(url, {
       headers: { Accept: "application/json" },
       signal: controller.signal,
@@ -2471,8 +2620,8 @@ async function loadGovernanceExceptionsPage(governance, contextKey, page, reques
       throw new Error(result?.message || `โหลดรายการไม่สำเร็จ (HTTP ${response.status})`);
     }
     const data = result.data;
-    const currentContext = governanceRequestContext(filters, latestPayload?.snapshot?.snapshotId ?? null);
-    const responseContext = governanceRequestContext(data.selectedFilters, data.snapshotId ?? null);
+    const currentContext = governanceModule.governanceRequestContext(filters, latestPayload?.snapshot?.snapshotId ?? null);
+    const responseContext = governanceModule.governanceRequestContext(data.selectedFilters, data.snapshotId ?? null);
     if (id !== governanceExceptionRequestId || contextKey !== currentContext || contextKey !== responseContext) return;
     if (!Array.isArray(data.rows) || !Number.isInteger(data.totalRows) || !Number.isInteger(data.totalPages)) {
       throw new Error("รายการที่ได้รับมีรูปแบบไม่ถูกต้อง");
@@ -2484,7 +2633,7 @@ async function loadGovernanceExceptionsPage(governance, contextKey, page, reques
     };
     governanceExceptionView = {
       contextKey,
-      requestKey: governanceExceptionRequestKey(contextKey, resolveGovernancePage(data.totalRows, governanceExceptionsState)),
+      requestKey: governanceExceptionRequestKey(contextKey, governanceModule.resolveGovernancePage(data.totalRows, governanceExceptionsState)),
       status: "ready",
       rows: data.rows,
       page: {
@@ -2500,7 +2649,7 @@ async function loadGovernanceExceptionsPage(governance, contextKey, page, reques
     renderGovernanceExceptions(governance);
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") return;
-    if (id !== governanceExceptionRequestId || contextKey !== governanceRequestContext(filters, latestPayload?.snapshot?.snapshotId ?? null)) return;
+    if (id !== governanceExceptionRequestId || contextKey !== governanceModule.governanceRequestContext(filters, latestPayload?.snapshot?.snapshotId ?? null)) return;
     governanceExceptionView = {
       contextKey,
       requestKey,
@@ -2522,15 +2671,38 @@ function renderGovernance(data) {
   renderGovernanceExceptions(data);
 }
 
-function renderDashboard(payload) {
-  latestPayload = payload;
-  renderOverview(payload.overview, payload);
-  renderPortfolio(payload.portfolio);
-  renderDepartments(payload.departments);
-  renderLocations(payload.locations);
-  renderAging(payload.aging, payload);
-  renderAcquisition(payload.acquisition);
-  renderGovernance(payload.governance);
+function renderDashboard(payload, view) {
+  const contextKey = JSON.stringify(filters);
+  latestPayload = latestPayloadContextKey === contextKey
+    ? { ...latestPayload, ...payload }
+    : payload;
+  latestPayloadContextKey = contextKey;
+
+  switch (view) {
+    case "overview":
+      renderOverview(latestPayload.overview, latestPayload);
+      break;
+    case "portfolio":
+      renderPortfolio(latestPayload.portfolio);
+      break;
+    case "departments":
+      renderDepartments(latestPayload.departments);
+      break;
+    case "locations":
+      renderLocations(latestPayload.locations);
+      break;
+    case "aging":
+      renderAging(latestPayload.aging, latestPayload);
+      break;
+    case "acquisition":
+      renderAcquisition(latestPayload.acquisition);
+      break;
+    case "governance":
+      renderGovernance(latestPayload.governance);
+      break;
+    default:
+      break;
+  }
 }
 
 function setRequestState(kind, message = "") {
@@ -2551,19 +2723,6 @@ function updateSnapshotLabel(payload) {
   const date = document.getElementById("dashboard-snapshot-date");
   const state = document.getElementById("dashboard-data-state");
   const detail = document.getElementById("dashboard-data-detail");
-  const latestUniversitySnapshot = payload.snapshotOptions?.find((snapshot) => snapshot.sourceSystem === "university_api");
-  const lastImport = document.querySelector("[data-snapshot-last-import]");
-  if (lastImport) {
-    const importedAt = latestUniversitySnapshot?.importedAt;
-    const sourceTime = String(importedAt || "").replace(" ", "T");
-    const timestamp = sourceTime
-      ? new Date(`${sourceTime}${/[zZ]|[+-]\d{2}:?\d{2}$/.test(sourceTime) ? "" : "Z"}`)
-      : null;
-    const formatted = timestamp && !Number.isNaN(timestamp.valueOf())
-      ? new Intl.DateTimeFormat("th-TH", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Bangkok" }).format(timestamp)
-      : "—";
-    lastImport.textContent = `นำเข้าจาก University Asset API ล่าสุด: ${formatted}`;
-  }
   if (!payload.snapshot) {
     if (date) date.textContent = "—";
     if (state) state.textContent = "ไม่พบข้อมูลสินทรัพย์";
@@ -2590,8 +2749,7 @@ function updateSelect(select, values, selected, allLabel, mapValue = (value) => 
 
 function populateFilterOptions(payload) {
   const options = payload.filterOptions || {};
-  const latestSnapshot = payload.snapshotOptions?.find((snapshot) => snapshot.sourceSystem === "university_api")
-    || payload.snapshotOptions?.[0];
+  const latestSnapshot = payload.snapshotOptions?.[0];
   const snapshotOptions = [
     ["latest", `ชุดข้อมูลล่าสุด${latestSnapshot ? ` · ${latestSnapshot.label} · ${formatDate(latestSnapshot.date)}` : ""}`],
     ...(payload.snapshotOptions || []).map((snapshot) => [String(snapshot.key), `${snapshot.label} · ${formatDate(snapshot.date)}`]),
@@ -2646,7 +2804,19 @@ function syncFilterControls() {
   });
 }
 
-async function loadDashboard() {
+async function loadDashboard(view = activeDashboardPage, { force = false } = {}) {
+  const selectedView = PAGE_IDS.includes(view) && view !== "explorer" ? view : "overview";
+  const url = buildInventoryDashboardUrl(DASHBOARD_API, filters, selectedView, { summaryOnly: selectedView === "acquisition" });
+  const requestKey = url;
+  const hasExactSnapshot = String(filters.snapshot).startsWith("id:");
+  abortAcquisitionDetailRequests();
+  if (force) {
+    dashboardPayloadCache.clear();
+    acquisitionDetailCache.clear();
+  }
+  if (activeDashboardRequest && activeDashboardRequest.key === requestKey && !force) return activeDashboardRequest.promise;
+  if (activeDashboardRequest) activeDashboardRequest.controller.abort();
+
   resetLocationPages();
   governanceFieldState = { ...governanceFieldState, page: 1 };
   governanceDepartmentState = { ...governanceDepartmentState, page: 1 };
@@ -2657,39 +2827,89 @@ async function loadDashboard() {
   governancePendingFocusSelector = null;
   governanceExceptionView = { contextKey: null, requestKey: null, status: "idle", rows: [], page: null, error: "" };
   const id = ++requestId;
+  const controller = new AbortController();
+  const request = { id, key: requestKey, controller, promise: null };
+  const measureOverview = selectedView === "overview" && overviewMeasurePending;
+  const performanceApi = globalThis.performance;
+  if (selectedView === "acquisition") {
+    performanceApi?.clearMarks?.("cpe-asset-inventory-acquisition-request-start");
+    performanceApi?.clearMarks?.("cpe-asset-inventory-acquisition-summary-usable");
+    performanceApi?.clearMarks?.("cpe-asset-inventory-acquisition-usable");
+    performanceApi?.mark?.("cpe-asset-inventory-acquisition-request-start");
+  }
+  const viewModulePromise = loadDashboardViewModule(selectedView);
+  if (measureOverview && performanceApi?.mark) {
+    performanceApi.clearMarks?.("cpe-asset-inventory-overview-request-start");
+    performanceApi.clearMarks?.("cpe-asset-inventory-overview-usable");
+    performanceApi.clearMeasures?.("cpe-asset-inventory-overview-ready");
+    performanceApi.clearMeasures?.("cpe-asset-inventory-overview-from-navigation");
+    performanceApi.mark("cpe-asset-inventory-overview-request-start");
+  }
   setRequestState("loading", "กำลังคำนวณข้อมูลตามตัวกรองที่เลือก");
   const sections = document.getElementById("dashboard-sections");
   if (sections) sections.setAttribute("aria-busy", "true");
-  try {
-    const url = buildInventoryDashboardUrl(DASHBOARD_API, filters);
-    const response = await fetch(url, { headers: { Accept: "application/json" } });
-    if (!response.ok) throw new Error(`คำขอล้มเหลว (HTTP ${response.status})`);
-    const result = await response.json();
-    if (id !== requestId) return;
-    if (!result || result.success !== true || !result.data || typeof result.data !== "object") {
-      throw new Error(result?.message || "ได้รับสรุปจากคลังสินทรัพย์ในรูปแบบที่ไม่คาดคิด");
+  request.promise = (async () => {
+    try {
+      const [data] = await Promise.all([dashboardPayloadCache.load(requestKey, async () => {
+        const response = await fetch(url, {
+          headers: { Accept: "application/json" },
+          signal: controller.signal,
+        });
+        if (!response.ok) throw new Error(`คำขอล้มเหลว (HTTP ${response.status})`);
+        const result = await response.json();
+        if (!result || result.success !== true || !result.data || typeof result.data !== "object") {
+          throw new Error(result?.message || "ได้รับสรุปจากคลังสินทรัพย์ในรูปแบบที่ไม่คาดคิด");
+        }
+        return result.data;
+      }, { cacheResult: hasExactSnapshot }), viewModulePromise]);
+      if (id !== requestId) return;
+
+      if (data.selectedFilters?.snapshot) {
+        filters.snapshot = String(data.selectedFilters.snapshot);
+        onFiltersChange({ ...filters });
+        const resolvedUrl = buildInventoryDashboardUrl(DASHBOARD_API, filters, selectedView, { summaryOnly: selectedView === "acquisition" });
+        if (resolvedUrl !== requestKey) {
+          await dashboardPayloadCache.load(resolvedUrl, async () => data);
+        }
+      }
+      populateFilterOptions(data);
+      updateSnapshotLabel(data);
+      renderDashboard(data, selectedView);
+      if (selectedView === "acquisition") {
+        performanceApi?.mark?.("cpe-asset-inventory-acquisition-summary-usable");
+        void loadAcquisitionDetails("cohort");
+      }
+      const hasAssets = Number(data.overview?.totalAssets || 0) > 0;
+      setRequestState(hasAssets ? "ready" : "empty", hasAssets ? "" : "ไม่พบสินทรัพย์ตามตัวกรองที่เลือก ลองเปลี่ยนหรือล้างตัวกรอง");
+      if (measureOverview && performanceApi?.mark) {
+        performanceApi.mark("cpe-asset-inventory-overview-usable");
+        performanceApi.measure?.(
+          "cpe-asset-inventory-overview-ready",
+          "cpe-asset-inventory-overview-request-start",
+          "cpe-asset-inventory-overview-usable",
+        );
+        performanceApi.measure?.("cpe-asset-inventory-overview-from-navigation", {
+          start: 0,
+          end: "cpe-asset-inventory-overview-usable",
+        });
+        overviewMeasurePending = false;
+      }
+    } catch (error) {
+      if (id !== requestId || error?.name === "AbortError") return;
+      const message = error instanceof Error ? error.message : "ไม่สามารถเชื่อมต่อคลังข้อมูลได้";
+      setRequestState("error", `${message} · ตรวจสอบการเชื่อมต่อแล้วลองอีกครั้ง`);
+      const notice = document.getElementById("dashboard-data-state");
+      const detail = document.getElementById("dashboard-data-detail");
+      if (notice) notice.textContent = "ไม่สามารถยืนยันข้อมูลล่าสุดได้";
+      if (detail) detail.textContent = message;
+      clearDashboardData();
+    } finally {
+      if (id === requestId && sections) sections.removeAttribute("aria-busy");
+      if (activeDashboardRequest === request) activeDashboardRequest = null;
     }
-    if (result.data.selectedFilters?.snapshot) {
-      filters.snapshot = String(result.data.selectedFilters.snapshot);
-      onFiltersChange({ ...filters });
-    }
-    populateFilterOptions(result.data);
-    updateSnapshotLabel(result.data);
-    renderDashboard(result.data);
-    const hasAssets = Number(result.data.overview?.totalAssets || 0) > 0;
-    setRequestState(hasAssets ? "ready" : "empty", hasAssets ? "" : "ไม่พบสินทรัพย์ตามตัวกรองที่เลือก ลองเปลี่ยนหรือล้างตัวกรอง");
-  } catch (error) {
-    if (id !== requestId) return;
-    const message = error instanceof Error ? error.message : "ไม่สามารถเชื่อมต่อคลังข้อมูลได้";
-    setRequestState("error", `${message} · ตรวจสอบการเชื่อมต่อแล้วลองอีกครั้ง`);
-    const notice = document.getElementById("dashboard-data-state");
-    const detail = document.getElementById("dashboard-data-detail");
-    if (notice) notice.textContent = "ไม่สามารถยืนยันข้อมูลล่าสุดได้";
-    if (detail) detail.textContent = message;
-    clearDashboardData();
-  } finally {
-    if (id === requestId && sections) sections.removeAttribute("aria-busy");
-  }
+  })();
+  activeDashboardRequest = request;
+  return request.promise;
 }
 
 function clearDashboardData() {
@@ -2732,7 +2952,7 @@ function applyFilterAndRefresh(key, value, { navigateToExplorer = false } = {}) 
   resetAcquisitionPages();
   syncFilterControls();
   updateFilterCount();
-  loadDashboard();
+  if (!navigateToExplorer && activeDashboardPage !== "explorer") loadDashboard();
   onFiltersChange({ ...filters });
   if (navigateToExplorer) window.location.hash = "#/inventory/explorer";
 }
@@ -2749,7 +2969,6 @@ function applyDrillFiltersAndRefresh(nextFilters) {
   resetAcquisitionPages();
   syncFilterControls();
   updateFilterCount();
-  loadDashboard();
   onFiltersChange({ ...filters });
   window.location.hash = "#/inventory/explorer";
 }
@@ -2784,7 +3003,7 @@ async function importUniversitySnapshot(button) {
     if (status) {
       status.textContent = `นำเข้าสำเร็จ ${formatCount(result.data.importedCount)} รายการ · ${result.data.snapshot.label}`;
     }
-    loadDashboard();
+    if (activeDashboardPage !== "explorer") loadDashboard(activeDashboardPage, { force: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : "นำเข้าข้อมูลไม่สำเร็จ";
     if (status) status.textContent = message;
@@ -2794,18 +3013,25 @@ async function importUniversitySnapshot(button) {
   }
 }
 
-export function initExecutiveDashboard({ onFilterChange = () => {} } = {}) {
+export function initExecutiveDashboard({ onFilterChange = () => {}, initialPageId = activeDashboardPage } = {}) {
   onFiltersChange = onFilterChange;
+  activeDashboardPage = PAGE_IDS.includes(initialPageId) ? initialPageId : "overview";
+  dashboardInitialized = true;
   const dashboardSections = document.getElementById("dashboard-sections");
+  dashboardSections?.addEventListener("toggle", (event) => {
+    const disclosure = event.target.closest?.(".acquisition-detail-disclosure");
+    if (!disclosure) return;
+    if (disclosure.open) void loadAcquisitionDetails("cross");
+  }, true);
   dashboardSections?.addEventListener("change", (event) => {
     const governancePageSizeSelect = event.target.closest("[data-governance-page-size]");
     if (governancePageSizeSelect) {
       const scope = governancePageSizeSelect.dataset.governancePageSize;
       const pageSize = governancePageSizeSelect.value === "all" ? "all" : Number(governancePageSizeSelect.value);
-      if (scope === "field") governanceFieldState = setGovernancePageSize(governanceFieldState, pageSize);
-      else if (scope === "department") governanceDepartmentState = setGovernancePageSize(governanceDepartmentState, pageSize);
+      if (scope === "field") governanceFieldState = governanceModule.setGovernancePageSize(governanceFieldState, pageSize);
+      else if (scope === "department") governanceDepartmentState = governanceModule.setGovernancePageSize(governanceDepartmentState, pageSize);
       else if (scope === "exceptions") {
-        governanceExceptionsState = setGovernancePageSize(governanceExceptionsState, pageSize);
+        governanceExceptionsState = governanceModule.setGovernancePageSize(governanceExceptionsState, pageSize);
         governancePendingFocusSelector = '[data-governance-page-size="exceptions"]';
       } else return;
       if (latestPayload) renderGovernance(latestPayload.governance);
@@ -2818,14 +3044,14 @@ export function initExecutiveDashboard({ onFilterChange = () => {} } = {}) {
       const pageSize = locationPageSizeSelect.value === "all" ? "all" : Number(locationPageSizeSelect.value);
       const state = getLocationVisualState(scope);
       if (!state) return;
-      setLocationVisualState(scope, setLocationPageSize(state, pageSize));
+      setLocationVisualState(scope, locationModule.setLocationPageSize(state, pageSize));
       if (latestPayload) renderLocations(latestPayload.locations);
       document.querySelector(`[data-location-page-size="${scope}"]`)?.focus();
       return;
     }
     const portfolioPageSizeSelect = event.target.closest("[data-portfolio-matrix-page-size]");
     if (portfolioPageSizeSelect) {
-      portfolioMatrixState = setPortfolioMatrixPageSize(
+      portfolioMatrixState = portfolioModule.setPortfolioMatrixPageSize(
         portfolioMatrixState,
         portfolioPageSizeSelect.value === "all" ? "all" : Number(portfolioPageSizeSelect.value),
       );
@@ -2860,13 +3086,29 @@ export function initExecutiveDashboard({ onFilterChange = () => {} } = {}) {
     const acquisitionPageSizeSelect = event.target.closest("[data-acquisition-page-size]");
     if (acquisitionPageSizeSelect) {
       const scope = acquisitionPageSizeSelect.dataset.acquisitionPageSize;
-      const state = getAcquisitionVisualState(scope);
-      if (!state) return;
       const pageSize = acquisitionPageSizeSelect.value === "all" ? "all" : Number(acquisitionPageSizeSelect.value);
-      setAcquisitionVisualState(scope, scope === "heatmap"
-        ? setAcquisitionHeatmapPageSize(state, pageSize)
-        : setAcquisitionPageSize(state, pageSize));
-      if (latestPayload) renderAcquisition(latestPayload.acquisition);
+      if (scope === "heatmap") {
+        acquisitionHeatmapState = acquisitionModule.setAcquisitionHeatmapPageSize(acquisitionHeatmapState, pageSize);
+        if (latestPayload) renderAcquisition(latestPayload.acquisition);
+      } else if (scope.startsWith("breakdown:")) {
+        const dimension = scope.slice("breakdown:".length);
+        if (!acquisitionModule.ACQUISITION_BREAKDOWN_DIMENSIONS.includes(dimension)
+          || !ACQUISITION_DETAIL_PAGE_SIZES.includes(pageSize)) return;
+        acquisitionBreakdownStates = {
+          ...acquisitionBreakdownStates,
+          [dimension]: { ...acquisitionBreakdownStates[dimension], page: 1, pageSize },
+        };
+        void loadAcquisitionDetails("cohort");
+      } else if (scope.startsWith("cross:")) {
+        const relation = scope.slice("cross:".length);
+        if (!acquisitionModule.ACQUISITION_RELATIONSHIPS.includes(relation)
+          || !ACQUISITION_DETAIL_PAGE_SIZES.includes(pageSize)) return;
+        acquisitionCrossStates = {
+          ...acquisitionCrossStates,
+          [relation]: { ...acquisitionCrossStates[relation], page: 1, pageSize },
+        };
+        void loadAcquisitionDetails("cross");
+      } else return;
       document.querySelector(`[data-acquisition-page-size="${scope}"]`)?.focus();
       return;
     }
@@ -2879,7 +3121,7 @@ export function initExecutiveDashboard({ onFilterChange = () => {} } = {}) {
       const key = governanceFieldSort.dataset.governanceFieldSort;
       if (!GOVERNANCE_FIELD_SORT_KEYS.includes(key)) return;
       const direction = governanceFieldState.sortKey === key && governanceFieldState.direction === "desc" ? "asc" : "desc";
-      governanceFieldState = setGovernanceSort(governanceFieldState, key, direction, GOVERNANCE_FIELD_SORT_KEYS);
+      governanceFieldState = governanceModule.setGovernanceSort(governanceFieldState, key, direction, GOVERNANCE_FIELD_SORT_KEYS);
       renderGovernance(latestPayload.governance);
       document.querySelector(`[data-governance-field-sort="${key}"]`)?.focus();
       return;
@@ -2889,7 +3131,7 @@ export function initExecutiveDashboard({ onFilterChange = () => {} } = {}) {
       const key = governanceDepartmentSort.dataset.governanceDepartmentSort;
       if (!GOVERNANCE_DEPARTMENT_SORT_KEYS.includes(key)) return;
       const direction = governanceDepartmentState.sortKey === key && governanceDepartmentState.direction === "desc" ? "asc" : "desc";
-      governanceDepartmentState = setGovernanceSort(governanceDepartmentState, key, direction, GOVERNANCE_DEPARTMENT_SORT_KEYS);
+      governanceDepartmentState = governanceModule.setGovernanceSort(governanceDepartmentState, key, direction, GOVERNANCE_DEPARTMENT_SORT_KEYS);
       renderGovernance(latestPayload.governance);
       document.querySelector(`[data-governance-department-sort="${key}"]`)?.focus();
       return;
@@ -2919,12 +3161,12 @@ export function initExecutiveDashboard({ onFilterChange = () => {} } = {}) {
         : scope === "department"
           ? (latestPayload.governance?.qualityByDepartment || []).length
           : Number(latestPayload.governance?.exceptionsTotal || 0);
-      const page = resolveGovernancePage(totalRows, state);
+      const page = governanceModule.resolveGovernancePage(totalRows, state);
       const requestedPage = { first: 1, previous: page.page - 1, next: page.page + 1, last: page.totalPages }[action];
-      if (scope === "field") governanceFieldState = setGovernancePage(state, requestedPage, totalRows);
-      else if (scope === "department") governanceDepartmentState = setGovernancePage(state, requestedPage, totalRows);
+      if (scope === "field") governanceFieldState = governanceModule.setGovernancePage(state, requestedPage, totalRows);
+      else if (scope === "department") governanceDepartmentState = governanceModule.setGovernancePage(state, requestedPage, totalRows);
       else {
-        governanceExceptionsState = setGovernancePage(state, requestedPage, totalRows);
+        governanceExceptionsState = governanceModule.setGovernancePage(state, requestedPage, totalRows);
         governancePendingFocusSelector = '[data-governance-page-size="exceptions"]';
       }
       renderGovernance(latestPayload.governance);
@@ -2935,7 +3177,7 @@ export function initExecutiveDashboard({ onFilterChange = () => {} } = {}) {
     }
     const governanceRetry = event.target.closest("[data-governance-exceptions-retry]");
     if (governanceRetry && latestPayload) {
-      const contextKey = governanceRequestContext(filters, latestPayload.snapshot?.snapshotId ?? null);
+      const contextKey = governanceModule.governanceRequestContext(filters, latestPayload.snapshot?.snapshotId ?? null);
       governancePendingFocusSelector = '[data-governance-page-size="exceptions"]';
       governanceExceptionView = { contextKey, requestKey: null, status: "idle", rows: [], page: null, error: "" };
       renderGovernance(latestPayload.governance);
@@ -2974,11 +3216,11 @@ export function initExecutiveDashboard({ onFilterChange = () => {} } = {}) {
       const threshold = document.getElementById("age-threshold-input");
       if (threshold) threshold.value = "10";
       updateFilterCount();
-      loadDashboard();
+      if (activeDashboardPage !== "explorer") loadDashboard();
       onFiltersChange({ ...filters });
       return;
     }
-    if (event.target.closest("[data-dashboard-retry]")) loadDashboard();
+    if (event.target.closest("[data-dashboard-retry]") && activeDashboardPage !== "explorer") loadDashboard(activeDashboardPage, { force: true });
   });
   document.getElementById("age-threshold-input")?.addEventListener("change", (event) => {
     const value = Number.parseInt(event.currentTarget.value, 10);
@@ -2992,13 +3234,14 @@ export function initExecutiveDashboard({ onFilterChange = () => {} } = {}) {
     const acquisitionYearDimensionButton = event.target.closest("[data-acquisition-year-dimension]");
     if (acquisitionYearDimensionButton) {
       const dimension = acquisitionYearDimensionButton.dataset.acquisitionYearDimension;
-      if (!ACQUISITION_DIMENSIONS.includes(dimension)) return;
+      if (!acquisitionModule.ACQUISITION_DIMENSIONS.includes(dimension)) return;
       acquisitionYearDimension = dimension;
       acquisitionSelectedCohortKey = null;
       acquisitionSelectedSourceKey = null;
       acquisitionHeatmapState = { ...acquisitionHeatmapState, page: 1 };
       resetAcquisitionPages();
       if (latestPayload) renderAcquisition(latestPayload.acquisition);
+      void loadAcquisitionDetails("cohort");
       document.querySelector(`[data-acquisition-year-dimension="${dimension}"]`)?.focus();
       return;
     }
@@ -3009,6 +3252,7 @@ export function initExecutiveDashboard({ onFilterChange = () => {} } = {}) {
       acquisitionSelectedSourceKey = acquisitionCell.dataset.acquisitionSourceKey;
       resetAcquisitionPages();
       renderAcquisition(latestPayload.acquisition);
+      void loadAcquisitionDetails("cohort");
       [...document.querySelectorAll("[data-acquisition-cell]")]
         .find((button) => button.dataset.acquisitionCohortKey === acquisitionSelectedCohortKey
           && button.dataset.acquisitionSourceKey === acquisitionSelectedSourceKey)
@@ -3022,6 +3266,7 @@ export function initExecutiveDashboard({ onFilterChange = () => {} } = {}) {
       acquisitionSelectedSourceKey = null;
       resetAcquisitionPages();
       renderAcquisition(latestPayload.acquisition);
+      void loadAcquisitionDetails("cohort");
       [...document.querySelectorAll("[data-acquisition-cohort]")]
         .find((button) => button.dataset.acquisitionCohort === acquisitionSelectedCohortKey)
         ?.focus();
@@ -3031,13 +3276,14 @@ export function initExecutiveDashboard({ onFilterChange = () => {} } = {}) {
     const acquisitionBreakdownButton = event.target.closest("[data-acquisition-breakdown-dimension]");
     if (acquisitionBreakdownButton) {
       const dimension = acquisitionBreakdownButton.dataset.acquisitionBreakdownDimension;
-      if (!ACQUISITION_BREAKDOWN_DIMENSIONS.includes(dimension)) return;
+      if (!acquisitionModule.ACQUISITION_BREAKDOWN_DIMENSIONS.includes(dimension)) return;
       acquisitionBreakdownDimension = dimension;
       acquisitionBreakdownStates = {
         ...acquisitionBreakdownStates,
         [dimension]: { ...acquisitionBreakdownStates[dimension], page: 1 },
       };
       if (latestPayload) renderAcquisition(latestPayload.acquisition);
+      void loadAcquisitionDetails("cohort");
       document.querySelector(`[data-acquisition-breakdown-dimension="${dimension}"]`)?.focus();
       return;
     }
@@ -3046,30 +3292,28 @@ export function initExecutiveDashboard({ onFilterChange = () => {} } = {}) {
     if (acquisitionBreakdownSort && latestPayload) {
       const dimension = acquisitionBreakdownSort.dataset.acquisitionTable;
       const key = acquisitionBreakdownSort.dataset.acquisitionBreakdownSort;
-      if (!ACQUISITION_BREAKDOWN_DIMENSIONS.includes(dimension) || !ACQUISITION_TABLE_SORT_KEYS.includes(key)) return;
+      if (!acquisitionModule.ACQUISITION_BREAKDOWN_DIMENSIONS.includes(dimension) || !ACQUISITION_TABLE_SORT_KEYS.includes(key)) return;
       const state = acquisitionBreakdownStates[dimension];
       const direction = state.sortKey === key && state.direction === "desc" ? "asc" : "desc";
       acquisitionBreakdownStates = {
         ...acquisitionBreakdownStates,
-        [dimension]: setAcquisitionSort(state, key, direction, ACQUISITION_TABLE_SORT_KEYS),
+        [dimension]: acquisitionModule.setAcquisitionSort(state, key, direction, ACQUISITION_TABLE_SORT_KEYS),
       };
-      renderAcquisition(latestPayload.acquisition);
-      [...document.querySelectorAll("[data-acquisition-breakdown-sort]")]
-        .find((button) => button.dataset.acquisitionBreakdownSort === key && button.dataset.acquisitionTable === dimension)
-        ?.focus();
+      void loadAcquisitionDetails("cohort");
       return;
     }
 
     const acquisitionRelationButton = event.target.closest("[data-acquisition-cross-relation]");
     if (acquisitionRelationButton) {
       const relation = acquisitionRelationButton.dataset.acquisitionCrossRelation;
-      if (!ACQUISITION_RELATIONSHIPS.includes(relation)) return;
+      if (!acquisitionModule.ACQUISITION_RELATIONSHIPS.includes(relation)) return;
       acquisitionCrossRelation = relation;
       acquisitionCrossStates = {
         ...acquisitionCrossStates,
         [relation]: { ...acquisitionCrossStates[relation], page: 1 },
       };
       if (latestPayload) renderAcquisition(latestPayload.acquisition);
+      if (document.querySelector(".acquisition-detail-disclosure")?.open) void loadAcquisitionDetails("cross");
       document.querySelector(`[data-acquisition-cross-relation="${relation}"]`)?.focus();
       return;
     }
@@ -3078,17 +3322,14 @@ export function initExecutiveDashboard({ onFilterChange = () => {} } = {}) {
     if (acquisitionCrossSort && latestPayload) {
       const relation = acquisitionCrossSort.dataset.acquisitionTable;
       const key = acquisitionCrossSort.dataset.acquisitionCrossSort;
-      if (!ACQUISITION_RELATIONSHIPS.includes(relation) || !ACQUISITION_CROSS_SORT_KEYS.includes(key)) return;
+      if (!acquisitionModule.ACQUISITION_RELATIONSHIPS.includes(relation) || !ACQUISITION_CROSS_SORT_KEYS.includes(key)) return;
       const state = acquisitionCrossStates[relation];
       const direction = state.sortKey === key && state.direction === "desc" ? "asc" : "desc";
       acquisitionCrossStates = {
         ...acquisitionCrossStates,
-        [relation]: setAcquisitionSort(state, key, direction, ACQUISITION_CROSS_SORT_KEYS),
+        [relation]: acquisitionModule.setAcquisitionSort(state, key, direction, ACQUISITION_CROSS_SORT_KEYS),
       };
-      renderAcquisition(latestPayload.acquisition);
-      [...document.querySelectorAll("[data-acquisition-cross-sort]")]
-        .find((button) => button.dataset.acquisitionCrossSort === key && button.dataset.acquisitionTable === relation)
-        ?.focus();
+      if (document.querySelector(".acquisition-detail-disclosure")?.open) void loadAcquisitionDetails("cross");
       return;
     }
 
@@ -3097,11 +3338,39 @@ export function initExecutiveDashboard({ onFilterChange = () => {} } = {}) {
       const scope = acquisitionPageButton.dataset.acquisitionPage;
       const state = getAcquisitionVisualState(scope);
       if (!state) return;
-      const rows = getAcquisitionVisualRows(scope);
-      const page = scope === "heatmap"
-        ? paginateAcquisitionHeatmapRows(rows, state)
-        : paginateAcquisitionRows(rows, state);
       const action = acquisitionPageButton.dataset.acquisitionPageAction;
+      if (scope.startsWith("breakdown:") || scope.startsWith("cross:")) {
+        const kind = scope.startsWith("breakdown:") ? "cohort" : "cross";
+        const pagination = acquisitionDetails[kind].data?.pagination;
+        if (!pagination) return;
+        const requestedPage = {
+          first: 1,
+          previous: pagination.page - 1,
+          next: pagination.page + 1,
+          last: pagination.totalPages,
+        }[action];
+        if (requestedPage === undefined || requestedPage < 1 || requestedPage > pagination.totalPages) return;
+        const stateKey = kind === "cohort"
+          ? scope.slice("breakdown:".length)
+          : scope.slice("cross:".length);
+        if (kind === "cohort") {
+          acquisitionBreakdownStates = {
+            ...acquisitionBreakdownStates,
+            [stateKey]: { ...state, page: requestedPage },
+          };
+          void loadAcquisitionDetails("cohort");
+        } else {
+          acquisitionCrossStates = {
+            ...acquisitionCrossStates,
+            [stateKey]: { ...state, page: requestedPage },
+          };
+          void loadAcquisitionDetails("cross");
+        }
+        return;
+      }
+
+      const rows = getAcquisitionVisualRows(scope);
+      const page = acquisitionModule.paginateAcquisitionHeatmapRows(rows, state);
       const requestedPage = {
         first: 1,
         previous: page.page - 1,
@@ -3109,9 +3378,7 @@ export function initExecutiveDashboard({ onFilterChange = () => {} } = {}) {
         last: page.totalPages,
       }[action];
       if (requestedPage !== undefined) {
-        setAcquisitionVisualState(scope, scope === "heatmap"
-          ? setAcquisitionHeatmapPage(state, requestedPage, page.totalRows)
-          : setAcquisitionPage(state, requestedPage, page.totalRows));
+        setAcquisitionVisualState(scope, acquisitionModule.setAcquisitionHeatmapPage(state, requestedPage, page.totalRows));
         renderAcquisition(latestPayload.acquisition);
         [...document.querySelectorAll("[data-acquisition-page]")]
           .find((button) => button.dataset.acquisitionPage === scope && button.dataset.acquisitionPageAction === action && !button.disabled)
@@ -3235,7 +3502,7 @@ export function initExecutiveDashboard({ onFilterChange = () => {} } = {}) {
       const state = getLocationVisualState(scope);
       const rows = getLocationVisualRows(scope);
       if (!state) return;
-      const page = paginateLocationRows(rows, state);
+      const page = locationModule.paginateLocationRows(rows, state);
       const action = locationPageButton.dataset.locationPageAction;
       const requestedPage = {
         first: 1,
@@ -3244,7 +3511,7 @@ export function initExecutiveDashboard({ onFilterChange = () => {} } = {}) {
         last: page.totalPages,
       }[action];
       if (requestedPage !== undefined) {
-        setLocationVisualState(scope, setLocationPage(state, requestedPage, page.totalRows));
+        setLocationVisualState(scope, locationModule.setLocationPage(state, requestedPage, page.totalRows));
         if (latestPayload) renderLocations(latestPayload.locations);
         [...document.querySelectorAll(`[data-location-page="${scope}"]`)]
           .find((button) => button.dataset.locationPageAction === action && !button.disabled)
@@ -3259,7 +3526,7 @@ export function initExecutiveDashboard({ onFilterChange = () => {} } = {}) {
       const allowed = ["label", "totalAssets", "completeRate", "incompleteRate", "missingRate", "unknownRate"];
       if (!allowed.includes(key)) return;
       const direction = locationMatrixState.sortKey === key && locationMatrixState.direction === "desc" ? "asc" : "desc";
-      locationMatrixState = setLocationSort(locationMatrixState, key, direction, allowed);
+      locationMatrixState = locationModule.setLocationSort(locationMatrixState, key, direction, allowed);
       renderLocations(latestPayload.locations);
       [...document.querySelectorAll("[data-location-matrix-sort]")].find((button) => button.dataset.locationMatrixSort === key)?.focus();
       return;
@@ -3271,7 +3538,7 @@ export function initExecutiveDashboard({ onFilterChange = () => {} } = {}) {
       const allowed = ["first", "second", "totalAssets"];
       if (!allowed.includes(key)) return;
       const direction = locationCategoryBuildingState.sortKey === key && locationCategoryBuildingState.direction === "desc" ? "asc" : "desc";
-      locationCategoryBuildingState = setLocationSort(locationCategoryBuildingState, key, direction, allowed);
+      locationCategoryBuildingState = locationModule.setLocationSort(locationCategoryBuildingState, key, direction, allowed);
       renderLocations(latestPayload.locations);
       [...document.querySelectorAll("[data-location-category-building-sort]")].find((button) => button.dataset.locationCategoryBuildingSort === key)?.focus();
       return;
@@ -3356,10 +3623,10 @@ export function initExecutiveDashboard({ onFilterChange = () => {} } = {}) {
     if (portfolioSortButton && latestPayload?.portfolio) {
       const key = portfolioSortButton.dataset.portfolioMatrixSort;
       const categories = latestPayload.portfolio.categories || [];
-      const isSupported = key === "totalAssets" || categories.some((category) => key === `category:${getPortfolioCategoryKey(category)}`);
+      const isSupported = key === "totalAssets" || categories.some((category) => key === `category:${portfolioModule.getPortfolioCategoryKey(category)}`);
       if (!isSupported) return;
       const direction = portfolioMatrixState.sortKey === key && portfolioMatrixState.direction === "desc" ? "asc" : "desc";
-      portfolioMatrixState = setPortfolioMatrixSort(portfolioMatrixState, key, direction);
+      portfolioMatrixState = portfolioModule.setPortfolioMatrixSort(portfolioMatrixState, key, direction);
       renderPortfolio(latestPayload.portfolio);
       [...document.querySelectorAll("[data-portfolio-matrix-sort]")]
         .find((button) => button.dataset.portfolioMatrixSort === key)
@@ -3369,12 +3636,12 @@ export function initExecutiveDashboard({ onFilterChange = () => {} } = {}) {
 
     const portfolioPageButton = event.target.closest("[data-portfolio-matrix-page]");
     if (portfolioPageButton && latestPayload?.portfolio) {
-      const matrix = buildPortfolioMatrixRows(
+      const matrix = portfolioModule.buildPortfolioMatrixRows(
         latestPayload.departments?.rows || [],
         latestPayload.portfolio.categories || [],
         latestPayload.portfolio.departmentCategoryMatrix,
       );
-      const currentPage = paginatePortfolioMatrixRows(matrix.rows, portfolioMatrixState);
+      const currentPage = portfolioModule.paginatePortfolioMatrixRows(matrix.rows, portfolioMatrixState);
       const action = portfolioPageButton.dataset.portfolioMatrixPage;
       const requestedPage = {
         first: 1,
@@ -3383,7 +3650,7 @@ export function initExecutiveDashboard({ onFilterChange = () => {} } = {}) {
         last: currentPage.totalPages,
       }[action];
       if (requestedPage !== undefined) {
-        portfolioMatrixState = setPortfolioMatrixPage(portfolioMatrixState, requestedPage, currentPage.totalRows);
+        portfolioMatrixState = portfolioModule.setPortfolioMatrixPage(portfolioMatrixState, requestedPage, currentPage.totalRows);
         renderPortfolio(latestPayload.portfolio);
         [...document.querySelectorAll("[data-portfolio-matrix-page]")]
           .find((button) => button.dataset.portfolioMatrixPage === action && !button.disabled)
@@ -3480,7 +3747,7 @@ export function initExecutiveDashboard({ onFilterChange = () => {} } = {}) {
     const drill = event.target.closest("[data-drill-filter]");
     if (drill) applyFilterAndRefresh(drill.dataset.drillFilter, drill.dataset.filterValue, { navigateToExplorer: true });
   });
-  loadDashboard();
+  return activeDashboardPage !== "explorer" ? loadDashboard(activeDashboardPage) : Promise.resolve();
 }
 
 export function getExecutiveDashboardFilters() {
@@ -3489,6 +3756,7 @@ export function getExecutiveDashboardFilters() {
 
 export function setInventoryDashboardPage(pageId) {
   const selectedPage = PAGE_IDS.includes(pageId) ? pageId : "overview";
+  activeDashboardPage = selectedPage;
   document.querySelectorAll("[data-dashboard-page]").forEach((page) => {
     page.hidden = page.dataset.dashboardPage !== selectedPage;
   });
@@ -3496,8 +3764,23 @@ export function setInventoryDashboardPage(pageId) {
     if (link.dataset.dashboardLink === selectedPage) link.setAttribute("aria-current", "page");
     else link.removeAttribute("aria-current");
   });
+  if (dashboardInitialized && selectedPage !== "explorer") loadDashboard(selectedPage);
+}
+
+export function cancelExecutiveDashboardRequest() {
+  if (activeDashboardRequest) {
+    requestId += 1;
+    activeDashboardRequest.controller.abort();
+    activeDashboardRequest = null;
+    setRequestState("ready");
+    document.getElementById("dashboard-sections")?.removeAttribute("aria-busy");
+  }
+  governanceExceptionRequestId += 1;
+  governanceExceptionController?.abort();
+  governanceExceptionController = null;
 }
 
 export function refreshExecutiveDashboard() {
-  return loadDashboard();
+  if (activeDashboardPage === "explorer") return Promise.resolve();
+  return loadDashboard(activeDashboardPage, { force: true });
 }

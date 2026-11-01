@@ -73,6 +73,52 @@ test(
     assert.ok(Array.isArray(payload.data.filterOptions.acquisitionFiscalYears));
     assert.ok(!Object.hasOwn(payload.data, "assets"), "analytics should return aggregates, not a full asset collection");
 
+    const viewFields = {
+      overview: ["overview", "departments", "aging", "history"],
+      portfolio: ["overview", "departments", "portfolio"],
+      departments: ["overview", "departments"],
+      locations: ["overview", "departments", "locations"],
+      aging: ["overview", "departments", "aging"],
+      acquisition: ["overview", "acquisition"],
+      governance: ["overview", "governance"],
+    };
+    for (const [view, expectedFields] of Object.entries(viewFields)) {
+      const viewUrl = new URL(endpoint);
+      viewUrl.searchParams.set("view", view);
+      const viewResponse = await fetch(viewUrl);
+      const viewPayload = await viewResponse.json();
+      assert.equal(viewResponse.status, 200, `${view} view should load successfully`);
+      assert.equal(viewPayload.success, true);
+      assert.equal(viewPayload.data.snapshot.snapshotId, payload.data.snapshot.snapshotId);
+      assert.deepEqual(viewPayload.data.snapshotOptions, payload.data.snapshotOptions);
+      assert.deepEqual(viewPayload.data.filterOptions, payload.data.filterOptions);
+      assert.equal(viewPayload.data.overview.totalAssets, payload.data.overview.totalAssets);
+      assert.deepEqual(
+        Object.keys(viewPayload.data).filter((key) => expectedFields.includes(key)).sort(),
+        [...expectedFields].sort(),
+        `${view} view should include its required section data`,
+      );
+      if (view === "overview") {
+        assert.deepEqual(viewPayload.data.overview, payload.data.overview, "Overview analytics must match the legacy response values.");
+        assert.deepEqual(viewPayload.data.departments, payload.data.departments, "Overview department heatmap rows must match the legacy response.");
+        assert.deepEqual(viewPayload.data.aging, { ageDistribution: payload.data.aging.ageDistribution }, "Overview age bands must match the legacy response.");
+      }
+      if (view === "departments") {
+        assert.equal(viewPayload.data.overview.totalAssets, payload.data.overview.totalAssets);
+        assert.deepEqual(viewPayload.data.departments, payload.data.departments, "Department scorecard rows must match the legacy response.");
+      }
+      for (const inactiveField of ["portfolio", "locations", "aging", "acquisition", "governance"]) {
+        if (!expectedFields.includes(inactiveField)) {
+          assert.equal(Object.hasOwn(viewPayload.data, inactiveField), false, `${view} should omit ${inactiveField} data`);
+        }
+      }
+    }
+
+    const invalidViewUrl = new URL(endpoint);
+    invalidViewUrl.searchParams.set("view", "unrecognized");
+    const invalidViewResponse = await fetch(invalidViewUrl);
+    assert.equal(invalidViewResponse.status, 400, "unsupported dashboard views should be rejected");
+
     const factEndpoint = new URL(endpoint);
     factEndpoint.pathname = factEndpoint.pathname.replace(/asset_inventory_dashboard\.php$/u, "fact_asset_inventory.php");
     factEndpoint.searchParams.set("limit", "100");
@@ -274,6 +320,86 @@ test(
     assert.equal(emptyPayload.data.overview.averageAssetAge, null);
     assert.deepEqual(emptyPayload.data.history.series, []);
     assert.equal(emptyPayload.data.history.comparison, null);
+  },
+);
+
+test(
+  "acquisition summary preserves legacy chart aggregates and paginates detail requests",
+  { skip: !endpoint },
+  async () => {
+    const request = async (url) => {
+      const response = await fetch(url);
+      const payload = await response.json();
+      return { response, payload };
+    };
+    const fullUrl = new URL(endpoint);
+    fullUrl.searchParams.set("view", "acquisition");
+    const { response: fullResponse, payload: fullPayload } = await request(fullUrl);
+    assert.equal(fullResponse.status, 200);
+    assert.ok(Object.hasOwn(fullPayload.data.acquisition, "cohortDetails"));
+
+    const summaryUrl = new URL(fullUrl);
+    summaryUrl.searchParams.set("summary", "1");
+    summaryUrl.searchParams.set("snapshot", `id:${fullPayload.data.snapshot.snapshotId}`);
+    const { response: summaryResponse, payload: summaryPayload } = await request(summaryUrl);
+    assert.equal(summaryResponse.status, 200);
+    assert.equal(summaryPayload.success, true);
+    assert.deepEqual(
+      Object.keys(summaryPayload.data.acquisition).sort(),
+      ["byFiscalSource", "bySource", "fiscalYears", "sources", "years"],
+    );
+    for (const metric of ["totalAssets", "assetsOlderThanThreshold", "oldAssetRate", "assetsWithKnownAge"]) {
+      assert.equal(summaryPayload.data.overview[metric], fullPayload.data.overview[metric]);
+    }
+
+    const fields = {
+      years: ["key", "label", "filterValue", "totalAssets", "averageAssetAge", "assetsWithKnownAge", "assetsOlderThanThreshold", "oldAssetRate"],
+      fiscalYears: ["key", "label", "filterValue", "totalAssets", "averageAssetAge", "assetsWithKnownAge", "assetsOlderThanThreshold", "oldAssetRate"],
+      sources: ["key", "label", "filterValue", "totalAssets"],
+      bySource: ["firstKey", "secondKey", "first", "second", "firstFilterValue", "secondFilterValue", "totalAssets", "averageAssetAge", "assetsWithKnownAge", "assetsOlderThanThreshold", "oldAssetRate"],
+      byFiscalSource: ["firstKey", "secondKey", "first", "second", "firstFilterValue", "secondFilterValue", "totalAssets", "averageAssetAge", "assetsWithKnownAge", "assetsOlderThanThreshold", "oldAssetRate"],
+    };
+    for (const [name, keys] of Object.entries(fields)) {
+      const projected = (fullPayload.data.acquisition[name] || []).map((row) =>
+        Object.fromEntries(keys.filter((key) => Object.hasOwn(row, key)).map((key) => [key, row[key]])),
+      );
+      assert.deepEqual(summaryPayload.data.acquisition[name], projected, `${name} aggregates should match the legacy response`);
+    }
+
+    const cohort = summaryPayload.data.acquisition.years.find((row) => /^\d+$/u.test(row.filterValue));
+    assert.ok(cohort, "the selected snapshot should expose at least one numeric acquisition year");
+    const cohortUrl = new URL(summaryUrl);
+    for (const [name, value] of Object.entries({
+      detail: "cohort",
+      cohortDimension: "year",
+      cohortValue: cohort.filterValue,
+      dimension: "department",
+      page: "1",
+      limit: "5",
+    })) cohortUrl.searchParams.set(name, value);
+    const { response: cohortResponse, payload: cohortPayload } = await request(cohortUrl);
+    assert.equal(cohortResponse.status, 200);
+    const cohortPage = cohortPayload.data.acquisitionDetail;
+    assert.equal(cohortPage.kind, "cohort");
+    assert.equal(cohortPage.pagination.pageSize, 5);
+    assert.ok(cohortPage.rows.length <= 5);
+    if (cohortPage.pagination.totalPages > 1) {
+      cohortUrl.searchParams.set("page", "2");
+      const { response: secondPageResponse, payload: secondPagePayload } = await request(cohortUrl);
+      assert.equal(secondPageResponse.status, 200);
+      const firstPageKeys = new Set(cohortPage.rows.map((row) => row.key));
+      assert.ok(secondPagePayload.data.acquisitionDetail.rows.every((row) => !firstPageKeys.has(row.key)));
+    }
+
+    const crossUrl = new URL(summaryUrl);
+    for (const [name, value] of Object.entries({ detail: "cross", relation: "yearDepartment", page: "1", limit: "5" })) {
+      crossUrl.searchParams.set(name, value);
+    }
+    const { response: crossResponse, payload: crossPayload } = await request(crossUrl);
+    assert.equal(crossResponse.status, 200);
+    assert.equal(crossPayload.data.acquisitionDetail.kind, "cross");
+    assert.ok(crossPayload.data.acquisitionDetail.rows.length <= 5);
+    assert.equal(crossPayload.data.snapshot.snapshotId, fullPayload.data.snapshot.snapshotId);
   },
 );
 

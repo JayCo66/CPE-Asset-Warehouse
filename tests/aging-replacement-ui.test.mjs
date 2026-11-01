@@ -42,7 +42,7 @@ test("aging interactions remain local, accessible, sortable, and paginated", () 
   assert.match(dashboard, /data-aging-page-size/u);
   assert.match(dashboard, /data-aging-page=/u);
   assert.match(dashboard, /selectedAgingDepartmentKey/u);
-  assert.match(dashboard, /renderAging\(payload\.aging,\s*payload\)/u);
+  assert.match(dashboard, /renderAging\(latestPayload\.aging,\s*latestPayload\)/u);
 });
 
 test("aging UI retains existing theme tokens and responsive internal table scrolling", () => {

@@ -1,32 +1,3 @@
-import {
-  ASSET_API_DEFAULT_PAGE_SIZE,
-  clampPage,
-  getAssetApiPageButtons,
-  getAssetApiTotalPages as getTotalPages,
-  normalizePageSize,
-} from "./pagination.mjs";
-import {
-  ASSET_DETAIL_API_ENDPOINTS,
-  ASSET_DETAIL_API_PAGE_SIZE,
-  combineBorrowHistory,
-  normalizeAssetId,
-  sortMaintenanceHistory,
-} from "./asset-detail.mjs";
-import {
-  buildAssetInventoryCsv,
-  normalizeSnapshotSummary,
-} from "./inventory-data.mjs?v=20261025.1";
-import {
-  buildAssetInventoryApiUrl,
-  buildAssetInventoryExportUrl,
-} from "./inventory-api.mjs?v=20261025.1";
-import {
-  getExecutiveDashboardFilters,
-  initExecutiveDashboard,
-  refreshExecutiveDashboard,
-  setInventoryDashboardPage,
-} from "./executive-dashboard.mjs?v=20261026.6";
-
 const dashboardData = {
   moduleNav: [
     { id: "inventory", label: "ทะเบียนสินทรัพย์", marker: "AI", href: "#/inventory" },
@@ -48,24 +19,71 @@ const dashboardData = {
 };
 
 const ASSET_API_BASE_URL = new URL("../../assets_api/", import.meta.url).href;
-const ASSET_INVENTORY_API_ENDPOINT = new URL(
-  ASSET_DETAIL_API_ENDPOINTS.assets,
-  ASSET_API_BASE_URL,
-).href;
-const DASHBOARD_SECTION_FILES = [
+const ASSET_INVENTORY_API_ENDPOINT = new URL("fact_asset_inventory.php", ASSET_API_BASE_URL).href;
+const DASHBOARD_COMMON_SECTION_FILES = [
   "sections/executive-filters.html",
   "sections/executive-navigation.html",
-  "sections/executive-overview.html",
-  "sections/portfolio.html",
-  "sections/departments.html",
-  "sections/locations.html",
-  "sections/aging.html",
-  "sections/acquisition.html",
-  "sections/governance.html",
-  "sections/asset-register.html",
 ];
+const DASHBOARD_PAGE_FILES = Object.freeze({
+  overview: "sections/executive-overview.html",
+  portfolio: "sections/portfolio.html",
+  departments: "sections/departments.html",
+  locations: "sections/locations.html",
+  aging: "sections/aging.html",
+  acquisition: "sections/acquisition.html",
+  governance: "sections/governance.html",
+  explorer: "sections/asset-register.html",
+});
 const ASSET_DETAIL_SECTION_FILE = "sections/asset-detail.html";
 const THEME_STORAGE_KEY = "cpe-asset-inventory-theme";
+const UI_ASSET_VERSION = "20261101.7";
+const EXECUTIVE_DASHBOARD_MODULE_URL = `./executive-dashboard.mjs?v=${UI_ASSET_VERSION}`;
+const ASSET_API_DEFAULT_PAGE_SIZE = 10;
+const ASSET_DETAIL_API_PAGE_SIZE = 100;
+const ASSET_DETAIL_API_ENDPOINTS = Object.freeze({
+  assets: "fact_asset_inventory.php",
+  borrowItems: "borrow_request_items.php",
+  borrowRequests: "borrow.php",
+  maintenance: "maintenance_asset.php",
+});
+
+let assetUiModules = null;
+let assetUiModulesPromise = null;
+
+function loadAssetUiModules() {
+  if (assetUiModules) return Promise.resolve(assetUiModules);
+  if (!assetUiModulesPromise) {
+    assetUiModulesPromise = Promise.all([
+      import(`./pagination.mjs?v=${UI_ASSET_VERSION}`),
+      import(`./asset-detail.mjs?v=${UI_ASSET_VERSION}`),
+      import(`./inventory-data.mjs?v=${UI_ASSET_VERSION}`),
+      import(`./inventory-api.mjs?v=${UI_ASSET_VERSION}`),
+    ]).then(([pagination, assetDetail, inventoryData, inventoryApi]) => {
+      assetUiModules = { pagination, assetDetail, inventoryData, inventoryApi };
+      return assetUiModules;
+    });
+  }
+  return assetUiModulesPromise;
+}
+
+let executiveDashboardModule = null;
+let executiveDashboardModulePromise = null;
+let dashboardCommonMarkupPromise = null;
+let dashboardCommonMarkup = null;
+let dashboardFilterPanelTemplate = null;
+let dashboardRequestStateTemplate = null;
+let dashboardRequestStateInstalled = false;
+let snapshotFilterPanelInstalled = false;
+let assetDetailSectionLoaded = false;
+let assetDetailSectionPromise = null;
+let dashboardSectionRenderId = 0;
+let shellInteractionsInitialized = false;
+let assetRegisterInteractionsInitialized = false;
+let executiveDashboardInitialized = false;
+let overviewMarkupReadyMarked = false;
+const dashboardSectionMarkup = new Map();
+const dashboardSectionMarkupRequests = new Map();
+const dashboardPageMarkupLoaded = new Set();
 
 const assetApiState = {
   status: "idle",
@@ -199,115 +217,199 @@ function cacheElements() {
   };
 }
 
-async function loadDashboardSections() {
-  const container = document.querySelector("#dashboard-sections");
-  if (!container) throw new Error("ไม่พบพื้นที่สำหรับโหลดส่วนแดชบอร์ด");
+function loadExecutiveDashboardModule() {
+  if (!executiveDashboardModulePromise) {
+    executiveDashboardModulePromise = import(EXECUTIVE_DASHBOARD_MODULE_URL)
+      .then((module) => {
+        executiveDashboardModule = module;
+        return module;
+      })
+      .catch((error) => {
+        executiveDashboardModulePromise = null;
+        throw error;
+      });
+  }
+  return executiveDashboardModulePromise;
+}
 
-  const responses = await Promise.all(
-    DASHBOARD_SECTION_FILES.map((file) => fetch(file, {
-      cache: "no-cache",
-      headers: { Accept: "text/html" },
-    })),
-  );
-  const failedResponse = responses.find((response) => !response.ok);
-  if (failedResponse) throw new Error(`โหลดส่วนแดชบอร์ดไม่สำเร็จ (HTTP ${failedResponse.status})`);
+function loadDashboardSectionMarkup(file) {
+  if (dashboardSectionMarkup.has(file)) return Promise.resolve(dashboardSectionMarkup.get(file));
+  if (dashboardSectionMarkupRequests.has(file)) return dashboardSectionMarkupRequests.get(file);
 
-  const sections = await Promise.all(responses.map((response) => response.text()));
-  container.innerHTML = sections.join("\n");
-  installDashboardFilterPanels(container);
-  container.removeAttribute("aria-busy");
+  const sectionUrl = new URL(file, import.meta.url);
+  sectionUrl.searchParams.set("v", UI_ASSET_VERSION);
+  const request = fetch(sectionUrl, {
+    headers: { Accept: "text/html" },
+  })
+    .then((response) => {
+      if (!response.ok) throw new Error(`โหลดส่วนแดชบอร์ดไม่สำเร็จ (HTTP ${response.status})`);
+      return response.text();
+    })
+    .then((markup) => {
+      dashboardSectionMarkup.set(file, markup);
+      dashboardSectionMarkupRequests.delete(file);
+      return markup;
+    })
+    .catch((error) => {
+      dashboardSectionMarkupRequests.delete(file);
+      throw error;
+    });
+  dashboardSectionMarkupRequests.set(file, request);
+  return request;
+}
+
+function loadDashboardCommonMarkup() {
+  if (dashboardCommonMarkup !== null) return Promise.resolve(dashboardCommonMarkup);
+  if (!dashboardCommonMarkupPromise) {
+    dashboardCommonMarkupPromise = Promise.all(DASHBOARD_COMMON_SECTION_FILES.map(loadDashboardSectionMarkup))
+      .then((sections) => {
+        dashboardCommonMarkup = sections.join("\n");
+        return dashboardCommonMarkup;
+      })
+      .catch((error) => {
+        dashboardCommonMarkupPromise = null;
+        throw error;
+      });
+  }
+  return dashboardCommonMarkupPromise;
+}
+
+function makeFilterPanelIdsUnique(panel, suffix) {
+  const idMap = new Map();
+  panel.querySelectorAll("[id]").forEach((element) => {
+    idMap.set(element.id, `${element.id}-${suffix}`);
+  });
+  panel.querySelectorAll("[id]").forEach((element) => {
+    element.id = idMap.get(element.id);
+  });
+  panel.querySelectorAll("[for]").forEach((element) => {
+    if (idMap.has(element.htmlFor)) element.htmlFor = idMap.get(element.htmlFor);
+  });
+  for (const attribute of ["aria-controls", "aria-describedby", "aria-labelledby"]) {
+    panel.querySelectorAll(`[${attribute}]`).forEach((element) => {
+      element.setAttribute(attribute, element.getAttribute(attribute).split(/\s+/).map((id) => idMap.get(id) || id).join(" "));
+    });
+  }
 }
 
 function installDashboardFilterPanels(container) {
-  const template = container.querySelector(".dashboard-filter-panel");
+  if (!dashboardFilterPanelTemplate) {
+    const template = container.querySelector(".dashboard-filter-panel");
+    if (!template) throw new Error("ไม่พบแม่แบบตัวกรองแดชบอร์ด");
+    dashboardFilterPanelTemplate = template.cloneNode(true);
+    dashboardRequestStateTemplate = template.querySelector("[data-dashboard-request-state]")?.cloneNode(true) ?? null;
+    template.remove();
+  }
+
   const overview = container.querySelector(".executive-overview");
-  const pages = [...container.querySelectorAll("[data-dashboard-page]")];
-  if (!template || !overview || pages.length === 0) {
-    throw new Error("ไม่พบแม่แบบตัวกรองหรือส่วนแดชบอร์ดสำหรับติดตั้งตัวกรอง");
-  }
+  if (overview && !snapshotFilterPanelInstalled) {
+    const globalSnapshotPanel = dashboardFilterPanelTemplate.cloneNode(true);
+    globalSnapshotPanel.dataset.filterScope = "snapshot";
+    globalSnapshotPanel.setAttribute("aria-label", "เลือกชุดข้อมูลของแดชบอร์ด");
+    globalSnapshotPanel.querySelector(".dashboard-filter-toolbar")?.remove();
+    globalSnapshotPanel.querySelector("[data-dashboard-request-state]")?.remove();
+    makeFilterPanelIdsUnique(globalSnapshotPanel, "snapshot");
+    const overviewHeading = overview.querySelector(".page-heading");
+    if (overviewHeading) overviewHeading.after(globalSnapshotPanel);
+    else overview.prepend(globalSnapshotPanel);
 
-  const makeIdsUnique = (panel, suffix) => {
-    const idMap = new Map();
-    panel.querySelectorAll("[id]").forEach((element) => {
-      idMap.set(element.id, `${element.id}-${suffix}`);
-    });
-    panel.querySelectorAll("[id]").forEach((element) => {
-      element.id = idMap.get(element.id);
-    });
-    panel.querySelectorAll("[for]").forEach((element) => {
-      if (idMap.has(element.htmlFor)) element.htmlFor = idMap.get(element.htmlFor);
-    });
-    for (const attribute of ["aria-controls", "aria-describedby", "aria-labelledby"]) {
-      panel.querySelectorAll(`[${attribute}]`).forEach((element) => {
-        element.setAttribute(attribute, element.getAttribute(attribute).split(/\s+/).map((id) => idMap.get(id) || id).join(" "));
-      });
+    if (dashboardRequestStateTemplate) {
+      const requestState = dashboardRequestStateTemplate.cloneNode(true);
+      globalSnapshotPanel.after(requestState);
+      dashboardRequestStateInstalled = true;
     }
-  };
-
-  const globalSnapshotPanel = template.cloneNode(true);
-  globalSnapshotPanel.dataset.filterScope = "snapshot";
-  globalSnapshotPanel.setAttribute("aria-label", "เลือกชุดข้อมูลของแดชบอร์ด");
-  globalSnapshotPanel.querySelector(".dashboard-filter-toolbar")?.remove();
-  globalSnapshotPanel.querySelector("[data-dashboard-request-state]")?.remove();
-  makeIdsUnique(globalSnapshotPanel, "snapshot");
-  const overviewHeading = overview.querySelector(".page-heading");
-  if (overviewHeading) overviewHeading.after(globalSnapshotPanel);
-  else overview.prepend(globalSnapshotPanel);
-
-  const requestState = template.querySelector("[data-dashboard-request-state]");
-  requestState?.remove();
-  if (requestState) globalSnapshotPanel.after(requestState);
-
-  const targets = pages
-    .filter((element) => element.dataset.dashboardPage !== "overview")
-    .map((element) => ({
-      id: element.dataset.dashboardPage,
-      element,
-      label: element.querySelector("h1")?.textContent.trim() || element.dataset.dashboardPage,
-    }));
-
-  for (const target of targets) {
-    const panel = template.cloneNode(true);
-    panel.dataset.filterScope = target.id;
-    panel.setAttribute("aria-label", `ตัวกรองข้อมูลร่วม · ${target.label}`);
-    panel.querySelector(".snapshot-filter-row")?.remove();
-    makeIdsUnique(panel, target.id);
-    const summaryLabel = panel.querySelector(".dashboard-filter-details > summary > span:first-child");
-    if (summaryLabel) summaryLabel.textContent = `ตัวกรอง · ${target.label}`;
-    const heading = target.element.querySelector(".page-heading");
-    if (heading) heading.after(panel);
-    else target.element.prepend(panel);
+    snapshotFilterPanelInstalled = true;
   }
 
-  template.remove();
+  const navigation = container.querySelector(".inventory-view-nav");
+  if (!overview && navigation && dashboardRequestStateTemplate && !dashboardRequestStateInstalled) {
+    navigation.after(dashboardRequestStateTemplate.cloneNode(true));
+    dashboardRequestStateInstalled = true;
+  }
+
+  for (const page of container.querySelectorAll("[data-dashboard-page]") ) {
+    if (page.dataset.dashboardPage === "overview" || page.querySelector(":scope > .dashboard-filter-panel")) continue;
+    const panel = dashboardFilterPanelTemplate.cloneNode(true);
+    panel.dataset.filterScope = page.dataset.dashboardPage;
+    panel.setAttribute("aria-label", `ตัวกรองข้อมูลร่วม · ${page.querySelector("h1")?.textContent.trim() || page.dataset.dashboardPage}`);
+    panel.querySelector("[data-dashboard-request-state]")?.remove();
+    panel.querySelector(".snapshot-filter-row")?.remove();
+    makeFilterPanelIdsUnique(panel, page.dataset.dashboardPage);
+    const summaryLabel = panel.querySelector(".dashboard-filter-details > summary > span:first-child");
+    if (summaryLabel) summaryLabel.textContent = `ตัวกรอง · ${page.querySelector("h1")?.textContent.trim() || page.dataset.dashboardPage}`;
+    const heading = page.querySelector(".page-heading");
+    if (heading) heading.after(panel);
+    else page.prepend(panel);
+  }
+}
+
+async function loadDashboardSections(pageId, renderId) {
+  const container = document.querySelector("#dashboard-sections");
+  const file = DASHBOARD_PAGE_FILES[pageId];
+  if (!container || !file) throw new Error("ไม่พบส่วนแดชบอร์ดสำหรับหน้าที่เลือก");
+
+  const [commonMarkup, pageMarkup] = await Promise.all([
+    loadDashboardCommonMarkup(),
+    loadDashboardSectionMarkup(file),
+  ]);
+  if (!container.dataset.dashboardCommonLoaded) {
+    container.insertAdjacentHTML("afterbegin", commonMarkup);
+    container.dataset.dashboardCommonLoaded = "true";
+  }
+  if (renderId !== dashboardSectionRenderId) return;
+  if (!dashboardPageMarkupLoaded.has(pageId)) {
+    container.insertAdjacentHTML("beforeend", pageMarkup);
+    dashboardPageMarkupLoaded.add(pageId);
+  }
+  container.querySelector(":scope > .api-state-loading[role='status']:not([data-dashboard-request-state])")?.remove();
+  container.querySelectorAll("[data-dashboard-section-load-error]").forEach((error) => error.remove());
+  installDashboardFilterPanels(container);
+  cacheElements();
+  container.removeAttribute("aria-busy");
 }
 
 async function loadAssetDetailSection() {
   const container = document.querySelector("#asset-detail-container");
   if (!container) throw new Error("ไม่พบพื้นที่สำหรับโหลดหน้ารายละเอียดสินทรัพย์");
+  if (assetDetailSectionLoaded) return;
+  if (assetDetailSectionPromise) return assetDetailSectionPromise;
 
-  const response = await fetch(ASSET_DETAIL_SECTION_FILE, { headers: { Accept: "text/html" } });
-  if (!response.ok) throw new Error(`โหลดหน้ารายละเอียดสินทรัพย์ไม่สำเร็จ (HTTP ${response.status})`);
-
-  container.innerHTML = await response.text();
-  container.removeAttribute("aria-busy");
+  assetDetailSectionPromise = loadDashboardSectionMarkup(ASSET_DETAIL_SECTION_FILE)
+    .then((markup) => {
+      container.innerHTML = markup;
+      container.removeAttribute("aria-busy");
+      assetDetailSectionLoaded = true;
+    })
+    .catch((error) => {
+      assetDetailSectionPromise = null;
+      throw error;
+    });
+  return assetDetailSectionPromise;
 }
 
 function showDashboardLoadError() {
   const container = document.querySelector("#dashboard-sections");
   if (!container) return;
+  container.querySelectorAll("[data-dashboard-section-load-error]").forEach((error) => error.remove());
+  container.querySelector(":scope > .api-state-loading[role='status']:not([data-dashboard-request-state])")?.remove();
 
   const errorState = document.createElement("div");
   errorState.className = "api-state api-state-error";
   errorState.setAttribute("role", "alert");
+  errorState.dataset.dashboardSectionLoadError = "true";
 
   const heading = document.createElement("strong");
   heading.textContent = "ไม่สามารถโหลดส่วนแดชบอร์ด";
   const detail = document.createElement("span");
   detail.textContent = "โปรดเปิดหน้านี้ผ่านเซิร์ฟเวอร์ภายในเครื่องแล้วลองใหม่อีกครั้ง";
+  const retry = document.createElement("button");
+  retry.type = "button";
+  retry.textContent = "ลองใหม่";
+  retry.addEventListener("click", handleModuleRoute, { once: true });
 
-  errorState.append(heading, detail);
-  container.replaceChildren(errorState);
+  errorState.append(heading, detail, retry);
+  if (container.dataset.dashboardCommonLoaded) container.append(errorState);
+  else container.replaceChildren(errorState);
   container.removeAttribute("aria-busy");
 }
 
@@ -344,7 +446,7 @@ function formatApiDate(value, includeTime = false) {
 }
 
 function getAssetApiTotalPages() {
-  return getTotalPages(assetApiState.matchedTotal, assetApiState.pageSize);
+  return assetUiModules.pagination.getAssetApiTotalPages(assetApiState.matchedTotal, assetApiState.pageSize);
 }
 
 async function fetchAssetApiPage(endpointName, page = 1, limit = ASSET_DETAIL_API_PAGE_SIZE) {
@@ -414,7 +516,9 @@ function getCurrentRouteSegments() {
 
 function getCurrentAssetId() {
   const [moduleId, routeName, rawAssetId] = getCurrentRouteSegments();
-  return moduleId === "inventory" && routeName === "asset" ? normalizeAssetId(rawAssetId) : null;
+  if (moduleId !== "inventory" || routeName !== "asset") return null;
+  const assetId = Number.parseInt(rawAssetId, 10);
+  return Number.isInteger(assetId) && assetId > 0 ? assetId : null;
 }
 
 function getCurrentDashboardPage() {
@@ -715,21 +819,21 @@ async function loadAssetDetailHistory(assetId, requestId) {
 
   assetDetailState.borrow = {
     status: borrowUnavailable ? "unavailable" : "ready",
-    rows: combineBorrowHistory(borrowItems, borrowRequests, assetId),
+    rows: assetUiModules.assetDetail.combineBorrowHistory(borrowItems, borrowRequests, assetId),
     error: borrowUnavailable
       ? borrowItemsResult.reason?.message || borrowRequestsResult.reason?.message
       : null,
   };
   assetDetailState.maintenance = {
     status: maintenanceUnavailable ? "unavailable" : "ready",
-    rows: maintenanceUnavailable ? [] : sortMaintenanceHistory(maintenanceResult.value, assetId),
+    rows: maintenanceUnavailable ? [] : assetUiModules.assetDetail.sortMaintenanceHistory(maintenanceResult.value, assetId),
     error: maintenanceUnavailable ? maintenanceResult.reason?.message : null,
   };
   renderAssetDetailState();
 }
 
 async function loadAssetDetail(assetId) {
-  const normalizedAssetId = normalizeAssetId(assetId);
+  const normalizedAssetId = assetUiModules.assetDetail.normalizeAssetId(assetId);
   if (!normalizedAssetId) return;
 
   const requestId = ++assetDetailRequestId;
@@ -769,14 +873,14 @@ function renderModuleView(moduleId = getCurrentModuleId()) {
   elements.modulePlaceholder.hidden = isInventory;
 
   if (isAssetDetail) {
-    loadAssetDetail(assetId);
+    if (elements.assetDetailContent) loadAssetDetail(assetId);
   } else if (!isInventory) {
     elements.modulePlaceholderTitle.textContent = activeModule.label;
     elements.modulePlaceholderDescription.textContent = activeModule.description;
     elements.modulePlaceholderTitle.focus({ preventScroll: true });
   } else {
     const pageId = getCurrentDashboardPage();
-    setInventoryDashboardPage(pageId);
+    executiveDashboardModule?.setInventoryDashboardPage(pageId);
     const scrollTarget = requestedDashboardScrollTarget;
     requestedDashboardScrollTarget = null;
     if (pageId === "explorer" && scrollTarget === "explorer") scrollAssetExplorerIntoView();
@@ -787,19 +891,93 @@ function renderModuleView(moduleId = getCurrentModuleId()) {
   }
 }
 
-function handleModuleRoute() {
-  const activeModuleId = getCurrentModuleId();
-  const isAssetDetail = getCurrentAssetId() !== null;
-  renderModuleNav(activeModuleId);
-  renderModuleView(activeModuleId);
-  if (activeModuleId === "inventory" && !isAssetDetail && getCurrentDashboardPage() === "explorer") {
-    loadAssetRegister(1);
+function setDashboardSectionVisibility(pageId) {
+  document.querySelectorAll("[data-dashboard-page]").forEach((page) => {
+    page.hidden = page.dataset.dashboardPage !== pageId;
+  });
+  document.querySelectorAll("[data-dashboard-link]").forEach((link) => {
+    if (link.dataset.dashboardLink === pageId) link.setAttribute("aria-current", "page");
+    else link.removeAttribute("aria-current");
+  });
+  if (pageId === "overview" && !overviewMarkupReadyMarked) {
+    globalThis.performance?.mark?.("cpe-asset-inventory-overview-markup-ready");
+    overviewMarkupReadyMarked = true;
   }
-  if (activeModuleId !== "inventory" || isAssetDetail) window.scrollTo({ top: 0, behavior: "auto" });
+}
+
+async function handleModuleRoute() {
+  const renderId = ++dashboardSectionRenderId;
+  const activeModuleId = getCurrentModuleId();
+  const assetId = getCurrentAssetId();
+  const isAssetDetail = assetId !== null;
+  executiveDashboardModule?.cancelExecutiveDashboardRequest?.();
+  renderModuleNav(activeModuleId);
+
+  if (activeModuleId !== "inventory") {
+    renderModuleView(activeModuleId);
+    window.scrollTo({ top: 0, behavior: "auto" });
+    return;
+  }
+
+  if (isAssetDetail) {
+    renderModuleView(activeModuleId);
+    try {
+      await loadAssetUiModules();
+      if (renderId !== dashboardSectionRenderId) return;
+      await loadAssetDetailSection();
+      if (renderId !== dashboardSectionRenderId) return;
+      cacheElements();
+      renderModuleView(activeModuleId);
+      window.scrollTo({ top: 0, behavior: "auto" });
+    } catch (error) {
+      if (renderId === dashboardSectionRenderId) showDashboardLoadError(error);
+    }
+    return;
+  }
+
+  const pageId = getCurrentDashboardPage();
+  try {
+    const executiveModuleResultPromise = loadExecutiveDashboardModule().then(
+      (module) => ({ module }),
+      (error) => ({ error }),
+    );
+    await loadDashboardSections(pageId, renderId);
+    if (renderId !== dashboardSectionRenderId) return;
+
+    cacheElements();
+    setDashboardSectionVisibility(pageId);
+    renderModuleView(activeModuleId);
+    initInteractions();
+    const { module, error } = await executiveModuleResultPromise;
+    if (error) throw error;
+    if (renderId !== dashboardSectionRenderId) return;
+    if (!executiveDashboardInitialized) {
+      executiveDashboardInitialized = true;
+      await module.initExecutiveDashboard({
+        initialPageId: pageId,
+        onFilterChange: () => {
+          if (getCurrentModuleId() === "inventory" && getCurrentDashboardPage() === "explorer" && !getCurrentAssetId()) {
+            loadAssetRegister(1);
+          }
+        },
+      });
+    }
+    if (pageId === "explorer") {
+      await loadAssetUiModules();
+      if (renderId !== dashboardSectionRenderId) return;
+      initAssetRegisterInteractions();
+      loadAssetRegister(1);
+    }
+  } catch (error) {
+    if (renderId === dashboardSectionRenderId) {
+      console.error("Dashboard module initialization failed", error);
+      showDashboardLoadError(error);
+    }
+  }
 }
 
 function getCurrentInventorySnapshot() {
-  return normalizeSnapshotSummary(assetApiState.summary?.current);
+  return assetUiModules.inventoryData.normalizeSnapshotSummary(assetApiState.summary?.current);
 }
 
 function getAssetApiPageRows() {
@@ -857,13 +1035,13 @@ function renderAssetApiPagination() {
   elements.assetApiPageInput.disabled = !isReady || !hasMultiplePages;
   elements.assetApiPageLabel.textContent = `หน้า ${formatNumber(assetApiState.page)} จาก ${formatNumber(totalPages)}`;
 
-  const currentPage = clampPage(assetApiState.page, totalPages);
+  const currentPage = assetUiModules.pagination.clampPage(assetApiState.page, totalPages);
   const pageTargets = {
     current: currentPage,
-    jumpBack: clampPage(currentPage - 2, totalPages),
-    previous: clampPage(currentPage - 1, totalPages),
-    next: clampPage(currentPage + 1, totalPages),
-    jumpForward: clampPage(currentPage + 2, totalPages),
+    jumpBack: assetUiModules.pagination.clampPage(currentPage - 2, totalPages),
+    previous: assetUiModules.pagination.clampPage(currentPage - 1, totalPages),
+    next: assetUiModules.pagination.clampPage(currentPage + 1, totalPages),
+    jumpForward: assetUiModules.pagination.clampPage(currentPage + 2, totalPages),
   };
   const relativePageButtons = [
     [elements.assetApiPageJumpBack, pageTargets.jumpBack, pageTargets.current > 1],
@@ -893,7 +1071,7 @@ function renderAssetApiPageSizeButtons() {
 function renderAssetApiPageButtons() {
   const totalPages = getAssetApiTotalPages();
   const isReady = assetApiState.status === "ready";
-  const pageButtons = getAssetApiPageButtons(totalPages);
+  const pageButtons = assetUiModules.pagination.getAssetApiPageButtons(totalPages);
   const firstPages = pageButtons.slice(0, Math.min(2, pageButtons.length));
   const finalPages = pageButtons.length > 2 ? pageButtons.slice(-2) : [];
   const renderButton = (page) => {
@@ -1051,15 +1229,15 @@ async function loadAssetRegister(page = assetApiState.page, pageSize = assetApiS
   const requestId = ++assetApiRequestId;
   assetApiState.status = "loading";
   assetApiState.page = Math.max(1, Number.parseInt(page, 10) || 1);
-  assetApiState.pageSize = normalizePageSize(pageSize);
+  assetApiState.pageSize = assetUiModules.pagination.normalizePageSize(pageSize);
   assetApiState.summary = null;
   assetApiState.error = null;
   renderAssetApiState();
   elements.refreshAssetApiButton.disabled = true;
 
   try {
-    const endpoint = buildAssetInventoryApiUrl(ASSET_INVENTORY_API_ENDPOINT, {
-      ...getExecutiveDashboardFilters(),
+    const endpoint = assetUiModules.inventoryApi.buildAssetInventoryApiUrl(ASSET_INVENTORY_API_ENDPOINT, {
+      ...(executiveDashboardModule?.getExecutiveDashboardFilters?.() ?? {}),
       page: assetApiState.page,
       pageSize: assetApiState.pageSize,
       search: elements.assetApiSearch.value,
@@ -1103,7 +1281,7 @@ async function loadAssetRegister(page = assetApiState.page, pageSize = assetApiS
         : [...new Set(payload.data.map((row) => row.type_name).filter((value) => typeof value === "string"))],
     };
     assetApiState.summary = payload.summary && typeof payload.summary === "object" ? payload.summary : null;
-    assetApiState.page = clampPage(payload.page ?? assetApiState.page, getAssetApiTotalPages());
+    assetApiState.page = assetUiModules.pagination.clampPage(payload.page ?? assetApiState.page, getAssetApiTotalPages());
     assetApiState.loadedAt = new Date();
     assetApiState.status = "ready";
     renderAssetApiState();
@@ -1136,7 +1314,7 @@ function handleAssetApiPageSizeButtonClick(event) {
 }
 
 function jumpToAssetApiPage() {
-  const page = clampPage(elements.assetApiPageInput.value, getAssetApiTotalPages());
+  const page = assetUiModules.pagination.clampPage(elements.assetApiPageInput.value, getAssetApiTotalPages());
   elements.assetApiPageInput.value = String(page);
   loadAssetRegister(page);
 }
@@ -1159,7 +1337,7 @@ function exportCurrentAssetPage() {
   const rows = getAssetApiPageRows();
   if (assetApiState.status !== "ready" || rows.length === 0) return;
 
-  const csv = buildAssetInventoryCsv(rows);
+  const csv = assetUiModules.inventoryData.buildAssetInventoryCsv(rows);
   const objectUrl = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
   const link = document.createElement("a");
   link.href = objectUrl;
@@ -1172,8 +1350,8 @@ function exportCurrentAssetPage() {
 function exportAllMatchingAssetRows() {
   if (assetApiState.status !== "ready" || assetApiState.matchedTotal === 0) return;
 
-  const endpoint = buildAssetInventoryExportUrl(ASSET_INVENTORY_API_ENDPOINT, {
-    ...getExecutiveDashboardFilters(),
+  const endpoint = assetUiModules.inventoryApi.buildAssetInventoryExportUrl(ASSET_INVENTORY_API_ENDPOINT, {
+    ...(executiveDashboardModule?.getExecutiveDashboardFilters?.() ?? {}),
     search: elements.assetApiSearch.value,
   });
   window.location.assign(endpoint);
@@ -1181,8 +1359,18 @@ function exportAllMatchingAssetRows() {
 }
 
 function initInteractions() {
+  if (shellInteractionsInitialized) return;
+  shellInteractionsInitialized = true;
   document.addEventListener("click", handleDashboardFilterBlankClick);
   elements.dashboardSections.addEventListener("click", handleDashboardSectionClick);
+  window.addEventListener("hashchange", handleModuleRoute);
+  window.addEventListener("scroll", renderBackToTop, { passive: true });
+  elements.backToTop.addEventListener("click", scrollToTop);
+}
+
+function initAssetRegisterInteractions() {
+  if (assetRegisterInteractionsInitialized) return;
+  assetRegisterInteractionsInitialized = true;
   elements.assetApiSearch.addEventListener("input", () => {
     window.clearTimeout(assetApiSearchTimer);
     assetApiRequestId += 1;
@@ -1194,7 +1382,7 @@ function initInteractions() {
   });
   elements.assetApiPageSizeButtons.addEventListener("click", handleAssetApiPageSizeButtonClick);
   elements.refreshAssetApiButton.addEventListener("click", () => {
-    refreshExecutiveDashboard();
+    executiveDashboardModule?.refreshExecutiveDashboard?.();
     loadAssetRegister(1);
   });
   elements.assetApiExportButton.addEventListener("click", exportCurrentAssetPage);
@@ -1207,26 +1395,14 @@ function initInteractions() {
       jumpToAssetApiPage();
     }
   });
-  window.addEventListener("hashchange", handleModuleRoute);
-  window.addEventListener("scroll", renderBackToTop, { passive: true });
-  elements.backToTop.addEventListener("click", scrollToTop);
 }
 
 async function init() {
-  await Promise.all([loadDashboardSections(), loadAssetDetailSection()]);
   cacheElements();
   renderModuleNav();
-  renderModuleView();
   initInteractions();
-  initExecutiveDashboard({
-    onFilterChange: () => {
-      if (getCurrentModuleId() === "inventory" && getCurrentDashboardPage() === "explorer" && !getCurrentAssetId()) {
-        loadAssetRegister(1);
-      }
-    },
-  });
+  await handleModuleRoute();
   renderBackToTop();
-  if (getCurrentDashboardPage() === "explorer") loadAssetRegister();
 }
 
 initializeThemeToggle();

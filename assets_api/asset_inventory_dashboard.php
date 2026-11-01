@@ -9,6 +9,8 @@ require_once __DIR__ . '/inventory_query.php';
 require_once __DIR__ . '/inventory_analytics.php';
 require_once __DIR__ . '/inventory_visual_pagination.php';
 require_once __DIR__ . '/inventory_disposal.php';
+require_once __DIR__ . '/inventory_dashboard_views.php';
+require_once __DIR__ . '/inventory_acquisition_details.php';
 
 function warehouseDashboardCached(string $route, array $query, callable $loader): array
 {
@@ -24,9 +26,11 @@ function warehouseDashboardCached(string $route, array $query, callable $loader)
     if ($cache === null) {
         return $loader();
     }
-    $category = match ($route) {
-        'asset-inventory:snapshot-options' => 'snapshot_list',
-        'asset-inventory:history' => 'snapshot_history',
+    $category = match (true) {
+        $route === 'asset-inventory:snapshot-options' => 'snapshot_list',
+        $route === 'asset-inventory:history' => 'snapshot_history',
+        str_starts_with($route, 'asset-inventory:acquisition-detail:') => 'snapshot_history',
+        str_starts_with($route, 'asset-inventory:section:') => 'asset_summary',
         default => 'asset_summary',
     };
     $fallback = match ($category) {
@@ -105,48 +109,27 @@ function warehouseDashboardFilterOptions(PDO $pdo, string $snapshotId): array
     return $options;
 }
 
-function warehouseDashboardFetchAnalytics(PDO $pdo, array $filters, string $snapshotId, ?array $visualPageRequest = null): array
+function warehouseDashboardFetchAnalytics(PDO $pdo, array $filters, string $snapshotId, ?array $visualPageRequest = null, ?string $view = null, bool $acquisitionSummaryOnly = false): array
 {
     $where = warehouseInventoryBuildWhere($filters, null, $snapshotId);
+    $summaryProjection = 'fai.`asset_count`, fai.`asset_age_years`, fai.`is_available_flag`, fai.`is_damaged_flag`, fai.`has_location_flag`, fai.`asset_key`, da.`asset_id`, da.`asset_code`, da.`asset_name`, da.`asset_status`, fai.`department_key`, department.`department_name`, fai.`category_key`, asset_category.`category_name`, fai.`type_key`, asset_type.`type_name`, location.`building`, location.`floor`, location.`room`, location.`area_name`';
+    $acquisitionProjection = 'fai.`asset_count`, fai.`asset_age_years`, fai.`is_available_flag`, fai.`is_damaged_flag`, fai.`has_location_flag`, fai.`asset_key`, da.`asset_id`, da.`source`, acquisition_date.`year` AS `acquisition_year`, acquisition_date.`fiscal_year` AS `acquisition_fiscal_year`';
+    $fullProjection = 'fai.`asset_count`, fai.`asset_age_years`, fai.`is_available_flag`, fai.`is_damaged_flag`, fai.`has_location_flag`, fai.`asset_key`, fai.`department_key`, fai.`category_key`, fai.`type_key`, fai.`location_key`, da.`asset_id`, da.`asset_code`, da.`asset_name`, da.`brand`, da.`model`, da.`year_purchase`, da.`year_fiscal`, da.`source`, da.`asset_status`, department.`department_name`, asset_category.`category_name`, asset_type.`type_name`, location.`building`, location.`floor`, location.`room`, location.`area_name`, acquisition_date.`year` AS `acquisition_year`, acquisition_date.`fiscal_year` AS `acquisition_fiscal_year`, snapshot_date.`full_date` AS `snapshot_date`';
+    $projection = match ($view) {
+        'overview', 'departments' => $summaryProjection,
+        'acquisition' => $acquisitionSummaryOnly ? $acquisitionProjection : $fullProjection,
+        default => $fullProjection,
+    };
     $statement = $pdo->prepare(
-        'SELECT
-            fai.`asset_count`,
-            fai.`asset_age_years`,
-            fai.`is_available_flag`,
-            fai.`is_damaged_flag`,
-            fai.`has_location_flag`,
-            fai.`asset_key`,
-            fai.`department_key`,
-            fai.`category_key`,
-            fai.`type_key`,
-            fai.`location_key`,
-            da.`asset_id`,
-            da.`asset_code`,
-            da.`asset_name`,
-            da.`brand`,
-            da.`model`,
-            da.`year_purchase`,
-            da.`year_fiscal`,
-            da.`source`,
-            da.`asset_status`,
-            department.`department_name`,
-            asset_category.`category_name`,
-            asset_type.`type_name`,
-            location.`building`,
-            location.`floor`,
-            location.`room`,
-            location.`area_name`,
-            acquisition_date.`year` AS `acquisition_year`,
-            acquisition_date.`fiscal_year` AS `acquisition_fiscal_year`,
-            snapshot_date.`full_date` AS `snapshot_date`
-        ' . warehouseInventoryFromSql() . '
+        'SELECT ' . $projection . ' ' . warehouseInventoryFromSql() . '
         ' . $where['sql'] . '
         ORDER BY fai.`asset_fact_id` ASC'
     );
     warehouseDashboardBind($statement, $where['params']);
     $statement->execute();
 
-    $analytics = warehouseInventoryAnalyticsCreate($filters['ageThreshold']);
+    $analyticsView = $view === 'acquisition' && !$acquisitionSummaryOnly ? null : $view;
+    $analytics = warehouseInventoryAnalyticsCreate($filters['ageThreshold'], $analyticsView);
     while ($row = $statement->fetch(PDO::FETCH_ASSOC)) {
         warehouseInventoryAnalyticsConsume($analytics, $row);
     }
@@ -289,6 +272,19 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') {
 try {
     $visualPageRequest = warehouseDashboardParseVisualPageRequest($_GET);
     $filters = warehouseInventoryParseFilters($_GET);
+    $dashboardView = warehouseInventoryDashboardNormalizeView($_GET['view'] ?? null);
+    $acquisitionSummaryOnly = false;
+    if (array_key_exists('summary', $_GET)) {
+        $summaryValue = warehouseInventoryReadQueryString($_GET, 'summary', '', 1);
+        if ($summaryValue !== '1' || $dashboardView !== 'acquisition') {
+            throw new InvalidArgumentException('The summary parameter is supported only for the acquisition view.');
+        }
+        $acquisitionSummaryOnly = true;
+    }
+    $acquisitionDetailRequest = warehouseDashboardParseAcquisitionDetailRequest($_GET);
+    if ($acquisitionDetailRequest !== null && $dashboardView !== 'acquisition') {
+        throw new InvalidArgumentException('Acquisition details require the acquisition view.');
+    }
 } catch (InvalidArgumentException $error) {
     warehouseDashboardRespond(false, 'ตัวกรองหรือพารามิเตอร์ไม่ถูกต้อง', [], 400);
 }
@@ -319,13 +315,27 @@ try {
         }
         $emptyAnalytics = warehouseInventoryAnalyticsFinalize(warehouseInventoryAnalyticsCreate($filters['ageThreshold']));
         $emptyAnalytics['overview']['disposalEstimate'] = warehouseDashboardUnavailableDisposalEstimate();
+        $emptyHistory = ['available' => false, 'series' => [], 'previousSnapshot' => null, 'comparison' => null];
+        if ($dashboardView !== null) {
+            $emptyViewData = [
+                'snapshot' => null,
+                'snapshotOptions' => [],
+                'filterOptions' => [],
+                'selectedFilters' => $filters,
+                ...warehouseInventoryDashboardSectionData($emptyAnalytics, $dashboardView),
+            ];
+            if ($dashboardView === 'overview') {
+                $emptyViewData['history'] = $emptyHistory;
+            }
+            warehouseDashboardRespond(true, 'ยังไม่มีข้อมูล snapshot ในคลังสินทรัพย์', $emptyViewData);
+        }
         warehouseDashboardRespond(true, 'ยังไม่มีข้อมูล snapshot ในคลังสินทรัพย์', [
             'snapshot' => null,
             'snapshotOptions' => [],
             'filterOptions' => [],
             'selectedFilters' => $filters,
             ...$emptyAnalytics,
-            'history' => ['available' => false, 'series' => [], 'previousSnapshot' => null, 'comparison' => null],
+            'history' => $emptyHistory,
         ]);
     }
 
@@ -336,12 +346,60 @@ try {
 
     $selectedSnapshotId = $snapshot['snapshotId'];
     $filters['snapshot'] = $snapshot['key'];
-    $analytics = warehouseDashboardCached(
+    if ($acquisitionDetailRequest !== null) {
+        if ($acquisitionDetailRequest['kind'] === 'cohort') {
+            $cohortFilter = $acquisitionDetailRequest['cohortDimension'] === 'year'
+                ? 'acquisitionYear'
+                : 'acquisitionFiscalYear';
+            $filters[$cohortFilter] = $acquisitionDetailRequest['cohortValue'];
+        }
+        $detailData = warehouseDashboardCached(
+            'asset-inventory:acquisition-detail:' . $acquisitionDetailRequest['kind'],
+            [
+                'filters' => $filters,
+                'snapshot_id' => $selectedSnapshotId,
+                'detail' => $acquisitionDetailRequest,
+            ],
+            fn(): array => warehouseDashboardFetchAcquisitionDetails(
+                $warehousePdo,
+                $filters,
+                $selectedSnapshotId,
+                $acquisitionDetailRequest,
+            ),
+        );
+        warehouseDashboardRespond(true, 'โหลดรายละเอียดการจัดหาสำเร็จ', [
+            'snapshot' => $snapshot,
+            'selectedFilters' => $filters,
+            'acquisitionDetail' => $detailData,
+        ]);
+    }
+
+    $analyticsCacheQuery = [
+        'filters' => $filters,
+        'snapshot_id' => $selectedSnapshotId,
+        'view' => $dashboardView,
+        'acquisition_summary_only' => $acquisitionSummaryOnly,
+        'acquisition_summary_version' => $acquisitionSummaryOnly ? 2 : null,
+        'visual_page' => null,
+    ];
+    $loadAnalytics = fn(): array => warehouseDashboardCached(
         'asset-inventory:analytics',
-        ['filters' => $filters, 'snapshot_id' => $selectedSnapshotId, 'visual_page' => $visualPageRequest],
-        fn(): array => warehouseDashboardFetchAnalytics($warehousePdo, $filters, $selectedSnapshotId, $visualPageRequest),
+        $analyticsCacheQuery,
+        fn(): array => warehouseDashboardFetchAnalytics(
+            $warehousePdo,
+            $filters,
+            $selectedSnapshotId,
+            null,
+            $dashboardView,
+            $acquisitionSummaryOnly,
+        ),
     );
     if ($visualPageRequest !== null) {
+        $analytics = warehouseDashboardCached(
+            'asset-inventory:analytics',
+            ['filters' => $filters, 'snapshot_id' => $selectedSnapshotId, 'visual_page' => $visualPageRequest],
+            fn(): array => warehouseDashboardFetchAnalytics($warehousePdo, $filters, $selectedSnapshotId, $visualPageRequest),
+        );
         $governance = $analytics['governance'];
         $page = $governance['exceptionsPage'];
         warehouseDashboardRespond(true, 'โหลดรายการสินทรัพย์ที่ควรตรวจสอบสำเร็จ', [
@@ -357,6 +415,52 @@ try {
             'selectedFilters' => $filters,
         ]);
     }
+
+    $filterOptions = warehouseDashboardCached(
+        'asset-inventory:filter-options',
+        ['snapshot_id' => $selectedSnapshotId],
+        fn(): array => warehouseDashboardFilterOptions($warehousePdo, $selectedSnapshotId),
+    );
+    if ($dashboardView !== null) {
+        $sectionData = warehouseDashboardCached(
+            'asset-inventory:section:' . $dashboardView,
+            [
+                'filters' => $filters,
+                'snapshot_id' => $selectedSnapshotId,
+                'view' => $dashboardView,
+                'acquisition_summary_only' => $acquisitionSummaryOnly,
+                'acquisition_summary_version' => $acquisitionSummaryOnly ? 2 : null,
+            ],
+            function () use ($dashboardView, $loadAnalytics, $warehousePdo, $filters, $selectedSnapshotId, $acquisitionSummaryOnly): array {
+                $analytics = $loadAnalytics();
+                if ($dashboardView === 'overview') {
+                    $analytics['overview']['disposalEstimate'] = warehouseDashboardCached(
+                        'asset-inventory:disposal-estimate',
+                        ['filters' => $filters, 'snapshot_id' => $selectedSnapshotId],
+                        fn(): array => warehouseDashboardDisposalEstimate($warehousePdo, $filters, $selectedSnapshotId),
+                    );
+                }
+                return warehouseInventoryDashboardSectionData($analytics, $dashboardView, $acquisitionSummaryOnly);
+            },
+        );
+        $viewData = [
+            'snapshot' => $snapshot,
+            'snapshotOptions' => $snapshotOptions,
+            'filterOptions' => $filterOptions,
+            'selectedFilters' => $filters,
+            ...$sectionData,
+        ];
+        if ($dashboardView === 'overview') {
+            $viewData['history'] = warehouseDashboardCached(
+                'asset-inventory:history',
+                ['filters' => $filters, 'snapshot_options' => $snapshotOptions, 'selected_snapshot_id' => $selectedSnapshotId],
+                fn(): array => warehouseDashboardHistory($warehousePdo, $filters, $snapshotOptions, $selectedSnapshotId),
+            );
+        }
+        warehouseDashboardRespond(true, 'โหลดข้อมูลวิเคราะห์สินทรัพย์สำเร็จ', $viewData);
+    }
+
+    $analytics = $loadAnalytics();
     $analytics['overview']['disposalEstimate'] = warehouseDashboardCached(
         'asset-inventory:disposal-estimate',
         ['filters' => $filters, 'snapshot_id' => $selectedSnapshotId],
@@ -371,11 +475,7 @@ try {
     warehouseDashboardRespond(true, 'โหลดข้อมูลวิเคราะห์สินทรัพย์สำเร็จ', [
         'snapshot' => $snapshot,
         'snapshotOptions' => $snapshotOptions,
-        'filterOptions' => warehouseDashboardCached(
-            'asset-inventory:filter-options',
-            ['snapshot_id' => $selectedSnapshotId],
-            fn(): array => warehouseDashboardFilterOptions($warehousePdo, $selectedSnapshotId),
-        ),
+        'filterOptions' => $filterOptions,
         'selectedFilters' => $filters,
         ...$analytics,
         'history' => $history,

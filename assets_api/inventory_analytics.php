@@ -20,7 +20,7 @@ function warehouseInventoryAnalyticsAgeBand(mixed $age): string
     };
 }
 
-function warehouseInventoryAnalyticsCreate(int $ageThreshold): array
+function warehouseInventoryAnalyticsCreate(int $ageThreshold, ?string $view = null): array
 {
     $ageBands = ['0-2', '3-5', '6-10', '11-15', '16-20', 'over-20', 'unknown'];
     $availabilityStates = ['available', 'unavailable', 'unknown'];
@@ -43,6 +43,7 @@ function warehouseInventoryAnalyticsCreate(int $ageThreshold): array
     ];
 
     $state = [
+        'view' => $view,
         'ageThreshold' => $ageThreshold,
         'metrics' => warehouseInventoryAnalyticsEmptyMetrics(),
         'groups' => [
@@ -441,8 +442,74 @@ function warehouseInventoryAnalyticsFinalizeLocationExplorer(array $explorer): a
     ];
 }
 
+function warehouseInventoryAnalyticsConsumeAcquisitionSummary(array &$state, array $row): void
+{
+    $weight = is_numeric($row['asset_count'] ?? null) ? (int)$row['asset_count'] : 0;
+    if ($weight <= 0) {
+        return;
+    }
+
+    $factIdentity = $row['asset_key'] ?? null;
+    if ($factIdentity === null || $factIdentity === '') {
+        $factIdentity = $row['asset_id'] ?? null;
+    }
+    if ($factIdentity !== null && $factIdentity !== '') {
+        $factIdentity = (string)$factIdentity;
+        if (isset($state['seenAssetFacts'][$factIdentity])) {
+            return;
+        }
+        $state['seenAssetFacts'][$factIdentity] = true;
+    }
+
+    $threshold = $state['ageThreshold'];
+    warehouseInventoryAnalyticsAddMetrics($state['metrics'], $row, $weight, $threshold);
+
+    [$yearKey, $yearLabel] = warehouseInventoryAnalyticsDimension(
+        $row,
+        'acquisition_year',
+        'acquisition_year',
+        'ไม่ระบุปีจัดหา',
+    );
+    [$fiscalYearKey, $fiscalYearLabel] = warehouseInventoryAnalyticsDimension(
+        $row,
+        'acquisition_fiscal_year',
+        'acquisition_fiscal_year',
+        'ไม่ระบุปีงบประมาณจัดหา',
+    );
+    [$sourceKey, $sourceLabel] = warehouseInventoryAnalyticsDimension(
+        $row,
+        'source',
+        'source',
+        'ไม่ระบุแหล่งเงิน',
+    );
+    $yearFilter = warehouseInventoryAnalyticsDimensionFilterValue($yearKey, $yearLabel);
+    $fiscalYearFilter = warehouseInventoryAnalyticsDimensionFilterValue($fiscalYearKey, $fiscalYearLabel);
+    $sourceFilter = warehouseInventoryAnalyticsDimensionFilterValue($sourceKey, $sourceLabel);
+
+    warehouseInventoryAnalyticsAddGroup($state['groups']['acquisitionYears'], $yearKey, $yearLabel, $row, $weight, $threshold, $yearFilter);
+    warehouseInventoryAnalyticsAddGroup($state['groups']['fiscalYears'], $fiscalYearKey, $fiscalYearLabel, $row, $weight, $threshold, $fiscalYearFilter);
+    warehouseInventoryAnalyticsAddGroup($state['groups']['sources'], $sourceKey, $sourceLabel, $row, $weight, $threshold, $sourceFilter);
+    warehouseInventoryAnalyticsAddCombo(
+        $state['groups']['yearSource'], $yearKey . '|' . $sourceKey, $yearLabel, $sourceLabel,
+        $yearFilter, $sourceFilter, $row, $weight, $threshold, $yearKey, $sourceKey,
+    );
+    warehouseInventoryAnalyticsAddCombo(
+        $state['groups']['fiscalSource'], $fiscalYearKey . '|' . $sourceKey, $fiscalYearLabel, $sourceLabel,
+        $fiscalYearFilter, $sourceFilter, $row, $weight, $threshold, $fiscalYearKey, $sourceKey,
+    );
+}
+
 function warehouseInventoryAnalyticsConsume(array &$state, array $row): void
 {
+    if (($state['view'] ?? null) === 'acquisition') {
+        warehouseInventoryAnalyticsConsumeAcquisitionSummary($state, $row);
+        return;
+    }
+    if (in_array($state['view'] ?? null, ['overview', 'departments'], true)) {
+        warehouseInventoryAnalyticsConsumeSummary($state, $row);
+        return;
+    }
+
     $rawWeight = $row['asset_count'] ?? null;
     $weight = $rawWeight !== null && is_numeric($rawWeight) ? (int)$rawWeight : 0;
     if ($weight === 0) {
@@ -710,6 +777,107 @@ function warehouseInventoryAnalyticsConsume(array &$state, array $row): void
     }
 }
 
+function warehouseInventoryAnalyticsConsumeSummary(array &$state, array $row): void
+{
+    $rawWeight = $row['asset_count'] ?? null;
+    $weight = $rawWeight !== null && is_numeric($rawWeight) ? (int)$rawWeight : 0;
+    if ($weight === 0) {
+        return;
+    }
+
+    $factIdentity = $row['asset_key'] ?? null;
+    if ($factIdentity === null || $factIdentity === '') {
+        $factIdentity = $row['asset_id'] ?? null;
+    }
+    if ($factIdentity !== null && $factIdentity !== '') {
+        $factIdentity = (string)$factIdentity;
+        if (isset($state['seenAssetFacts'][$factIdentity])) {
+            return;
+        }
+        $state['seenAssetFacts'][$factIdentity] = true;
+    }
+
+    $threshold = $state['ageThreshold'];
+    $age = $row['asset_age_years'] ?? null;
+    $band = warehouseInventoryAnalyticsAgeBand($age);
+    $available = warehouseInventoryAnalyticsFlag($row['is_available_flag'] ?? null);
+    $damaged = warehouseInventoryAnalyticsFlag($row['is_damaged_flag'] ?? null);
+    $hasLocation = warehouseInventoryAnalyticsFlag($row['has_location_flag'] ?? null);
+    $old = $age !== null && is_numeric($age) && (int)$age > $threshold;
+
+    warehouseInventoryAnalyticsAddMetrics($state['metrics'], $row, $weight, $threshold);
+    $state['ageDistribution'][$band] += $weight;
+    $availabilityKey = $available === 1 ? 'available' : ($available === 0 ? 'unavailable' : 'unknown');
+    $damageKey = $damaged === 1 ? 'damaged' : ($damaged === 0 ? 'notDamaged' : 'unknown');
+    $state['availabilityDistribution'][$availabilityKey] += $weight;
+    $state['damageDistribution'][$damageKey] += $weight;
+    $state['ageAvailability'][$band][$availabilityKey] += $weight;
+    $state['ageDamage'][$band][$damageKey] += $weight;
+
+    $status = warehouseInventoryAnalyticsIsMissing($row['asset_status'] ?? null)
+        ? '__missing__'
+        : trim((string)$row['asset_status']);
+    $state['statusDistribution'][$status] = ($state['statusDistribution'][$status] ?? 0) + $weight;
+
+    [$departmentKey, $departmentLabel] = warehouseInventoryAnalyticsDimension($row, 'department_key', 'department_name', 'ไม่ระบุหน่วยงาน');
+    [$categoryKey] = warehouseInventoryAnalyticsDimension($row, 'category_key', 'category_name', 'ไม่ระบุหมวดหมู่');
+    [$typeKey] = warehouseInventoryAnalyticsDimension($row, 'type_key', 'type_name', 'ไม่ระบุประเภท');
+    $departmentFilterValue = warehouseInventoryAnalyticsDimensionFilterValue($departmentKey, $departmentLabel);
+    warehouseInventoryAnalyticsAddGroup(
+        $state['groups']['departments'],
+        $departmentKey,
+        $departmentLabel,
+        $row,
+        $weight,
+        $threshold,
+        $departmentFilterValue,
+    );
+
+    $departmentBucket =& $state['groups']['departments'][$departmentKey];
+    $departmentBucket['categoryKeys'][$categoryKey] = true;
+    $departmentBucket['typeKeys'][$typeKey] = true;
+    $departmentBucket['locationBuildingCounts'] ??= [];
+    $departmentBucket['locationFloorKeys'] ??= [];
+    $departmentBucket['locationRoomAreaKeys'] ??= [];
+    if ($hasLocation === 1) {
+        $knownBuilding = warehouseInventoryAnalyticsIsMissing($row['building'] ?? null)
+            ? null
+            : trim((string)$row['building']);
+        $knownFloor = warehouseInventoryAnalyticsIsMissing($row['floor'] ?? null)
+            ? null
+            : trim((string)$row['floor']);
+        $knownRoom = warehouseInventoryAnalyticsIsMissing($row['room'] ?? null)
+            ? null
+            : trim((string)$row['room']);
+        $knownArea = warehouseInventoryAnalyticsIsMissing($row['area_name'] ?? null)
+            ? null
+            : trim((string)$row['area_name']);
+        if ($knownBuilding !== null) {
+            $departmentBucket['locationBuildingCounts'][$knownBuilding] = ($departmentBucket['locationBuildingCounts'][$knownBuilding] ?? 0) + $weight;
+            if ($knownFloor !== null) {
+                $departmentBucket['locationFloorKeys'][json_encode([$knownBuilding, $knownFloor], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE)] = true;
+                if ($knownRoom !== null || $knownArea !== null) {
+                    $departmentBucket['locationRoomAreaKeys'][json_encode([$knownBuilding, $knownFloor, $knownRoom, $knownArea], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE)] = true;
+                }
+            }
+        }
+    }
+    unset($departmentBucket);
+
+    $missingCritical = warehouseInventoryAnalyticsIsMissing($row['asset_code'] ?? null)
+        || warehouseInventoryAnalyticsIsMissing($row['asset_name'] ?? null)
+        || warehouseInventoryAnalyticsIsMissing($row['department_key'] ?? null)
+        || warehouseInventoryAnalyticsIsMissing($row['department_name'] ?? null);
+    if ($damaged === 1) $state['attentionAreas']['damaged'] += $weight;
+    if ($available === 0) $state['attentionAreas']['unavailable'] += $weight;
+    if ($old) $state['attentionAreas']['old'] += $weight;
+    if ($hasLocation === 0) $state['attentionAreas']['missingLocation'] += $weight;
+    if ($old && $damaged === 1) $state['attentionAreas']['oldDamaged'] += $weight;
+    if ($old && $available === 0) $state['attentionAreas']['oldUnavailable'] += $weight;
+    if ($old && $hasLocation === 0) $state['attentionAreas']['oldMissingLocation'] += $weight;
+    if ($missingCritical) $state['attentionAreas']['missingCriticalMetadata'] += $weight;
+}
+
 function warehouseInventoryAnalyticsLocationLabel(array $row): string
 {
     $parts = [];
@@ -919,6 +1087,21 @@ function warehouseInventoryAnalyticsFinalizeAgeGroups(array $groups): array
 
 function warehouseInventoryAnalyticsFinalize(array $state, ?array $exceptionPageRequest = null): array
 {
+    if (($state['view'] ?? null) === 'acquisition') {
+        $overview = warehouseInventoryAnalyticsMetricOutput($state['metrics']);
+        return [
+            'overview' => $overview,
+            'acquisition' => [
+                'years' => warehouseInventoryAnalyticsFinalizeMap($state['groups']['acquisitionYears'], $overview['totalAssets']),
+                'fiscalYears' => warehouseInventoryAnalyticsFinalizeMap($state['groups']['fiscalYears'], $overview['totalAssets']),
+                'sources' => warehouseInventoryAnalyticsFinalizeMap($state['groups']['sources'], $overview['totalAssets']),
+                'bySource' => warehouseInventoryAnalyticsFinalizeComboMap($state['groups']['yearSource'], PHP_INT_MAX),
+                'byFiscalSource' => warehouseInventoryAnalyticsFinalizeComboMap($state['groups']['fiscalSource'], PHP_INT_MAX),
+            ],
+            'summary' => $overview,
+        ];
+    }
+
     $overview = warehouseInventoryAnalyticsMetricOutput($state['metrics']);
     $departments = warehouseInventoryAnalyticsFinalizeMap($state['groups']['departments'], $overview['totalAssets']);
     $categories = warehouseInventoryAnalyticsFinalizeMap($state['groups']['categories'], $overview['totalAssets']);

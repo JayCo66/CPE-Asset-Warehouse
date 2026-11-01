@@ -1,4 +1,4 @@
-import { buildInventoryDashboardUrl } from "./inventory-dashboard-data.mjs";
+import { buildInventoryDashboardUrl } from "./inventory-dashboard-data.mjs?v=20261101.7";
 
 export const GOVERNANCE_PAGE_SIZES = Object.freeze([5, 10, 25, "all"]);
 
