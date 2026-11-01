@@ -214,7 +214,7 @@ unset($_SERVER['HTTP_COOKIE']);
 $redis = new MemoryRedis();
 $cache = newCache($redis);
 $cache->remember('annual.php', [], 999999, static fn(): array => ['ok' => true]);
-expectSame(3600, array_values($redis->ttls)[0], 'cache TTL is capped');
+expectSame(86400, array_values($redis->ttls)[0], 'cache TTL is capped');
 
 $redis = new MemoryRedis();
 $cache = newCache($redis);

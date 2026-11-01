@@ -3,6 +3,9 @@ declare(strict_types=1);
 
 final class RedisCache
 {
+    // snapshot เปลี่ยนเมื่อนำเข้าเท่านั้น และการนำเข้าล้าง cache ผ่าน warehouse version จึงเก็บได้นานถึง 1 วัน
+    private const MAX_TTL = 86400;
+
     private bool $enabled;
     private bool $failed = false;
     private string $prefix;
@@ -59,7 +62,7 @@ final class RedisCache
         if ($value === false || !ctype_digit((string)$value)) {
             $value = $fallback;
         }
-        return max(1, min(3600, (int)$value));
+        return max(1, min(self::MAX_TTL, (int)$value));
     }
 
     public function remember(string $route, array $query, int $ttl, callable $loader): mixed
@@ -126,7 +129,7 @@ final class RedisCache
                 ? "\0CPE1" . $compressed
                 : $json;
             if (strlen($stored) <= $this->maxEntryBytes) {
-                $redis->setex($key, max(1, min(3600, $ttl)), $stored);
+                $redis->setex($key, max(1, min(self::MAX_TTL, $ttl)), $stored);
             }
         } catch (Throwable) {
             $this->failed = true;
