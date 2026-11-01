@@ -1,0 +1,158 @@
+{
+  "approval_sha256": "2960ad2cc55d8d6d02c679daed00decfde8841af2577d47b7b2720d82354fccc",
+  "manifest": {
+    "schema_version": 1,
+    "policy": {
+      "retain_count": 3,
+      "candidate_sources": [
+        "university_api"
+      ],
+      "legacy_snapshots": "preserve_for_review",
+      "archive_required": true,
+      "dashboard_history": "all listed snapshots are selectable history points; candidates require explicit acknowledgement"
+    },
+    "latest_snapshot_id": "f6d1ce63-710b-4706-9a61-b20f15e0964b",
+    "latest_university_snapshot_id": "f6d1ce63-710b-4706-9a61-b20f15e0964b",
+    "retained_snapshot_ids": [
+      "f6d1ce63-710b-4706-9a61-b20f15e0964b",
+      "6f800cea-0520-4d3c-bc4f-75d87fa3005b",
+      "9c8101e8-f0cf-47a0-9ac2-3fcf34f083a0"
+    ],
+    "candidate_snapshot_ids": [
+      "ec8a1dc2-e470-4a74-b735-16726ac9faa5"
+    ],
+    "preserved_snapshot_ids": [
+      "7dca40c9-0a37-46ba-914d-a039a93ba8d3",
+      "379cf335-e90a-4e00-986c-a6e8624ca4c0",
+      "fd150057-10d7-4635-9d87-a807cd4721a6"
+    ],
+    "snapshots": [
+      {
+        "snapshot_id": "f6d1ce63-710b-4706-9a61-b20f15e0964b",
+        "snapshot_date_key": 20261101,
+        "snapshot_date": "2026-11-01",
+        "source_system": "university_api",
+        "imported_at": "2026-11-01 09:29:01",
+        "asset_count": 4324,
+        "archive_key": "assets_20261101__f6d1ce63-710b-4706-9a61-b20f15e0964b.json",
+        "fact_count": 4324,
+        "dashboard_exposed": true,
+        "facts_sha256": "aa8e2df78a3f96f2e0a604be227caab111cfffe735c41fbd6d3cad3c8287b05a",
+        "archive_path": "/var/lib/cpe-warehouse/snapshot-history/assets_20261101__f6d1ce63-710b-4706-9a61-b20f15e0964b.json",
+        "archive_bytes": 3707542,
+        "archive_sha256": "a587f2ceeb0d8fc97855a44bee279ca3430f0321e70a03bc59d24d10ab6be779",
+        "archive_verified": true,
+        "disposition": "retained",
+        "disposition_reason": "within_retention_count"
+      },
+      {
+        "snapshot_id": "6f800cea-0520-4d3c-bc4f-75d87fa3005b",
+        "snapshot_date_key": 20261026,
+        "snapshot_date": "2026-10-26",
+        "source_system": "university_api",
+        "imported_at": "2026-10-25 23:00:46",
+        "asset_count": 4324,
+        "archive_key": "assets_20261026__6f800cea-0520-4d3c-bc4f-75d87fa3005b.json",
+        "fact_count": 4324,
+        "dashboard_exposed": true,
+        "facts_sha256": "f6bb84c08ee6cef2f84c6ceb9e7079b5b2a615cff64f3f28c3535e92cd66078f",
+        "archive_path": "/var/lib/cpe-warehouse/snapshot-history/assets_20261026__6f800cea-0520-4d3c-bc4f-75d87fa3005b.json",
+        "archive_bytes": 3707552,
+        "archive_sha256": "efded346ef14aa0b0d684298f574588c3d20325e1be8f4500d545f279bb4f579",
+        "archive_verified": true,
+        "disposition": "retained",
+        "disposition_reason": "within_retention_count"
+      },
+      {
+        "snapshot_id": "9c8101e8-f0cf-47a0-9ac2-3fcf34f083a0",
+        "snapshot_date_key": 20261026,
+        "snapshot_date": "2026-10-26",
+        "source_system": "university_api",
+        "imported_at": "2026-10-25 20:08:41",
+        "asset_count": 4324,
+        "archive_key": "assets_20261026__9c8101e8-f0cf-47a0-9ac2-3fcf34f083a0.json",
+        "fact_count": 4324,
+        "dashboard_exposed": true,
+        "facts_sha256": "2a282f1506469de1377894abc2be1089d7f372f0e0cb0d4bc4eda5ffc0b80f26",
+        "archive_path": "/var/lib/cpe-warehouse/snapshot-history/assets_20261026__9c8101e8-f0cf-47a0-9ac2-3fcf34f083a0.json",
+        "archive_bytes": 3707552,
+        "archive_sha256": "f5f81ded3758d7cefac313d15e6422109bed75c7f7f9988a69c8175bb2ece67e",
+        "archive_verified": true,
+        "disposition": "retained",
+        "disposition_reason": "within_retention_count"
+      },
+      {
+        "snapshot_id": "ec8a1dc2-e470-4a74-b735-16726ac9faa5",
+        "snapshot_date_key": 20261026,
+        "snapshot_date": "2026-10-26",
+        "source_system": "university_api",
+        "imported_at": "2026-10-25 20:03:02",
+        "asset_count": 4324,
+        "archive_key": "assets_20261026__ec8a1dc2-e470-4a74-b735-16726ac9faa5.json",
+        "fact_count": 4324,
+        "dashboard_exposed": true,
+        "facts_sha256": "2a9164f01a7e9d4015dea56bc8b567e612fb9ad0ffd2a456fa1180111bbcd45d",
+        "archive_path": "/var/lib/cpe-warehouse/snapshot-history/assets_20261026__ec8a1dc2-e470-4a74-b735-16726ac9faa5.json",
+        "archive_bytes": 3707552,
+        "archive_sha256": "ec707d5fa726d81d04129b5e2a56ebc810db5b966f74e426c0c95dc4fd9cb679",
+        "archive_verified": true,
+        "disposition": "candidate",
+        "disposition_reason": "outside_retention_count_requires_history_review"
+      },
+      {
+        "snapshot_id": "7dca40c9-0a37-46ba-914d-a039a93ba8d3",
+        "snapshot_date_key": 20261023,
+        "snapshot_date": "2026-10-23",
+        "source_system": "legacy_warehouse",
+        "imported_at": null,
+        "asset_count": 4336,
+        "archive_key": "assets_20261023__7dca40c9-0a37-46ba-914d-a039a93ba8d3.json",
+        "fact_count": 4336,
+        "dashboard_exposed": true,
+        "facts_sha256": "7fde2076c79671ec02ef405b8c568c9b5786b18f771554ee6b21f8b1c0ae25c8",
+        "archive_path": null,
+        "archive_bytes": null,
+        "archive_sha256": null,
+        "archive_verified": false,
+        "disposition": "preserved",
+        "disposition_reason": "non_university_source_requires_review"
+      },
+      {
+        "snapshot_id": "379cf335-e90a-4e00-986c-a6e8624ca4c0",
+        "snapshot_date_key": 20261022,
+        "snapshot_date": "2026-10-22",
+        "source_system": "legacy_warehouse",
+        "imported_at": null,
+        "asset_count": 4336,
+        "archive_key": "assets_20261022__379cf335-e90a-4e00-986c-a6e8624ca4c0.json",
+        "fact_count": 4336,
+        "dashboard_exposed": true,
+        "facts_sha256": "4ed83b7f8581bba3e689c29aaad256108c41b3572ce0d5b96497c9f20bf9d8c1",
+        "archive_path": null,
+        "archive_bytes": null,
+        "archive_sha256": null,
+        "archive_verified": false,
+        "disposition": "preserved",
+        "disposition_reason": "non_university_source_requires_review"
+      },
+      {
+        "snapshot_id": "fd150057-10d7-4635-9d87-a807cd4721a6",
+        "snapshot_date_key": 20261021,
+        "snapshot_date": "2026-10-21",
+        "source_system": "legacy_warehouse",
+        "imported_at": null,
+        "asset_count": 4324,
+        "archive_key": "assets_20261021__fd150057-10d7-4635-9d87-a807cd4721a6.json",
+        "fact_count": 4324,
+        "dashboard_exposed": true,
+        "facts_sha256": "6eb82224789d41afb40de281a7d4961f6398bd02c800620c0a814f69bd49b0f7",
+        "archive_path": null,
+        "archive_bytes": null,
+        "archive_sha256": null,
+        "archive_verified": false,
+        "disposition": "preserved",
+        "disposition_reason": "non_university_source_requires_review"
+      }
+    ]
+  }
+}
