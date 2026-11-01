@@ -10,10 +10,6 @@ x-mysql-command: &mysql-command
   - --innodb-buffer-pool-size=64M
   - --max-connections=30
 
-x-php-build: &php-build
-  context: .
-  dockerfile: docker/php/Dockerfile
-
 services:
   source-db:
     image: mysql:8.0
@@ -52,9 +48,10 @@ services:
         condition: service_healthy
     restart: "no"
 
+  # ใช้ image เดียวกับ web สร้างครั้งเดียว ไม่ให้ build พร้อมกันแล้วชนชื่อ image
   source-api:
-    build: *php-build
     image: cpe-hub-php:local
+    pull_policy: never
     restart: unless-stopped
     mem_limit: 256m
     environment:
@@ -75,6 +72,7 @@ services:
 
   etl:
     image: cpe-hub-etl:local
+    pull_policy: never
     command: ["sh", "docker/etl/run.sh"]
     environment:
       SOURCE_API: http://source-api/
@@ -125,7 +123,9 @@ services:
 
   # หน้ารวมและ API ; data/ ระบุทีละไฟล์เพื่อไม่ให้ Excel ใบแจ้งซ่อมดาวน์โหลดผ่านเว็บได้
   web:
-    build: *php-build
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
     image: cpe-hub-php:local
     restart: unless-stopped
     mem_limit: 256m
