@@ -343,6 +343,7 @@
     /* ==========================================================================
        CONTEXT HEADER & SEMESTER PICKER
        ========================================================================== */
+    #activeTopicNote { margin: 6px 0 0; font-size: 0.9rem; color: var(--cpe-text-muted); }
     .context-header {
       background: var(--cpe-surface);
       border: 1px solid var(--cpe-border);
@@ -925,8 +926,8 @@
       <button class="nav-module-pill" data-topic="patterns" title="รูปแบบการยืมตามช่วงเวลา (Borrowing Patterns)">
         <span class="pill-text">📅 รูปแบบตามช่วงเวลา</span>
       </button>
-      <button class="nav-module-pill" data-topic="utilization" title="การหมุนเวียนและครุภัณฑ์ที่ใช้น้อย/ไม่ถูกใช้งาน (Asset Utilization & Dormancy)">
-        <span class="pill-text">💤 หมุนเวียน & ครุภัณฑ์ไม่ถูกใช้</span>
+      <button class="nav-module-pill" data-topic="utilization" title="การหมุนเวียนและครุภัณฑ์ที่ยืมน้อย/ไม่มีประวัติการยืม (Circulation & Borrow Activity)">
+        <span class="pill-text">📭 หมุนเวียน & ไม่มีประวัติยืม</span>
       </button>
       <button class="nav-module-pill" data-topic="punctuality" title="ความตรงต่อเวลาในการคืน (Return Behavior)">
         <span class="pill-text">⏱️ ความตรงต่อเวลา</span>
@@ -946,6 +947,7 @@
     <div class="context-header">
       <div class="context-title">
         <h2 id="activeTopicTitle">📦 1. ความต้องการใช้งานครุภัณฑ์ (Equipment Demand)</h2>
+        <p id="activeTopicNote" hidden></p>
       </div>
 
       <!-- Quick Semester Selection -->
@@ -1430,11 +1432,12 @@
       },
       'utilization': {
         id: 'utilization',
-        title: '💤 3. การหมุนเวียนและครุภัณฑ์ที่ไม่ค่อยถูกใช้งาน / ไม่ถูกใช้งาน (Asset Circulation & Dormancy)',
-        question: '❓ คำถามที่ต้องการหาคำตอบ: ครุภัณฑ์ใดถูกยืมบ่อย ขณะที่รายการใดมีการยืมน้อยหรือไม่ถูกใช้งาน และการจัดสรรทรัพยากรเหมาะสมหรือไม่?',
-        desc: 'วิเคราะห์ความถี่การยืมเปรียบเทียบกับจำนวนคงเหลือในคลัง ค้นหาครุภัณฑ์นอนนิ่ง (Zero-Borrow) และครุภัณฑ์ที่ยืมน้อย เพื่อประกอบการพิจารณาจัดสรรทรัพยากรใหม่',
+        title: '📭 3. การหมุนเวียนและครุภัณฑ์ที่ยืมน้อย / ไม่มีประวัติการยืม (Circulation & Borrow Activity)',
+        question: '❓ คำถามที่ต้องการหาคำตอบ: ครุภัณฑ์ใดถูกยืมบ่อย และรายการใดมีการยืมน้อยหรือไม่มีประวัติการยืม?',
+        desc: 'วิเคราะห์ความถี่การยืมเปรียบเทียบกับจำนวนคงเหลือในคลัง แสดงครุภัณฑ์ที่ไม่มีประวัติการยืม (Zero-Borrow) และที่ยืมน้อย ซึ่งต้องตรวจการใช้งานจริงก่อนพิจารณาจัดสรรใหม่',
         tag: 'Insight 3 (Slide 5)',
-        icon: '💤'
+        note: 'ℹ️ ครุภัณฑ์ที่ไม่มีประวัติการยืมไม่ได้หมายความว่าไม่ถูกใช้งาน เช่น คอมพิวเตอร์ตั้งโต๊ะที่ใช้ประจำห้องโดยไม่มีการยืมออก จึงควรตรวจการใช้งานจริงก่อนพิจารณาจัดสรรใหม่',
+        icon: '📭'
       },
       'punctuality': {
         id: 'punctuality',
@@ -1844,6 +1847,9 @@
       // Update Context Header
       const meta = TOPICS[topicId];
       document.getElementById('activeTopicTitle').textContent = meta.title;
+      const topicNote = document.getElementById('activeTopicNote');
+      topicNote.textContent = meta.note || '';
+      topicNote.hidden = !meta.note;
 
       // Reset Table Header Actions when not in utilization
       if (topicId !== 'utilization') {
@@ -2706,17 +2712,17 @@
       };
 
       // KPIs
-      document.getElementById('kpiTitle1').textContent = 'ครุภัณฑ์ไม่เคยถูกยืมเลย (Zero Borrow)';
-      document.getElementById('kpiIcon1').textContent = '💤';
+      document.getElementById('kpiTitle1').textContent = 'ครุภัณฑ์ที่ไม่มีประวัติการยืม (Zero Borrow)';
+      document.getElementById('kpiIcon1').textContent = '📭';
       document.getElementById('kpiVal1').textContent = `${summary.total_zero_borrow_items.toLocaleString()} ชิ้น`;
-      document.getElementById('kpiSub1').textContent = `สัดส่วน ${(100 - summary.utilization_rate_pct).toFixed(1)}% ของคลัง (${summary.zero_borrow_models_count.toLocaleString()} โมเดล)`;
+      document.getElementById('kpiSub1').textContent = `สัดส่วน ${(100 - summary.utilization_rate_pct).toFixed(1)}% ของคลัง (${summary.zero_borrow_models_count.toLocaleString()} โมเดล) · อาจใช้งานประจำที่`;
 
-      document.getElementById('kpiTitle2').textContent = 'ครุภัณฑ์ที่ถูกยืมน้อยมาก (Low Usage)';
+      document.getElementById('kpiTitle2').textContent = 'ครุภัณฑ์ที่ถูกยืมน้อยมาก (Low Borrow)';
       document.getElementById('kpiIcon2').textContent = '⏳';
       document.getElementById('kpiVal2').textContent = `${summary.low_borrow_models_count} รายการ`;
       document.getElementById('kpiSub2').textContent = `ถูกยืมเพียง 1-2 ครั้งตลอดทั้งปี`;
 
-      document.getElementById('kpiTitle3').textContent = 'อัตราการหมุนเวียนคลังครุภัณฑ์';
+      document.getElementById('kpiTitle3').textContent = 'สัดส่วนครุภัณฑ์ที่เคยถูกยืม';
       document.getElementById('kpiIcon3').textContent = '🔄';
       document.getElementById('kpiVal3').textContent = `${summary.utilization_rate_pct}%`;
       document.getElementById('kpiSub3').textContent = `มีการเบิกยืมจริง ${summary.total_borrowed_unique_items} จาก ${summary.total_inventory_items.toLocaleString()} ชิ้น`;
@@ -2734,10 +2740,10 @@
       // Chart Titles
       document.getElementById('chartTitleA').textContent = '📊 ความถี่การยืม vs จำนวนคงเหลือในคลัง (Borrow Frequency vs Stock Matrix)';
 
-      document.getElementById('chartTitleB').textContent = '🍩 สัดส่วนสถานะการใช้งานคลังครุภัณฑ์ (Inventory Utilization)';
-      setSortBtnLabels('สัดส่วนทั้งระบบ', 'Top 10 ใช้น้อย (1-2 ครั้ง)');
+      document.getElementById('chartTitleB').textContent = '🍩 สัดส่วนครุภัณฑ์ตามประวัติการยืม (Borrow Activity)';
+      setSortBtnLabels('สัดส่วนทั้งระบบ', 'Top 10 ยืมน้อย (1-2 ครั้ง)');
 
-      document.getElementById('chartTitleFull').textContent = '🏢 ปริมาณครุภัณฑ์ที่ไม่เคยถูกยืม (Dormant Assets) จำแนกตามสังกัด & ภาควิชา';
+      document.getElementById('chartTitleFull').textContent = '🏢 ปริมาณครุภัณฑ์ที่ไม่มีประวัติการยืม (Zero Borrow) จำแนกตามสังกัด & ภาควิชา';
 
       document.getElementById('chartTitleC').textContent = '⏱️ ระยะเวลายืมเฉลี่ยจำแนกตามหมวดหมู่ (วัน/ครั้ง)';
 
@@ -2789,7 +2795,7 @@
               pointHoverRadius: 9
             },
             {
-              label: 'เสี่ยงนอนนิ่ง (Low Demand / High Stock: สต็อก ≥5 แต่ยืมน้อย)',
+              label: 'ยืมน้อย สต็อกมาก (Low Demand / High Stock: สต็อก ≥5 แต่ยืมน้อย)',
               data: filteredScatter.filter(p => p.quadrant === 'LOW_DEMAND_HIGH_STOCK'),
               backgroundColor: '#FFC107',
               pointRadius: 6,
@@ -2866,8 +2872,8 @@
           type: 'doughnut',
           data: {
             labels: [
-              `💤 ไม่เคยถูกยืมเลย (${s.total_zero_borrow_items.toLocaleString()} ชิ้น)`,
-              `⏳ ใช้น้อยมาก 1-2 ครั้ง (${s.low_borrow_models_count} รายการ)`,
+              `📭 ไม่มีประวัติการยืม (${s.total_zero_borrow_items.toLocaleString()} ชิ้น)`,
+              `⏳ ยืมน้อยมาก 1-2 ครั้ง (${s.low_borrow_models_count} รายการ)`,
               `⚡ หมุนเวียนสูง >2 ครั้ง (${s.high_borrow_models_count} รายการ)`
             ],
             datasets: [{
@@ -2973,7 +2979,7 @@
         data: {
           labels: dormantDepts.map(d => d.department),
           datasets: [{
-            label: 'จำนวนครุภัณฑ์ที่ไม่เคยถูกยืมเลย (ชิ้น)',
+            label: 'จำนวนครุภัณฑ์ที่ไม่มีประวัติการยืม (ชิ้น)',
             data: dormantDepts.map(d => d.count),
             backgroundColor: 'rgba(255, 193, 7, 0.75)',
             borderColor: '#FFC107',
@@ -3105,14 +3111,14 @@
       const inv = window.ASSET_INVENTORY_DATA || {};
       
       // Update Title & Sub-tabs
-      document.getElementById('tablePanelTitle').textContent = '📋 บัญชีตรวจสอบครุภัณฑ์เพื่อการจัดสรรใหม่ (Dormant & Underutilized Asset Ledger)';
+      document.getElementById('tablePanelTitle').textContent = '📋 รายการครุภัณฑ์ตามประวัติการยืม (Borrow Activity Ledger)';
       
       const headerActions = document.getElementById('tableHeaderActions');
       if (headerActions) {
         headerActions.innerHTML = `
           <div class="table-sub-tabs">
-            <button class="table-sub-tab-btn ${utilizationFilterMode==='zero'?'active':''}" onclick="setUtilizationSubFilter('zero')">💤 ไม่เคยถูกยืมเลย</button>
-            <button class="table-sub-tab-btn ${utilizationFilterMode==='low'?'active':''}" onclick="setUtilizationSubFilter('low')">⏳ ใช้น้อย (1-2 ครั้ง)</button>
+            <button class="table-sub-tab-btn ${utilizationFilterMode==='zero'?'active':''}" onclick="setUtilizationSubFilter('zero')">📭 ไม่มีประวัติการยืม</button>
+            <button class="table-sub-tab-btn ${utilizationFilterMode==='low'?'active':''}" onclick="setUtilizationSubFilter('low')">⏳ ยืมน้อย (1-2 ครั้ง)</button>
             <button class="table-sub-tab-btn ${utilizationFilterMode==='high'?'active':''}" onclick="setUtilizationSubFilter('high')">⚡ หมุนเวียนสูง</button>
             <button class="table-sub-tab-btn ${utilizationFilterMode==='all'?'active':''}" onclick="setUtilizationSubFilter('all')">📋 ทั้งหมด</button>
           </div>
@@ -3167,9 +3173,9 @@
         const stock = item.ready_qty || item.total_qty || 1;
 
         if (count === 0) {
-          turnoverBadge = stock >= 5 ? '<span class="badge-status status-dormant" style="font-size:11px;">💤 ไม่เคยถูกยืม (สต็อกสูง)</span>' : '<span class="badge-status status-dormant" style="font-size:11px;">💤 ไม่เคยถูกยืม</span>';
+          turnoverBadge = stock >= 5 ? '<span class="badge-status status-dormant" style="font-size:11px;">📭 ไม่มีประวัติการยืม (สต็อกสูง)</span>' : '<span class="badge-status status-dormant" style="font-size:11px;">📭 ไม่มีประวัติการยืม</span>';
         } else if (count <= 2) {
-          turnoverBadge = '<span class="badge-status status-warning" style="font-size:11px;">⏳ ใช้น้อย</span>';
+          turnoverBadge = '<span class="badge-status status-warning" style="font-size:11px;">⏳ ยืมน้อย</span>';
         } else {
           turnoverBadge = '<span class="badge-status status-ready" style="font-size:11px;">⚡ หมุนเวียนสูง</span>';
         }
@@ -4197,8 +4203,9 @@
           tbody.innerHTML = `
             <tr>
               <td colspan="6" style="text-align: center; padding: 32px 16px; color: var(--cpe-text-dim);">
-                <div style="font-size: 24px; margin-bottom: 6px;">💤</div>
+                <div style="font-size: 24px; margin-bottom: 6px;">📭</div>
                 <strong style="color: var(--cpe-text); font-size: 13.5px;">ยังไม่มีประวัติการเบิกยืมในระบบ (Zero-Borrow)</strong><br>
+                <span style="font-size: 12px; display: inline-block; margin-top: 4px;">ไม่ได้หมายความว่าไม่ถูกใช้งาน อาจเป็นครุภัณฑ์ที่ใช้ประจำที่โดยไม่มีการยืมออก</span><br>
                 <span style="font-size: 12px; display: inline-block; margin-top: 4px; color: var(--cpe-text-dim);">
                   สังกัด: ${found.department || 'คณะ'} | สภาพพร้อมใช้งานในคลัง: ${found.ready_qty || found.total_qty || 1} ชิ้น (ปีจัดซื้อ: ${found.year_purchase || '-'})
                 </span>
