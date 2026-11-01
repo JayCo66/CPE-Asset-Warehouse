@@ -16,13 +16,13 @@ Only GET aggregate and reporting data is cached. Other methods bypass cache acce
 | web/public/api/invest.php | Replacement planning summary | 300 s |
 | assets_api/report_facility.php | Facility reports | 120 s |
 | assets_api/report_repair.php | Repair reports | 120 s |
-| assets_api/asset_inventory_dashboard.php | Snapshot options (300 s), overview/aggregates (900 s), and history (3600 s) | 300–3600 s |
+| assets_api/asset_inventory_dashboard.php | Snapshot options (300 s), overview/aggregates and history (86400 s on production; 900 s and 3600 s by default) | 300–86400 s |
 
 The facility and repair view=jobs responses bypass caching because they include staff identities. The borrower detail endpoint assets_api/dw_borrow.php is not cached.
 
 ## Keys and invalidation
 
-The prefix separates environments, for example cpe:local: and cpe:production:. Response keys are SHA-256 hashes over the route, canonicalized query parameters, public access scope, and warehouse version. Redis stores JSON with SETEX; TTLs are capped at one hour.
+The prefix separates environments, for example cpe:local: and cpe:production:. Response keys are SHA-256 hashes over the route, canonicalized query parameters, public access scope, and warehouse version. Redis stores JSON with SETEX; TTLs are capped at 24 hours.
 
 After a warehouse load succeeds and its SQL statements and commit complete, ETL increments the configured prefix followed by warehouse:version. New requests then use a fresh key generation. Old entries expire by TTL and are evicted under allkeys-lru. Invalidation does not scan keys or flush a database.
 
