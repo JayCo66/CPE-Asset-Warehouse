@@ -1,9 +1,24 @@
+# รับเฉพาะไฟล์ที่ image ใช้ ; .env, output/, Excel ใบแจ้งซ่อม และไฟล์อื่นในเครื่องไม่เข้า build context
 **
 !composer.json
 !composer.lock
 !requirements.txt
+!index.html
+!hub-theme.css
+!src/
+!assets_api/
+!lib/
+!mock_api/asset_types.json
+!mock_api/asset_categories.json
+!data/asset_utilization_data.js
+!data/asset_inventory_utilization.json
+!data/dw_borrow_cached.json
 !docker/
 !docker/php/
 !docker/php/Dockerfile
 !docker/etl/
 !docker/etl/Dockerfile
+!docker/web/
+!docker/web/apache-app.conf
+!docker/web/entrypoint.sh
+assets_api/.htaccess
