@@ -40,7 +40,7 @@ Warehouse staff and asset administrators use the dashboard to monitor inventory,
 
 - Existing dashboard: `src/asset-inv/`.
 - Warehouse API documentation: `assets_api/README.md`; the dashboard reads the local warehouse through `assets_api/fact_asset_inventory.php`.
-- Warehouse ETL and snapshot workflow: `README.md` and `etl_warehouse.py`.
+- Warehouse ETL and snapshot workflow: `docs/etl.md` and `etl_warehouse.py`.
 - The repository includes a `fact_asset_inventory` warehouse table and related dimensions. Treat displayed counts as data-dependent; do not invent or present a fixed total as current without checking the data source.
 
 ## Product Principles

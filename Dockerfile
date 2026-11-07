@@ -1,6 +1,6 @@
 # เว็บหน้ารวม + API (PHP 8.3 + Apache) สำหรับ production ; ฐานข้อมูล MySQL อยู่นอก container
 #   docker build -t cpe-asset-warehouse .
-# วิธีรันและค่าที่ต้องตั้งอยู่ใน DEPLOY.md
+# วิธีรันและค่าที่ต้องตั้งอยู่ใน README.md
 
 FROM composer:2 AS dependencies
 WORKDIR /app
