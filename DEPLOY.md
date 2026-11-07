@@ -1,88 +1,98 @@
-# คู่มือติดตั้ง CPE Asset Warehouse
+# คู่มือ Deploy (Docker ไม่ใช้ Compose)
 
-สำหรับผู้ดูแลที่นำระบบไปติดตั้งบน server ทุกบริการรันใน Docker
+ระบบมีแอปเดียว คือเว็บหน้ารวมพร้อม API (PHP 8.3 + Apache) ใช้ `Dockerfile` ที่ root ของ repo ส่วนฐานข้อมูลเป็น MySQL ที่อยู่นอก container
 
-## สิ่งที่ต้องมี
+## สิ่งที่ต้องเตรียม
 
-- Linux server ที่ติดตั้ง Docker Engine และ Docker Compose v2
-- RAM อย่างน้อย 2 GB และพื้นที่ดิสก์ว่างอย่างน้อย 5 GB
-- อินเทอร์เน็ตสำหรับโหลด image และแพ็กเกจตอนติดตั้ง
-- พอร์ต 80 ว่าง หรือเลือกพอร์ตอื่นด้วย `WEB_PORT` ใน `.env`
-
-## ติดตั้ง
-
-รันคำสั่งเหล่านี้ในโฟลเดอร์ที่แตกจาก zip
-
-```bash
-cp deploy.env.example .env
-sed -i "s/^DB_ROOT_PASSWORD=.*/DB_ROOT_PASSWORD=$(openssl rand -hex 24)/" .env
-sed -i "s/^SOURCE_DB_ROOT_PASSWORD=.*/SOURCE_DB_ROOT_PASSWORD=$(openssl rand -hex 24)/" .env
-sed -i "s/^DB_PASSWORD=.*/DB_PASSWORD=$(openssl rand -hex 24)/" .env
-chmod 600 .env
-docker compose up -d --build
-```
-
-ครั้งแรกใช้เวลาหลายนาที ตรวจว่าโหลดข้อมูลเสร็จด้วยคำสั่งนี้ ซึ่งต้องจบที่ `etl exited 0`
-
-```bash
-docker compose logs -f etl
-```
-
-จากนั้นเปิด `http://<IP ของ server>/`
-
-เก็บไฟล์ `.env` ไว้ รหัสผ่านถูกกำหนดตอนสร้างฐานข้อมูลครั้งแรก การแก้ไฟล์นี้ภายหลังจะไม่เปลี่ยนรหัสผ่านในฐานข้อมูล
-
-## สิ่งที่ต้องรู้ก่อนเปิดใช้งาน
-
-- **ไม่มีระบบ login:** ทุกคนที่เข้าถึงพอร์ตเว็บเห็นข้อมูลทั้งหมดและกดนำเข้า snapshot ได้ รวมถึงชื่อผู้ยืมผ่าน `assets_api/dw_borrow.php` ควรเปิดเฉพาะในเครือข่ายภาควิชาหรือผ่าน VPN
-- **ไม่มี HTTPS:** ถ้าเปิดออกอินเทอร์เน็ต ให้ตั้ง reverse proxy ที่มี TLS ไว้ด้านหน้า
-- **พอร์ต:** มีเพียงพอร์ตเว็บที่เปิดออกนอก container ฐานข้อมูล Redis และ API ต้นทางเข้าถึงได้จากภายใน Docker เท่านั้น
-
-## ข้อมูลในชุดนี้
-
-| ข้อมูล | ที่มา |
+| รายการ | ค่า |
 |---|---|
-| ทะเบียนครุภัณฑ์ | ข้อมูลจริงจาก `data/assets_real.json` และนำเข้ารอบใหม่จาก API มหาวิทยาลัยได้จากหน้าเว็บ |
-| การยืม-คืน งานซ่อมครุภัณฑ์ ราคาซื้อ ผู้ใช้ | ข้อมูลจำลองใน `mock_api/` |
-| ใบแจ้งซ่อมอาคาร | ข้อมูลจำลอง ชุดนี้ไม่มีไฟล์ Excel เดิมเพราะมีชื่อและเบอร์โทรผู้แจ้ง |
+| ชนิดฐานข้อมูล | MySQL 8.0 (utf8mb4) |
+| ฐานข้อมูล | `cpeasset` (ระบบครุภัณฑ์ต้นทาง) และ `cpe_warehouse` (Data Warehouse) อยู่บน server เดียวกันได้ |
+| พอร์ตใน container | 80 |
+| Base path | ตั้งด้วย `BASE_PATH` เช่น `/asset-warehouse` |
+| ข้อมูลที่ต้องคงอยู่ | `/var/lib/cpe-warehouse/snapshot-history` (ไฟล์ snapshot ที่นำเข้าจากหน้าเว็บ) |
 
-การนำเข้าจากหน้าเว็บต้องให้ server เข้าถึง `https://cpe.eng.kps.ku.ac.th` ได้
+## 1. เตรียมฐานข้อมูล
 
-ถ้าต้องการใส่ใบแจ้งซ่อมจริง ให้วางไฟล์ `.xlsx` ใน `data/` แล้วรัน ETL ไฟล์นี้จะไม่ถูกเปิดผ่านเว็บ แต่ผลที่ clean แล้วใน `output/` ยังเป็นข้อมูลบุคคล จึงควรจำกัดสิทธิ์เข้าถึงโฟลเดอร์นี้
-
-```bash
-docker compose run --rm etl
-```
-
-## งานดูแลประจำ
-
-เครื่องรีบูตแล้วบริการจะกลับมาเอง ไม่ต้องสั่งใหม่
+นำเข้าไฟล์ dump ที่ส่งให้ ไฟล์นี้สร้างทั้งสองฐานข้อมูลให้เอง
 
 ```bash
-# ดูสถานะ
-docker compose ps
-
-# ดู log ของเว็บ
-docker compose logs --tail 100 web
-
-# สำรองฐานข้อมูล (รหัสผ่านอ่านจากตัวแปรใน container)
-docker compose exec -T warehouse-db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysqldump -uroot --single-transaction cpe_warehouse' | gzip > warehouse-$(date +%F).sql.gz
-docker compose exec -T source-db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysqldump -uroot --single-transaction cpeasset' | gzip > source-$(date +%F).sql.gz
-
-# สำรองประวัติ snapshot
-docker run --rm -v cpe-hub_snapshot_history:/data:ro -v "$PWD":/backup alpine tar -czf /backup/snapshot-history-$(date +%F).tar.gz -C /data .
+mysql -uroot -p < cpe_asset_warehouse_dump.sql
 ```
 
-การอัปเดตเวอร์ชัน: แตก zip ใหม่ทับโดยคงไฟล์ `.env` และโฟลเดอร์ `output/` ไว้ แล้วรัน `docker compose up -d --build`
+สร้าง user ของเว็บ สิทธิ์เขียนจำกัดเฉพาะตารางที่การนำเข้า snapshot ใช้
 
-**ห้ามใช้ `docker compose down -v`** เพราะจะลบฐานข้อมูลและประวัติ snapshot ทั้งหมด ใช้ `docker compose down` ถ้าต้องการหยุดระบบ
+```sql
+CREATE USER 'cpe_web'@'%' IDENTIFIED BY '<รหัสผ่าน>';
+GRANT SELECT, SHOW VIEW ON cpeasset.* TO 'cpe_web'@'%';
+GRANT SELECT, SHOW VIEW ON cpe_warehouse.* TO 'cpe_web'@'%';
+GRANT INSERT, UPDATE ON cpe_warehouse.dim_asset TO 'cpe_web'@'%';
+GRANT INSERT, UPDATE ON cpe_warehouse.dim_asset_category TO 'cpe_web'@'%';
+GRANT INSERT, UPDATE ON cpe_warehouse.dim_asset_type TO 'cpe_web'@'%';
+GRANT INSERT, UPDATE ON cpe_warehouse.dim_department TO 'cpe_web'@'%';
+GRANT INSERT, UPDATE ON cpe_warehouse.dim_location TO 'cpe_web'@'%';
+GRANT INSERT ON cpe_warehouse.dim_date TO 'cpe_web'@'%';
+GRANT INSERT ON cpe_warehouse.dim_inventory_snapshot TO 'cpe_web'@'%';
+GRANT INSERT ON cpe_warehouse.fact_asset_inventory TO 'cpe_web'@'%';
+```
 
-## แก้ปัญหา
+`database/source_schema.sql` และ `database/warehouse_schema.sql` ใช้สร้างฐานข้อมูลเปล่าสำหรับพัฒนาเท่านั้น ฐานข้อมูลที่มีอยู่แล้วไม่ต้องรัน migration เพิ่ม
 
-| อาการ | สาเหตุและทางแก้ |
-|---|---|
-| `ตั้งค่าใน .env` ตอนรัน | ยังไม่ได้สร้าง `.env` หรือรหัสผ่านว่าง ทำตามขั้นตอนติดตั้งใหม่ |
-| `no configuration file provided` | ไม่มี `.env` ซึ่งเป็นตัวบอกชื่อไฟล์ compose หรือไม่ได้อยู่ในโฟลเดอร์ที่แตกจาก zip |
-| `port is already allocated` | พอร์ตเว็บถูกใช้อยู่ เปลี่ยน `WEB_PORT` ใน `.env` แล้วรัน `docker compose up -d` |
-| หน้าเว็บไม่มีข้อมูล | ETL ยังไม่จบหรือล้มเหลว ดู `docker compose logs etl` |
-| เข้าเว็บจากเครื่องอื่นไม่ได้ | ตรวจ firewall ของ server หรือ security group ว่าเปิดพอร์ตเว็บแล้ว |
+## 2. Build image
+
+```bash
+docker build -t cpe-asset-warehouse .
+```
+
+## 3. Run
+
+คัดลอก `deploy.env.example` เป็น `.env` แล้วกรอกค่าที่มี `CHANGE_ME`
+
+```bash
+docker volume create cpe-asset-snapshots
+docker run -d --name cpe-asset-warehouse \
+  --restart unless-stopped \
+  --env-file .env \
+  -p 8080:80 \
+  -v cpe-asset-snapshots:/var/lib/cpe-warehouse/snapshot-history \
+  cpe-asset-warehouse
+```
+
+ถ้า MySQL อยู่ใน container บน Docker network เดียวกัน ให้เพิ่ม `--network <ชื่อ network>` และใช้ชื่อ container ของ MySQL เป็น `DB_HOST` กับ `WAREHOUSE_DB_HOST`
+
+ทดสอบที่ `http://localhost:8080/asset-warehouse/`
+
+## ค่าใน `.env`
+
+| ตัวแปร | ต้องตั้ง | ความหมาย |
+|---|---|---|
+| `BASE_PATH` | ไม่บังคับ | path ที่เว็บเปิดอยู่ เช่น `/asset-warehouse` ว่างไว้ = เปิดที่ `/` |
+| `DB_HOST` `DB_PORT` `DB_NAME` `DB_USER` `DB_PASS` | ต้องตั้ง | ฐานข้อมูล `cpeasset` |
+| `WAREHOUSE_DB_HOST` `WAREHOUSE_DB_PORT` `WAREHOUSE_DB_NAME` `WAREHOUSE_DB_USER` `WAREHOUSE_DB_PASS` | ต้องตั้ง | ฐานข้อมูล `cpe_warehouse` |
+| `CPE_TRUST_PROXY_HEADERS` | เมื่ออยู่หลัง proxy | `true` เพื่อให้ปุ่มนำเข้า snapshot ผ่านการตรวจว่าคำขอมาจากหน้าเว็บเดียวกัน |
+| `REDIS_ENABLED` `REDIS_HOST` `REDIS_PORT` | ไม่บังคับ | cache ของแดชบอร์ด ไม่มี Redis ก็ทำงานได้ |
+
+ทุกค่าเป็นค่าตอนรัน ไม่มีค่าใดต้องส่งตอน build
+
+## Reverse proxy
+
+ส่งคำขอต่อโดยไม่ตัด base path ออก และส่ง host กับ scheme เดิมไปด้วย ตัวอย่าง nginx:
+
+```nginx
+location /asset-warehouse/ {
+    proxy_pass http://127.0.0.1:8080;
+    proxy_set_header X-Forwarded-Host $http_host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_read_timeout 360s;
+}
+```
+
+การนำเข้า snapshot ใช้เวลาได้ถึง 5 นาที จึงต้องตั้ง timeout ของ proxy ให้ยาวพอ
+
+## สิ่งที่ควรรู้
+
+- ระบบไม่มี login ทุกคนที่เข้าถึงเว็บเห็นข้อมูลทั้งหมด รวมถึงชื่อผู้ยืมผ่าน `assets_api/dw_borrow.php` และกดนำเข้า snapshot ได้
+- การนำเข้า snapshot ดึงข้อมูลจาก `https://cpe.eng.kps.ku.ac.th` container ต้องออกอินเทอร์เน็ตได้
+- การนำเข้า snapshot อัตโนมัติรายวันเป็น cron บน EC2 เดิม ยังไม่อยู่ใน image นี้ ใช้ปุ่มนำเข้าบนหน้าทะเบียนสินทรัพย์แทน
+- ETL (`etl_warehouse.py`) ไม่จำเป็นต่อการรันเว็บ ใช้เมื่อต้องการสร้าง warehouse ใหม่จากต้นทาง มี `docker/etl/Dockerfile` สำหรับงานนี้
+- `docker-compose.yml` ใน repo ใช้สำหรับพัฒนาในเครื่องเท่านั้น
