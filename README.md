@@ -1,3 +1,33 @@
+# CPE Asset Warehouse
+
+ระบบคลังข้อมูลและแดชบอร์ดวิเคราะห์ครุภัณฑ์ ภาควิชาวิศวกรรมคอมพิวเตอร์ คณะวิศวกรรมศาสตร์ กำแพงแสน รวมทะเบียนครุภัณฑ์ การยืม-คืน การแจ้งซ่อมอาคาร และงานซ่อมครุภัณฑ์ไว้ใน Data Warehouse เดียว แล้วแสดงผลบนหน้ารวม
+
+วิธีติดตั้งบน server ด้วย Docker อยู่ใน [DEPLOY.md](DEPLOY.md)
+
+## โครงสร้างโปรเจกต์
+
+| Path | หน้าที่ |
+|---|---|
+| `index.html`, `hub-theme.css` | หน้ารวม เปิดแดชบอร์ดแต่ละโมดูลใน iframe และใส่ธีมเดียวกันให้ทุกหน้า |
+| `src/asset-inv/` | แดชบอร์ดทะเบียนสินทรัพย์ (ES modules) และปุ่มนำเข้า snapshot จาก API มหาวิทยาลัย |
+| `src/borrow/` | แดชบอร์ดการยืม-คืน |
+| `src/maintenance/` | แดชบอร์ดแจ้งซ่อมอาคารและซ่อมครุภัณฑ์ (รวมหน้าคุ้มซ่อมไหม) |
+| `assets_api/` | PHP API: `report_*.php`, `asset_inventory_dashboard.php`, `fact_asset_inventory.php`, `dw_borrow.php` อ่าน Data Warehouse ; `assets.php`, `borrow.php` และ endpoint ต้นทางอื่นอ่านฐานข้อมูล `cpeasset` ให้ ETL |
+| `lib/RedisCache.php` | cache ของ API บน Redis (ไม่มี Redis ก็ทำงานได้) |
+| `data/` | ข้อมูลประกอบหน้ายืม-คืน และทะเบียนครุภัณฑ์ตั้งต้นสำหรับ ETL |
+| `mock_api/` | ข้อมูลจำลองของระบบต้นทาง (ผู้ใช้ การยืม งานซ่อม) และรายการประเภท/หมวดหมู่ครุภัณฑ์ |
+| `database/` | schema ของ `cpeasset` และ `cpe_warehouse` และ migration |
+| `etl_warehouse.py` | ETL: ดึงจากระบบต้นทางและ Excel ใบแจ้งซ่อม แปลงแล้วสร้าง SQL โหลดเข้า warehouse |
+| `scripts/` | งานนำเข้า snapshot รายวัน, warm cache, ล้าง snapshot เก่า และตัวอย่าง cron |
+| `tests/` | เทส PHP / JavaScript / Python |
+| `docs/` | คู่มือ (XAMPP, Redis, snapshot automation, design guide) |
+| `Dockerfile`, `docker/web/` | image สำหรับ production (เว็บ + API) |
+| `docker-compose.yml`, `docker/php/`, `docker/etl/` | ระบบทั้งสายสำหรับพัฒนาในเครื่อง (MySQL 2 ตัว, API ต้นทาง, ETL, Redis) |
+| `web/` | แดชบอร์ดรายปีรุ่นแรก (ใช้ใน compose สำหรับพัฒนาเท่านั้น) |
+| `etl_demo.html` | หน้าสาธิตขั้นตอน ETL ของ Excel ทีละขั้น |
+
+ข้อมูลไหลจาก ระบบครุภัณฑ์ (`cpeasset`) และ Excel ใบแจ้งซ่อม → `etl_warehouse.py` → `cpe_warehouse` → `assets_api/` → แดชบอร์ดใน `src/` ส่วนทะเบียนครุภัณฑ์รอบใหม่นำเข้าจาก API มหาวิทยาลัยลง `cpe_warehouse` ได้โดยตรงผ่าน `assets_api/import_university_snapshot.php`
+
 # ETL ระบบครุภัณฑ์ + ใบแจ้งซ่อม → Data Warehouse
 
 `etl_warehouse.py` รวมข้อมูลจาก 2 แหล่งให้เป็นรูปแบบเดียวกัน แล้วสร้างไฟล์ SQL สำหรับโหลดเข้า warehouse ตาม `database/warehouse_schema.sql` ซึ่งมี 8 dimension และ 4 fact
