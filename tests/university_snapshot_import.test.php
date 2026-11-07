@@ -245,6 +245,20 @@ importRunTest('allows same-origin snapshot requests on a deployed host and rejec
     $request['HTTP_SEC_FETCH_SITE'] = 'same-origin';
     $request['HTTP_X_CPE_SNAPSHOT_IMPORT'] = '';
     importExpectSame(false, warehouseUniversitySameOriginRequestAllowed($request), 'Requests without the import marker must be rejected.');
+    $request['HTTP_X_CPE_SNAPSHOT_IMPORT'] = '1';
+
+    $proxied = [
+        'HTTP_HOST' => 'web:80',
+        'HTTP_ORIGIN' => 'https://dashboard.example.test',
+        'HTTP_SEC_FETCH_SITE' => 'same-origin',
+        'HTTP_X_CPE_SNAPSHOT_IMPORT' => '1',
+        'HTTP_X_FORWARDED_HOST' => 'dashboard.example.test',
+        'HTTP_X_FORWARDED_PROTO' => 'https',
+    ];
+    importExpectSame(false, warehouseUniversitySameOriginRequestAllowed($proxied, false), 'Forwarded headers must be ignored unless the proxy is trusted.');
+    importExpectSame(true, warehouseUniversitySameOriginRequestAllowed($proxied, true), 'A trusted proxy should forward the browser host and scheme.');
+    $proxied['HTTP_ORIGIN'] = 'https://attacker.example';
+    importExpectSame(false, warehouseUniversitySameOriginRequestAllowed($proxied, true), 'A trusted proxy must not allow another origin.');
 });
 
 echo "Passed {$testCount} university snapshot import tests.\n";

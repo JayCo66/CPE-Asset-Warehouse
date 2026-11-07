@@ -499,9 +499,22 @@ function warehouseUniversityAcquisitionDate(array $asset): ?DateTimeImmutable
     return null;
 }
 
-function warehouseUniversitySameOriginRequestAllowed(array $server): bool
+function warehouseUniversitySameOriginRequestAllowed(array $server, ?bool $trustProxyHeaders = null): bool
 {
     $host = strtolower((string)($server['HTTP_HOST'] ?? ''));
+    $serverScheme = !empty($server['HTTPS']) && strtolower((string)$server['HTTPS']) !== 'off' ? 'https' : 'http';
+    // Behind a reverse proxy the browser's host and scheme arrive in X-Forwarded-*; trust them only when configured.
+    $trustProxyHeaders ??= filter_var(getenv('CPE_TRUST_PROXY_HEADERS') ?: 'false', FILTER_VALIDATE_BOOLEAN);
+    if ($trustProxyHeaders) {
+        $forwardedHost = strtolower(trim(explode(',', (string)($server['HTTP_X_FORWARDED_HOST'] ?? ''))[0]));
+        $forwardedScheme = strtolower(trim(explode(',', (string)($server['HTTP_X_FORWARDED_PROTO'] ?? ''))[0]));
+        if ($forwardedHost !== '') {
+            $host = $forwardedHost;
+        }
+        if (in_array($forwardedScheme, ['http', 'https'], true)) {
+            $serverScheme = $forwardedScheme;
+        }
+    }
     $origin = (string)($server['HTTP_ORIGIN'] ?? '');
     $fetchSite = strtolower((string)($server['HTTP_SEC_FETCH_SITE'] ?? ''));
     $customHeader = (string)($server['HTTP_X_CPE_SNAPSHOT_IMPORT'] ?? '');
@@ -514,7 +527,6 @@ function warehouseUniversitySameOriginRequestAllowed(array $server): bool
 
     $originParts = parse_url($origin);
     $hostParts = parse_url('http://' . $host);
-    $serverScheme = !empty($server['HTTPS']) && strtolower((string)$server['HTTPS']) !== 'off' ? 'https' : 'http';
     if (!is_array($originParts)
         || !is_array($hostParts)
         || !isset($originParts['scheme'], $originParts['host'])
